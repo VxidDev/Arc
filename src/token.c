@@ -1,0 +1,59 @@
+#include "../include/token.h"
+#include "../include/utils.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+Token* initToken(char *type, void* value, bool needsToBeFreed) {
+  if (!type) return NULL;
+
+  Token* token = malloc(sizeof(Token));
+
+  if (!token) return NULL;
+
+  token->type = stringDup(type);
+
+  if (!token->type) {
+    free(token);
+    return NULL;
+  }
+
+  token->value = value;
+  token->needsToBeFreed = needsToBeFreed;
+
+  return token;
+}
+
+/*
+ * WORKS ONLY FOR STRINGS
+char *tokenRepr(const Token *t) {
+  if (!t || !t->type) return NULL;
+  
+  unsigned long typeLen = strlen(t->type);
+  unsigned long valueLen = t ->value ? strlen(t->value) : 0;    
+
+  unsigned long needed = typeLen + (valueLen ? (valueLen + 1) : 0);
+  char *output = malloc(needed * sizeof(char) + 1);
+
+  if (!output) return NULL;
+
+  memcpy(output, t->type, typeLen); 
+
+  if (valueLen) {
+    output[typeLen] = ':';
+    memcpy(output + typeLen + 1, t->value, valueLen);
+  }
+
+  output[needed] = '\0';
+  return output;
+}
+*/
+
+void freeToken(Token *t) {
+  if (!t) return;
+
+  if (t->type) free(t->type);
+  if (t->value && t->needsToBeFreed) free(t->value);
+
+  free(t);
+}
