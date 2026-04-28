@@ -59,6 +59,10 @@ Error *initIllegalCharError(Position* start, Position* end, char *filename, char
   return initError(start, end, "Illegal Character", filename, details);
 }
 
+Error *initSyntaxError(Position* start, Position* end, char *filename, char* details) {
+  return initError(start, end, "Syntax Error", filename, details);
+}
+
 char* errorAsString(const Error* error) {
   if (!error || !error->name || !error->details || !error->filename || !error->start)
     return NULL;

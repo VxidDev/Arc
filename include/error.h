@@ -10,6 +10,7 @@ typedef struct Error {
 
 Error* initError(Position* start, Position* end, char *filename, char *name, char *details);
 Error* initIllegalCharError(Position* start, Position* end, char *filename, char *details);
+Error* initSyntaxError(Position* start, Position* end, char *filename, char *details);
 char *errorAsString(const Error *error);
 
 void freeError(Error* err);

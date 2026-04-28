@@ -1,10 +1,11 @@
 #include "../include/token.h"
 #include "../include/utils.h"
+#include "../include/position.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-Token* initToken(char *type, void* value, bool needsToBeFreed) {
+Token* initToken(char *type, void* value, bool needsToBeFreed, Position* start, Position* end) {
   if (!type) return NULL;
 
   Token* token = malloc(sizeof(Token));
@@ -20,6 +21,18 @@ Token* initToken(char *type, void* value, bool needsToBeFreed) {
 
   token->value = value;
   token->needsToBeFreed = needsToBeFreed;
+  
+  token->start = start;
+
+  if (token->start && end) {
+    token->end = end;
+  } else if (token->start && !end) {
+    Position* copy = copyPosition(start);
+    advancePosition(start, 0);
+    token->end = copy;
+  } else {
+    token->end = NULL;
+  }
 
   return token;
 }
@@ -54,6 +67,18 @@ void freeToken(Token *t) {
 
   if (t->type) free(t->type);
   if (t->value && t->needsToBeFreed) free(t->value);
+  if (t->start) freePosition(t->start);
+  if (t->end) freePosition(t->end);
+
+  free(t);
+}
+
+void freeTokens(Token **t, unsigned long s) {
+  if (!t) return;
+
+  for (unsigned long i = 0; i < s; i++) {
+    freeToken(t[i]);
+  }
 
   free(t);
 }

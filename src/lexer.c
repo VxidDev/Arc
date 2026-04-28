@@ -157,7 +157,9 @@ Token* makeNumberTokenLexer(Lexer* lexer) {
 
     *val = value;
 
-    Token* token = initToken(TOK_INT, val, true);
+    Position* pos = copyPosition(lexer->pos);
+
+    Token* token = initToken(TOK_INT, val, true, pos, NULL);
 
     if (!token) {
       free(val);
@@ -172,7 +174,7 @@ Token* makeNumberTokenLexer(Lexer* lexer) {
   char *end;
   errno = 0;
 
-  double value = strtof(numStr, &end);
+  double value = strtod(numStr, &end);
 
   // No digits found
   if (end == numStr) {
@@ -201,7 +203,9 @@ Token* makeNumberTokenLexer(Lexer* lexer) {
 
   *val = value;
 
-  Token* token = initToken(TOK_FLOAT, val, true);
+  Position *pos = copyPosition(lexer->pos);
+
+  Token* token = initToken(TOK_FLOAT, val, true, pos, NULL);
 
   if (!token) {
     free(val);
@@ -248,7 +252,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     } 
 
     if (lexer->currChar == '+') {
-      Token *token = initToken(TOK_PLUS, NULL, false);
+      Token *token = initToken(TOK_PLUS, NULL, false, copyPosition(lexer->pos), NULL);
 
       if (!token) {
         _freeTokens(tokens, size);
@@ -269,7 +273,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (lexer->currChar == '-') {
-      Token *token = initToken(TOK_MINUS, NULL, false);
+      Token *token = initToken(TOK_MINUS, NULL, false, copyPosition(lexer->pos), NULL);
 
       if (!token) {
         _freeTokens(tokens, size);
@@ -285,12 +289,12 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
       tokens[size++] = token;
       advanceLexer(lexer);
-
+      
       continue;
     }
 
     if (lexer->currChar == '*') {
-      Token *token = initToken(TOK_MUL, NULL, false);
+      Token *token = initToken(TOK_MUL, NULL, false, copyPosition(lexer->pos), NULL);
 
       if (!token) {
         _freeTokens(tokens, size);
@@ -311,7 +315,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (lexer->currChar == '/') {
-      Token *token = initToken(TOK_DIV, NULL, false);
+      Token *token = initToken(TOK_DIV, NULL, false, copyPosition(lexer->pos), NULL);
 
       if (!token) {
         _freeTokens(tokens, size);
@@ -332,7 +336,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (lexer->currChar == '(') {
-      Token *token = initToken(TOK_LPAREN, NULL, false);
+      Token *token = initToken(TOK_LPAREN, NULL, false, copyPosition(lexer->pos), NULL);
 
       if (!token) {
         _freeTokens(tokens, size);
@@ -353,7 +357,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (lexer->currChar == ')') {
-      Token *token = initToken(TOK_RPAREN, NULL, false);
+      Token *token = initToken(TOK_RPAREN, NULL, false, copyPosition(lexer->pos), NULL);
 
       if (!token) {
         _freeTokens(tokens, size);
