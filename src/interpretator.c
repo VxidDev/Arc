@@ -10,8 +10,12 @@ Number* visitNumberNode(ASTNode* node) {
   NumberNode* numNode = (NumberNode*)node;
 
   if (!numNode->token) return NULL;
+  
+  if (strcmp(numNode->token->type, TOK_FLOAT) == 0) {
+    return initFloat(*(double*)numNode->token->value);
+  }
 
-  return initNumber(*(long*)numNode->token->value);
+  return initInt(*(long*)numNode->token->value);
 }
 
 Number* visitBinOpNode(ASTNode* node) {
@@ -50,7 +54,7 @@ Number* visitUnaryOpNode(ASTNode* node) {
   Number* output = NULL;
 
   if (strcmp(unaryOper->operTok->type, TOK_MINUS) == 0) {
-    output = mulNumber(number, initNumber(-1));
+    output = mulNumber(number, initInt(-1));
     free(number);
   }
 

@@ -2,7 +2,8 @@
 #define OBJECT_H
 
 typedef enum ObjType {
-  OBJ_NUMBER
+  OBJ_NUMBER_INT,
+  OBJ_NUMBER_FLOAT,
 } ObjType;
 
 typedef struct Object {
@@ -11,10 +12,16 @@ typedef struct Object {
 
 typedef struct Number {
   Object base;
-  long value;
+
+  union {
+    long i;
+    double f;
+  } as;
+
 } Number;
 
-Number* initNumber(long value);
+Number* initInt(long value);
+Number* initFloat(double value);
 
 Number* addNumber(const Number* dest, const Number* src);
 Number* subNumber(const Number* dest, const Number* src);

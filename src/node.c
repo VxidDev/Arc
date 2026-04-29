@@ -49,7 +49,6 @@ UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node) {
 void freeNumberNode(NumberNode *node) {
     if (!node) return;
 
-    freeToken(node->token);
     free(node);
 }
 
@@ -59,7 +58,6 @@ void freeBinOpNode(BinOpNode *node) {
     freeAST(node->leftNode);
     freeAST(node->rightNode);
 
-    freeToken(node->operTok);
     free(node);
 }
 
@@ -67,7 +65,6 @@ void freeUnaryOpNode(UnaryOpNode *node) {
     if (!node) return;
 
     freeAST(node->node);
-    freeToken(node->operTok);
     free(node);
 }
 

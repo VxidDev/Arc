@@ -2,58 +2,103 @@
 
 #include <stdlib.h>
 
-Number* initNumber(long value) {
+static inline double toDouble(const Number* n) {
+  return (n->base.type == OBJ_NUMBER_FLOAT)
+    ? n->as.f
+    : (double)n->as.i;
+}
+
+static inline long toLong(const Number* n) {
+  return (n->base.type == OBJ_NUMBER_INT)
+    ? n->as.i
+    : (long)n->as.f;
+}
+
+static inline ObjType promote(const Number* a, const Number* b) {
+  return (a->base.type == OBJ_NUMBER_FLOAT ||
+          b->base.type == OBJ_NUMBER_FLOAT)
+    ? OBJ_NUMBER_FLOAT
+    : OBJ_NUMBER_INT;
+}
+
+Number *initInt(long value) {
   Number* number = malloc(sizeof(Number));
 
   if (!number) return NULL;
 
-  number->value = value;
+  number->as.i = value;
+  number->base.type = OBJ_NUMBER_INT;
+
+  return number;
+}
+
+Number *initFloat(double value) {
+  Number* number = malloc(sizeof(Number));
+
+  if (!number) return NULL;
+
+  number->as.f = value;
+  number->base.type = OBJ_NUMBER_FLOAT;
+
   return number;
 }
 
 Number* addNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return NULL;
 
-  Number* out = malloc(sizeof(Number));
+  ObjType type = promote(dest, src);
 
-  if (!out) return NULL;
+  if (type == OBJ_NUMBER_FLOAT) {
+    double result = toDouble(src) + toDouble(dest);
+    return initFloat(result);
+  }
 
-  out->value = src->value + dest->value;
-  return out;
+  long result = toLong(src) + toLong(dest);
+  return initInt(result);
 }
 
 Number* subNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return NULL;
 
-  Number* out = malloc(sizeof(Number));
+  ObjType type = promote(dest, src);
 
-  if (!out) return NULL;
+  if (type == OBJ_NUMBER_FLOAT) {
+    double result = toDouble(src) - toDouble(dest);
+    return initFloat(result);
+  }
 
-  out->value = src->value - dest->value;
-  return out;
+  long result = toLong(src) - toLong(dest);
+  return initInt(result);
 }
 
 Number* divNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return NULL;
 
-  Number* out = malloc(sizeof(Number));
+  ObjType type = promote(dest, src);
 
-  if (!out) return NULL;
+  if (type == OBJ_NUMBER_FLOAT) {
+    double destVal = toDouble(dest);
+    double result = destVal == 0 ? -1 : toDouble(src) / destVal;
+    return initFloat(result);
+  }
   
-  out->value = !dest->value ? -1 : src->value / dest->value;
-  return out;
+  long destVal = toLong(dest);
+  long result = destVal == 0 ? -1 : toLong(src) / destVal;
+  return initInt(result);
 }
 
 Number* mulNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return NULL;
 
-  Number* out = malloc(sizeof(Number));
+  ObjType type = promote(dest, src);
 
-  if (!out) return NULL;
+  if (type == OBJ_NUMBER_FLOAT) {
+    double result = toDouble(src) * toDouble(dest);
+    return initFloat(result);
+  }
 
-  out->value = src->value * dest->value;
-  out->base.type = OBJ_NUMBER;
-  return out;
+  long result = toLong(src) * toLong(dest);
+  return initInt(result);
 }
 
 

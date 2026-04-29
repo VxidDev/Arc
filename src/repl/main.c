@@ -14,8 +14,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <limits.h>
 
 bool _DEBUG;
+int _FLOAT_PRECISION = 6;
 
 void printAST(ASTNode* node) {
   if (!node) return;
@@ -27,7 +30,7 @@ void printAST(ASTNode* node) {
       if (strcmp(n->token->type, TOK_INT) == 0) {
         printf("%s%d%s", ANSI_BRIGHT_YELLOW_FG, *(int*)n->token->value, ANSI_RESET);
       } else if (strcmp(n->token->type, TOK_FLOAT) == 0) {
-        printf("%s%s%f%s", ANSI_DIM, ANSI_YELLOW_FG, *(double*)n->token->value, ANSI_RESET);
+        printf("%s%s%.*f%s", ANSI_DIM, ANSI_YELLOW_FG, _FLOAT_PRECISION, *(double*)n->token->value, ANSI_RESET);
       }
 
       break;
@@ -59,17 +62,17 @@ void printAST(ASTNode* node) {
   }
 }
 
-ASTNode* run(char *text, Error **error, unsigned long *size) {
+void run(char *text, Error **error, unsigned long *size) {
   Lexer *lexer = initLexer("<stdin>", text);
 
   if (!lexer) {
     printf("%sArc: %sFailed to initialize lexer.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
-    return NULL;
+    return;
   }
   
   Token **tokens = makeTokensLexer(lexer, error, size);
   
-  if (!tokens) return NULL;
+  if (!tokens) return;
   
   if (_DEBUG) {
     printf("\n%sTokens: %s", ANSI_CYAN_FG, ANSI_BRIGHT_BLUE_FG);
@@ -85,7 +88,7 @@ ASTNode* run(char *text, Error **error, unsigned long *size) {
 
   if (!parser) {
     freeLexer(lexer);
-    return NULL;
+    return;
   }
 
   ASTNode* ast = parseParser(parser);
@@ -100,21 +103,41 @@ ASTNode* run(char *text, Error **error, unsigned long *size) {
 
   if (!result) {
     printf("%sArc: %sFailed to calculate result.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
-    free(lexer);
+    freeAST(ast);
+    freeTokens(tokens, *size);
     free(parser);
-    free(tokens);
-
-    return ast;
+    freeLexer(lexer);
   }
   
-  printf("%s%s%ld%s\n", ANSI_BRIGHT_CYAN_FG, ANSI_BOLD, result->value, ANSI_RESET);
+  if (result->base.type == OBJ_NUMBER_INT) {
+    printf("%s%s%ld%s\n", ANSI_BRIGHT_CYAN_FG, ANSI_BOLD, result->as.i, ANSI_RESET);
+  } else if (result->base.type == OBJ_NUMBER_FLOAT){
+    printf("%s%s%.*f%s\n", ANSI_BRIGHT_CYAN_FG, ANSI_BOLD, _FLOAT_PRECISION, result->as.f, ANSI_RESET);
+  }
+
   free(result);
-
-  freeLexer(lexer);
+  
+  freeAST(ast);
+  freeTokens(tokens, *size);
   free(parser);
-  free(tokens);
+  freeLexer(lexer);
+}
 
-  return ast;
+int parseInt(const char *s, int *out) {
+  char *end = NULL;
+  errno = 0;
+
+  long val = strtol(s, &end, 10);
+
+  if (errno != 0) return 0; // overflow / underflow
+  
+  while (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r') end++;
+
+  if (*end != '\0') return 0; // invalid chars 
+  if (val < INT_MIN || val > INT_MAX) return 0;
+
+  *out = (int)val;
+  return 1;
 }
 
 void parseArguments(int argc, char **argv) {
@@ -124,10 +147,24 @@ void parseArguments(int argc, char **argv) {
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
       _DEBUG = true;
       break;
-    }
+    } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--float-precision") == 0) {
+      if (i + 1 >= argc) {
+        printf("%sArc: %sprecision cannot be empty.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+        exit(1);
+      }
 
-    printf("%sArc: %sunknown argument \"%s\"%s\n", ANSI_CYAN_FG, ANSI_WHITE_FG, argv[i], ANSI_RESET);
-    exit(1);
+      int precision;
+
+      if (!parseInt(argv[++i], &precision)) {
+        printf("%sArc: %sprecision must be a valid integer%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+        exit(1);
+      }
+
+      _FLOAT_PRECISION = precision;
+    } else {
+      printf("%sArc: %sunknown argument \"%s\"%s\n", ANSI_CYAN_FG, ANSI_WHITE_FG, argv[i], ANSI_RESET);
+      exit(1);
+    } 
   }
 }
 
@@ -154,22 +191,16 @@ int main(int argc, char **argv) {
     Error *error = NULL;
     
     unsigned long size = 0; 
-    ASTNode* ast = run(userInput, &error, &size);
-    
-    if (!ast) {
-      char *errStr = errorAsString(error); 
-
+    run(userInput, &error, &size);
+     
+    if (error) {
+      char *errStr = errorAsString(error);
       printf("%s%s%s\n", ANSI_BRIGHT_RED_FG, errStr, ANSI_RESET);
-      free(userInput); 
       free(errStr);
-
-      freeError(error);
-
-      continue;
     }
     
     free(userInput); 
-    freeAST(ast);
+    freeError(error);  
   } 
 
   return 0;
