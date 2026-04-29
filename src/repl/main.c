@@ -5,10 +5,17 @@
 #include "../../include/parser.h"
 #include "../../include/node.h"
 #include "../../include/error.h"
+#include "../../include/interpretator.h"
+#include "../../include/object.h"
+
+#include "../../include/ansi-colors.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
+bool _DEBUG;
 
 void printAST(ASTNode* node) {
   if (!node) return;
@@ -18,9 +25,9 @@ void printAST(ASTNode* node) {
       NumberNode* n = (NumberNode*)node;
 
       if (strcmp(n->token->type, TOK_INT) == 0) {
-        printf("%d", *(int*)n->token->value);
+        printf("%s%d%s", ANSI_BRIGHT_YELLOW_FG, *(int*)n->token->value, ANSI_RESET);
       } else if (strcmp(n->token->type, TOK_FLOAT) == 0) {
-        printf("%f", *(double*)n->token->value);
+        printf("%s%s%f%s", ANSI_DIM, ANSI_YELLOW_FG, *(double*)n->token->value, ANSI_RESET);
       }
 
       break;
@@ -29,23 +36,23 @@ void printAST(ASTNode* node) {
     case NODE_BINOP: {
       BinOpNode* b = (BinOpNode*)node;
 
-      printf("(");
+      putchar('(');
       printAST(b->leftNode);
 
-      printf(" %s ", b->operTok->type);
+      printf(" %s%s%s ", ANSI_BRIGHT_CYAN_FG, b->operTok->type, ANSI_RESET);
 
       printAST(b->rightNode);
-      printf(")");
+      putchar(')');
       break;
     }
 
     case NODE_UNARYOP: {
       UnaryOpNode* u = (UnaryOpNode*)node;
 
-      printf("(");
-      printf("%s ", u->operTok->type);
+      putchar('(');
+      printf("%s%s%s ", ANSI_BRIGHT_BLACK_FG, u->operTok->type, ANSI_RESET);
       printAST(u->node);
-      printf(")");
+      putchar(')');
 
       break;
     }
@@ -56,20 +63,24 @@ ASTNode* run(char *text, Error **error, unsigned long *size) {
   Lexer *lexer = initLexer("<stdin>", text);
 
   if (!lexer) {
-    printf("\n[ ARC ] Failed to initialize lexer.\n");
+    printf("%sArc: %sFailed to initialize lexer.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
     return NULL;
   }
   
   Token **tokens = makeTokensLexer(lexer, error, size);
   
   if (!tokens) return NULL;
+  
+  if (_DEBUG) {
+    printf("\n%sTokens: %s", ANSI_CYAN_FG, ANSI_BRIGHT_BLUE_FG);
 
-  for (size_t i = 0; i < *size; i++) {
-    printf("%s ", tokens[i]->type);
+    for (size_t i = 0; i < *size; i++) {
+      printf("%s ", tokens[i]->type);
+    }
+
+    printf("%s\n", ANSI_RESET);
   }
-
-  putchar('\n');
-
+  
   Parser* parser = initParser(tokens, *size);
 
   if (!parser) {
@@ -78,10 +89,27 @@ ASTNode* run(char *text, Error **error, unsigned long *size) {
   }
 
   ASTNode* ast = parseParser(parser);
-
-  printAST(ast);
-  putchar('\n');
   
+  if (_DEBUG) {
+    printf("%sAST tree: ", ANSI_CYAN_FG);
+    printAST(ast);
+    printf("%s\n\n", ANSI_RESET);
+  }
+
+  Number* result = visitNode(ast);
+
+  if (!result) {
+    printf("%sArc: %sFailed to calculate result.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+    free(lexer);
+    free(parser);
+    free(tokens);
+
+    return ast;
+  }
+  
+  printf("%s%s%ld%s\n", ANSI_BRIGHT_CYAN_FG, ANSI_BOLD, result->value, ANSI_RESET);
+  free(result);
+
   freeLexer(lexer);
   free(parser);
   free(tokens);
@@ -89,14 +117,32 @@ ASTNode* run(char *text, Error **error, unsigned long *size) {
   return ast;
 }
 
+void parseArguments(int argc, char **argv) {
+  if (argc < 1) return;
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
+      _DEBUG = true;
+      break;
+    }
+
+    printf("%sArc: %sunknown argument \"%s\"%s\n", ANSI_CYAN_FG, ANSI_WHITE_FG, argv[i], ANSI_RESET);
+    exit(1);
+  }
+}
+
 int main(int argc, char **argv) {
+  parseArguments(argc, argv);
+
   char *userInput = NULL;
 
+  char prompt[] = "\033[36mArc > \033[0m";
+
   for (;;) {
-    userInput = input("Arc > ");
+    userInput = input(prompt);
 
     if (!userInput) {
-      printf("\n[ ARC - FATAL ] Failed to get user input.\n");
+      printf("%sArc: %sFailed to get user input.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
       break;
     }
 
@@ -113,7 +159,7 @@ int main(int argc, char **argv) {
     if (!ast) {
       char *errStr = errorAsString(error); 
 
-      printf("[ ARC - ERROR ] %s\n", errStr);
+      printf("%s%s%s\n", ANSI_BRIGHT_RED_FG, errStr, ANSI_RESET);
       free(userInput); 
       free(errStr);
 

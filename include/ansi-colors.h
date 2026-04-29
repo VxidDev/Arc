@@ -1,0 +1,49 @@
+#ifndef ANSI_COLORS_H
+#define ANSI_COLORS_H
+
+#define ANSI_BLACK_FG "\033[30m"
+#define ANSI_RED_FG "\033[31m"
+#define ANSI_GREEN_FG "\033[32m"
+#define ANSI_YELLOW_FG "\033[33m"
+#define ANSI_BLUE_FG "\033[34m"
+#define ANSI_MAGENTA_FG "\033[35m"
+#define ANSI_CYAN_FG "\033[36m"
+#define ANSI_WHITE_FG "\033[37m"
+
+#define ANSI_BRIGHT_BLACK_FG "\033[90m"
+#define ANSI_BRIGHT_RED_FG "\033[91m"
+#define ANSI_BRIGHT_GREEN_FG "\033[92m"
+#define ANSI_BRIGHT_YELLOW_FG "\033[93m"
+#define ANSI_BRIGHT_BLUE_FG "\033[94m"
+#define ANSI_BRIGHT_MAGENTA_FG "\033[95m"
+#define ANSI_BRIGHT_CYAN_FG "\033[96m"
+#define ANSI_BRIGHT_WHITE_FG "\033[97m"
+
+#define ANSI_BLACK_BG "\033[40m"
+#define ANSI_RED_BG "\033[41m"
+#define ANSI_GREEN_BG "\033[42m"
+#define ANSI_YELLOW_BG "\033[43m"
+#define ANSI_BLUE_BG "\033[44m"
+#define ANSI_MAGENTA_BG "\033[45m"
+#define ANSI_CYAN_BG "\033[46m"
+#define ANSI_WHITE_BG "\033[47m"
+
+#define ANSI_BRIGHT_BLACK_BG "\033[100m"
+#define ANSI_BRIGHT_RED_BG "\033[101m"
+#define ANSI_BRIGHT_GREEN_BG "\033[102m"
+#define ANSI_BRIGHT_YELLOW_BG "\033[103m"
+#define ANSI_BRIGHT_BLUE_BG "\033[104m"
+#define ANSI_BRIGHT_MAGENTA_BG "\033[105m"
+#define ANSI_BRIGHT_CYAN_BG "\033[106m"
+#define ANSI_BRIGHT_WHITE_BG "\033[107m"
+
+#define ANSI_BOLD "\033[1m"
+#define ANSI_DIM "\033[2m"
+#define ANSI_ITALIC "\033[3m"
+#define ANSI_UNDERLINE "\033[4m"
+#define ANSI_BLINK "\033[5m"
+#define ANSI_REVERSE "\033[7m"
+#define ANSI_STRIKETHROUGH "\033[9m"
+#define ANSI_RESET "\033[0m"
+
+#endif // ANSI_COLORS_H

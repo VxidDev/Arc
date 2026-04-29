@@ -1,6 +1,6 @@
 # Arc
 
-Arc is a small programming language project written in C. It currently focuses on building a clean and reliable frontend pipeline, including a lexer, REPL, and structured error reporting.
+Arc is a small programming language project written in C. It focuses on building a clean and reliable frontend pipeline, along with a simple interpreter for evaluating expressions.
 
 ---
 
@@ -8,29 +8,72 @@ Arc is a small programming language project written in C. It currently focuses o
 
 * Interactive REPL (`src/repl`)
 * Lexer for arithmetic expressions
+* Parser with AST generation
+* Expression evaluation (interpreter)
 * Integer and floating-point number support
 * Basic arithmetic operators:
 
   * `+`, `-`, `*`, `/`
   * parentheses `(` `)`
 * Token system (`include/token.h`)
-* Error handling with position tracking:
+* Structured error handling with position tracking:
 
   * file name
   * line number
   * column number
+* Debug mode for inspecting tokens and AST
 * Focus on memory-safe design
 
 ---
 
 ## Example
 
-```text
-Arc > 123 + 45
-[INT:123, PLUS, INT:45]
+### Normal Mode
 
+```text
+Arc > 3-3
+0
+Arc > 3*3*3
+27
+```
+
+---
+
+### Debug Mode
+
+Run with:
+
+```bash
+./arc -d
+# or
+./arc --debug
+```
+
+Example session:
+
+```text
+Arc > 1-1
+
+Tokens: INT MINUS INT 
+AST tree: (1 MINUS 1)
+
+0
+
+Arc > 3*3*3
+
+Tokens: INT MUL INT MUL INT 
+AST tree: ((3 MUL 3) MUL 3)
+
+27
+```
+
+---
+
+### Error Handling
+
+```text
 Arc > s
-[ ARC - ERROR ] Illegal Character: 's'
+Illegal Character: 's'
 File <stdin>, line 1, column 0
 ```
 
@@ -45,54 +88,93 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 
   * lexer
   * tokens
-  * errors
+  * parser
+  * AST nodes
+  * interpreter
+  * error handling
   * position tracking
   * REPL
 * Predictable memory ownership
+* Debuggability over cleverness
 
 ---
 
 ## Project Structure
 
 ```
-include/
-├── error.h
-├── lexer.h
-├── node.h
-├── parser.h
-├── position.h
-├── repl/
-│   └── input.h
-├── token.h
-└── utils.h
-
-src/
-├── error.c
-├── lexer.c
-├── node.c
-├── parser.c
-├── position.c
-├── repl/
-│   ├── input.c
-│   └── main.c
-├── token.c
-└── utils.c
+.
+├── arc
+├── include
+│   ├── ansi-colors.h
+│   ├── error.h
+│   ├── interpretator.h
+│   ├── lexer.h
+│   ├── node.h
+│   ├── object.h
+│   ├── parser.h
+│   ├── position.h
+│   ├── repl/
+│   │   └── input.h
+│   ├── token.h
+│   └── utils.h
+├── src
+│   ├── error.c
+│   ├── interpretator.c
+│   ├── lexer.c
+│   ├── node.c
+│   ├── objects/
+│   │   └── number.c
+│   ├── parser.c
+│   ├── position.c
+│   ├── repl/
+│   │   ├── input.c
+│   │   └── main.c
+│   ├── token.c
+│   └── utils.c
+├── makefile
+├── README.md
+└── LICENSE
 ```
 
 ---
 
 ## Build
 
-To build the project:
-
 ```bash
 make
 ```
 
-To run the REPL:
+Run:
 
 ```bash
 ./arc
+```
+
+Debug mode:
+
+```bash
+./arc -d
+# or
+./arc --debug
+```
+
+To install:
+
+```bash
+sudo make install
+```
+
+Run:
+```
+arc 
+# or 
+arc -d 
+# or 
+arc --debug 
+```
+```
+```
+```
 ```
 
 ---
@@ -104,8 +186,6 @@ Arc is regularly tested with Valgrind to ensure:
 * No memory leaks
 * No invalid reads or writes
 * Clear and consistent ownership rules
-
-Run checks with:
 
 ```bash
 valgrind --leak-check=full --show-leak-kinds=all ./arc
@@ -119,17 +199,19 @@ valgrind --leak-check=full --show-leak-kinds=all ./arc
 * Token system (done)
 * REPL (done)
 * Error reporting with position tracking (done)
-* Parser (AST generation)
-* Expression evaluation
+* Parser (AST generation) (done)
+* Expression evaluation (done)
 * Variables and identifiers
-* Basic interpreter runtime
+* Scoped environments
+* Functions
+* Basic runtime system
 * Bytecode virtual machine (long-term goal)
 
 ---
 
 ## Notes
 
-Arc is still early in development. The focus right now is correctness, memory safety, and building a solid foundation for parsing and evaluation before moving toward more advanced features.
+Arc is still early in development. The current focus is correctness, memory safety, and building a solid foundation for parsing and evaluation before moving toward more advanced language features.
 
 ---
 
