@@ -86,7 +86,7 @@ bool _is_digit(char c) {
   return (c >= '0' && c <= '9');
 }
 
-Token* makeNumberTokenLexer(Lexer* lexer) {
+Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
   if (!lexer) return NULL;
 
   unsigned long size = 0;
@@ -133,18 +133,21 @@ Token* makeNumberTokenLexer(Lexer* lexer) {
     // No digits found
     if (end == numStr) {
       free(numStr);
+      *error = initLexerError(copyPosition(lexer->pos), NULL, lexer->filename, "Invalid numeral literal");
       return NULL;
     }
 
     // overflow / underflow 
     if (errno == ERANGE || value > INT_MAX || value < INT_MIN) {
       free(numStr);
+      *error = initSemanticError(copyPosition(lexer->pos), NULL, lexer->filename, "Number out of range");
       return NULL;
     }
 
     // trailing garbage
     if (*end != '\0') {
       free(numStr);
+      *error = initLexerError(copyPosition(lexer->pos), NULL, lexer->filename, "Trailing characters after number");
       return NULL;
     }
 
@@ -179,18 +182,21 @@ Token* makeNumberTokenLexer(Lexer* lexer) {
   // No digits found
   if (end == numStr) {
     free(numStr);
+    *error = initLexerError(copyPosition(lexer->pos), NULL, lexer->filename, "Invalid numeric literal");
     return NULL;
   }
 
   // overflow / underflow 
   if (errno == ERANGE) {
     free(numStr);
+    *error = initSemanticError(copyPosition(lexer->pos), NULL, lexer->filename, "Number out of range");
     return NULL;
   }
 
   // trailing garbage
   if (*end != '\0') {
     free(numStr);
+    *error = initLexerError(copyPosition(lexer->pos), NULL, lexer->filename, "Trailing characters after number");
     return NULL;
   }
 
@@ -232,7 +238,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (_is_digit(lexer->currChar)) {
-      Token *token = makeNumberTokenLexer(lexer);
+      Token *token = makeNumberTokenLexer(lexer, error);
 
       if (!token) {
         _freeTokens(tokens, size);

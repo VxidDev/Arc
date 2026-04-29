@@ -63,11 +63,11 @@ ASTNode* factorParser(Parser* parser) {
       advanceParser(parser);
       return expr;
     } else {
+      freeAST(expr);
       return NULL;
     }
   }
 
-  // Optional: handle parentheses later
   return NULL;
 }
 
@@ -85,12 +85,17 @@ ASTNode* termParser(Parser* parser) {
     advanceParser(parser);
 
     ASTNode* right = factorParser(parser);
+
     if (!right) {
+      freeAST(left);
       return NULL;
     }
 
     left = (ASTNode*)initBinOpNode(left, opTok, right);
-    if (!left) return NULL;
+    if (!left) {
+      freeAST(right);
+      return NULL;
+    }
   }
 
   return left;
@@ -111,11 +116,15 @@ ASTNode* exprParser(Parser* parser) {
 
     ASTNode* right = termParser(parser);
     if (!right) {
+      freeAST(left);
       return NULL;
     }
 
     left = (ASTNode*)initBinOpNode(left, opTok, right);
-    if (!left) return NULL;
+    if (!left) {
+      freeAST(right);
+      return NULL;
+    }
   }
 
   return left;

@@ -63,6 +63,18 @@ Error *initSyntaxError(Position* start, Position* end, char *filename, char* det
   return initError(start, end, "Syntax Error", filename, details);
 }
 
+Error *initValueError(Position* start, Position* end, char *filename, char* details) {
+  return initError(start, end, "Value Error", filename, details);
+}
+
+Error *initLexerError(Position* start, Position* end, char *filename, char* details) {
+  return initError(start, end, "Lexer Error", filename, details);
+}
+
+Error *initSemanticError(Position* start, Position *end, char *filename, char* details) {
+  return initError(start, end, "Semantic Error", filename, details); 
+}
+
 char* errorAsString(const Error* error) {
   if (!error || !error->name || !error->details || !error->filename || !error->start)
     return NULL;

@@ -99,6 +99,15 @@ void run(char *text, Error **error, unsigned long *size) {
     printf("%s\n\n", ANSI_RESET);
   }
 
+  if (!ast) {
+    printf("%sArc: %sFailed to construct AST.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+    freeTokens(tokens, *size);
+    free(parser);
+    freeLexer(lexer);
+    
+    return;
+  }
+
   Number* result = visitNode(ast);
 
   if (!result) {
@@ -107,6 +116,8 @@ void run(char *text, Error **error, unsigned long *size) {
     freeTokens(tokens, *size);
     free(parser);
     freeLexer(lexer);
+
+    return;
   }
   
   if (result->base.type == OBJ_NUMBER_INT) {
@@ -186,6 +197,10 @@ int main(int argc, char **argv) {
     if (strcmp(userInput, "exit") == 0) {
       free(userInput);
       return 0;
+    } else if (strcmp(userInput, "clear") == 0) {
+      printf("\033[2J\033[H");
+      free(userInput);
+      continue;
     }
     
     Error *error = NULL;

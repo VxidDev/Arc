@@ -24,7 +24,11 @@ Number* visitBinOpNode(ASTNode* node) {
   Number *src = visitNode(binOper->leftNode);
   Number *dest = visitNode(binOper->rightNode);
   
-  if (!src || !dest) return NULL;
+  if (!src || !dest) {
+    if (src) free(src);
+    if (dest) free(dest);
+    return NULL;
+  } 
   
   Number* output;
 
