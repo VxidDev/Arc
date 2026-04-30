@@ -7,6 +7,7 @@
 #define TOK_MINUS "MINUS"
 #define TOK_MUL "MUL"
 #define TOK_DIV "DIV"
+#define TOK_POW "POW"
 #define TOK_LPAREN "LPAREN"
 #define TOK_RPAREN "RPAREN"
 

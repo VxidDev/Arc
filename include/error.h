@@ -3,6 +3,12 @@
 
 #include "position.h"
 
+typedef enum ErrType {
+  ERR_NONE,
+  ERR_DIV_BY_ZERO,
+  ERR_NULL
+} ErrType;
+
 typedef struct Error {
   char *name, *details, *filename;
   Position *start, *end;

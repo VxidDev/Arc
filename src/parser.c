@@ -36,21 +36,27 @@ Token* advanceParser(Parser* parser) {
 }
 
 ASTNode* exprParser(Parser* parser);
+ASTNode* termParser(Parser* parser);
+ASTNode* factorParser(Parser* parser);
 
-ASTNode* factorParser(Parser* parser) {
+ASTNode* atomParser(Parser* parser) {
   if (!parser || !parser->currentToken) return NULL;
-
+    
   Token* token = parser->currentToken;
 
-  if (strcmp(token->type, TOK_PLUS) == 0 || strcmp(token->type, TOK_MINUS) == 0) {
+  if (strcmp(token->type, TOK_PLUS) == 0 ||
+      strcmp(token->type, TOK_MINUS) == 0) {
+
     advanceParser(parser);
-    ASTNode* factor = factorParser(parser);
 
-    if (!factor) return NULL;
+    ASTNode* expr = atomParser(parser); 
 
-    ASTNode* unaryOpNode = (ASTNode*) initUnaryOpNode(token, factor);
-    return unaryOpNode;
-  } else if (strcmp(token->type, TOK_INT) == 0 || strcmp(token->type, TOK_FLOAT) == 0) {
+    if (!expr) return NULL;
+
+    return (ASTNode*)initUnaryOpNode(token, expr);
+  }
+
+  if (strcmp(token->type, TOK_INT) == 0 || strcmp(token->type, TOK_FLOAT) == 0) {
     advanceParser(parser);
     return (ASTNode*)initNumberNode(token);
   } else if (strcmp(token->type, TOK_LPAREN) == 0) {
@@ -69,6 +75,47 @@ ASTNode* factorParser(Parser* parser) {
   }
 
   return NULL;
+}
+
+ASTNode* powerParser(Parser* parser) {
+  if (!parser) return NULL;
+
+  ASTNode* left = atomParser(parser);
+  if (!left) return NULL;
+
+  if (parser->currentToken && strcmp(parser->currentToken->type, TOK_POW) == 0) {
+    Token* opTok = parser->currentToken;
+    advanceParser(parser);
+
+    ASTNode* right = powerParser(parser);
+
+    if (!right) {
+      freeAST(left);
+      return NULL;
+    }
+
+    return (ASTNode*)initBinOpNode(left, opTok, right);
+  }
+
+  return left;
+}
+
+ASTNode* factorParser(Parser* parser) {
+  if (!parser || !parser->currentToken) return NULL;
+
+  Token* token = parser->currentToken;
+
+  if (strcmp(token->type, TOK_PLUS) == 0 || strcmp(token->type, TOK_MINUS) == 0) {
+    advanceParser(parser);
+    ASTNode* factor = factorParser(parser);
+
+    if (!factor) return NULL;
+
+    ASTNode* unaryOpNode = (ASTNode*) initUnaryOpNode(token, factor);
+    return unaryOpNode; 
+  }
+
+  return powerParser(parser);
 }
 
 ASTNode* termParser(Parser* parser) {
@@ -137,7 +184,10 @@ ASTNode* parseParser(Parser* parser) {
 
   if (!res) return NULL;
 
-  if (parser->currentToken != NULL) return NULL;
+  if (parser->currentToken != NULL) {
+    freeAST(res);
+    return NULL;
+  }
 
   return res;
 }

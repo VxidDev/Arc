@@ -1,6 +1,7 @@
 #include "../../include/object.h"
 
 #include <stdlib.h>
+#include <math.h>
 
 static inline double toDouble(const Number* n) {
   return (n->base.type == OBJ_NUMBER_FLOAT)
@@ -43,62 +44,79 @@ Number *initFloat(double value) {
   return number;
 }
 
-Number* addNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return NULL;
+EvalResultNumber addNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
     double result = toDouble(src) + toDouble(dest);
-    return initFloat(result);
+    return (EvalResultNumber){initFloat(result), ERR_NONE};
   }
 
   long result = toLong(src) + toLong(dest);
-  return initInt(result);
+  return (EvalResultNumber){initInt(result), ERR_NONE};
 }
 
-Number* subNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return NULL;
+EvalResultNumber subNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
     double result = toDouble(src) - toDouble(dest);
-    return initFloat(result);
+    return (EvalResultNumber){initFloat(result), ERR_NONE};
   }
 
   long result = toLong(src) - toLong(dest);
-  return initInt(result);
+  return (EvalResultNumber){initInt(result), ERR_NONE};
 }
 
-Number* divNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return NULL;
+EvalResultNumber divNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
     double destVal = toDouble(dest);
-    double result = destVal == 0 ? -1 : toDouble(src) / destVal;
-    return initFloat(result);
+
+    if (!destVal) {
+      return (EvalResultNumber){NULL, ERR_DIV_BY_ZERO};
+    }
+
+    double result = toDouble(src) / destVal;
+    return (EvalResultNumber){initFloat(result), ERR_NONE};
   }
   
   long destVal = toLong(dest);
-  long result = destVal == 0 ? -1 : toLong(src) / destVal;
-  return initInt(result);
+
+  if (!destVal) {
+    return (EvalResultNumber){NULL, ERR_DIV_BY_ZERO};
+  }
+
+  long result = toLong(src) / destVal;
+  return (EvalResultNumber){initInt(result), ERR_NONE};
 }
 
-Number* mulNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return NULL;
+EvalResultNumber mulNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
     double result = toDouble(src) * toDouble(dest);
-    return initFloat(result);
+    return (EvalResultNumber){initFloat(result), ERR_NONE};
   }
 
   long result = toLong(src) * toLong(dest);
-  return initInt(result);
+  return (EvalResultNumber){initInt(result), ERR_NONE};
+}
+
+EvalResultNumber powNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+
+  double result = pow(toDouble(src), toDouble(dest));
+  return (EvalResultNumber){initFloat(result), ERR_NONE};
 }
 
 

@@ -6,10 +6,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-Number* visitNumberNode(ASTNode* node) {
+Number* visitNumberNode(ASTNode* node, char *filename, Error **err) {
+  if (!filename || !err) return NULL;
+
   NumberNode* numNode = (NumberNode*)node;
 
-  if (!numNode->token) return NULL;
+  if (!numNode->token) {
+    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+    return NULL;
+  }
   
   if (strcmp(numNode->token->type, TOK_FLOAT) == 0) {
     return initFloat(*(double*)numNode->token->value);
@@ -18,19 +23,22 @@ Number* visitNumberNode(ASTNode* node) {
   return initInt(*(long*)numNode->token->value);
 }
 
-Number* visitBinOpNode(ASTNode* node) {
+Number* visitBinOpNode(ASTNode* node, char *filename, Error **err) {
+  if (!filename || !err) return NULL;
+
   BinOpNode* binOper = (BinOpNode*)node;
 
-  Number *src = visitNode(binOper->leftNode);
-  Number *dest = visitNode(binOper->rightNode);
+  Number *src = visitNode(binOper->leftNode, filename, err);
+  Number *dest = visitNode(binOper->rightNode, filename, err);
   
   if (!src || !dest) {
+    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     if (src) free(src);
     if (dest) free(dest);
     return NULL;
   } 
   
-  Number* output;
+  EvalResultNumber output;
 
   if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) {
     output = addNumber(dest, src);
@@ -40,38 +48,62 @@ Number* visitBinOpNode(ASTNode* node) {
     output = mulNumber(dest, src);
   } else if (strcmp(binOper->operTok->type, TOK_DIV) == 0) {
     output = divNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_POW) == 0) {
+    output = powNumber(dest, src);
+  }
+
+  if (output.err) {
+    if (output.err == ERR_NULL) {
+      if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+    } else if (output.err == ERR_DIV_BY_ZERO) {
+      if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Division by zero");
+    } else { if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Unknown error."); }
+
+    free(src);
+    free(dest);
+
+    return NULL;
   }
 
   free(dest);
   free(src);
 
-  return output;
+  return output.num;
 }
 
-Number* visitUnaryOpNode(ASTNode* node) {
+Number* visitUnaryOpNode(ASTNode* node, char *filename, Error **err) {
   UnaryOpNode* unaryOper = (UnaryOpNode*)node;
 
-  Number* number = visitNode(unaryOper->node);
+  Number* number = visitNode(unaryOper->node, filename, err);
 
-  if (!number) return NULL;
+  if (!number) {
+    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected Number* result, received NULL.");
+    return NULL;
+  }
   
-  Number* output = NULL;
+  EvalResultNumber output = {0};
 
   if (strcmp(unaryOper->operTok->type, TOK_MINUS) == 0) {
-    output = mulNumber(number, initInt(-1));
+    Number* negOne = initInt(-1);
+    output = mulNumber(number, negOne);
     free(number);
+    free(negOne);
+  } else {
+    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename,"<empty>"), NULL, filename, "Unknown unary operator");
+    free(number);
+    return NULL;
   }
 
-  return output;
+  return output.num;
 }
 
-Number* visitNode(ASTNode* node) {
+Number* visitNode(ASTNode* node, char *filename, Error** err) {
   if (!node) return NULL;
 
   switch (node->type) {
-    case NODE_NUMBER: return visitNumberNode(node); 
-    case NODE_BINOP: return visitBinOpNode(node);
-    case NODE_UNARYOP: return visitUnaryOpNode(node);
+    case NODE_NUMBER: return visitNumberNode(node, filename, err); 
+    case NODE_BINOP: return visitBinOpNode(node, filename, err);
+    case NODE_UNARYOP: return visitUnaryOpNode(node, filename, err);
     default: return NULL;
   }
 }

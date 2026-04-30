@@ -13,8 +13,8 @@
 
 void advanceLexer(Lexer *lexer) {
   if (!lexer) return;
-  
-  lexer->currChar = (++lexer->pos->index < lexer->textLen) ? lexer->text[lexer->pos->index] : '\0';
+  advancePosition(lexer->pos, lexer->text[lexer->pos->index]); 
+  lexer->currChar = (lexer->pos->index < lexer->textLen) ? lexer->text[lexer->pos->index] : '\0';
 }
 
 Lexer* initLexer(char *filename, char *text) {
@@ -58,27 +58,15 @@ Lexer* initLexer(char *filename, char *text) {
   return lexer;
 }
 
-void _freeTokens(Token** tokens, unsigned long size) {
-  if (!tokens) return;
+bool _resizeTokensList(Token ***tokens, unsigned long *capacity) {
+  unsigned long newCap = (*capacity) * 2;
 
-  for (unsigned long i = 0; i < size; i++) {
-    freeToken(tokens[i]);
-  }
-
-  free(tokens);
-}
-
-bool _resizeTokensList(Token ***tokens, unsigned long *capacity, unsigned long size) {
-  *capacity *= 2;
-
-  Token **tmp = realloc(*tokens, (*capacity) * sizeof(Token*));
-
-  if (!tmp) {
-    _freeTokens(*tokens, size);
-    return false;
-  }
+  Token **tmp = realloc(*tokens, newCap * sizeof(Token*));
+  if (!tmp) return false;
 
   *tokens = tmp;
+  *capacity = newCap;
+
   return true;
 }
 
@@ -92,7 +80,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
   unsigned long size = 0;
   unsigned long capacity = 32;
 
-  char *numStr = malloc(capacity * sizeof(char));
+  char *numStr = malloc(capacity);
 
   if (!numStr) return NULL;
 
@@ -223,12 +211,34 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
   return token;
 }
 
+bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned long *capacity, char *tokenType) {
+  if (*size >= *capacity) {
+    if (!_resizeTokensList(tokens, capacity)) {
+      freeTokens(*tokens, *size);
+      return false;
+    }
+  }
+
+  Token *token = initToken(tokenType, NULL, false, copyPosition(lexer->pos), NULL);
+
+  if (!token) {
+    freeTokens(*tokens, *size);
+    return false;
+  }
+
+  (*tokens)[*size] = token;
+  (*size)++;
+  advanceLexer(lexer);
+
+  return true;
+}
+
 // Will get optimized / shortened later.
 Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   unsigned long size = 0;
   unsigned long capacity = 16;
 
-  Token** tokens = malloc(sizeof(Token*) * (capacity + 1));
+  Token** tokens = malloc(sizeof(Token*) * capacity);
   if (!tokens) return NULL;
   
   while (lexer->currChar != 0) {
@@ -241,13 +251,13 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       Token *token = makeNumberTokenLexer(lexer, error);
 
       if (!token) {
-        _freeTokens(tokens, size);
+        freeTokens(tokens, size);
         return NULL;
       }
 
       if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
+        if (!_resizeTokensList(&tokens, &capacity)) {
+          freeTokens(tokens, size);
           return NULL;
         }
       }
@@ -258,128 +268,37 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     } 
 
     if (lexer->currChar == '+') {
-      Token *token = initToken(TOK_PLUS, NULL, false, copyPosition(lexer->pos), NULL);
-
-      if (!token) {
-        _freeTokens(tokens, size);
-        return NULL;
-      }
-      
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-      advanceLexer(lexer);
-
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_PLUS)) return NULL;
       continue;
     }
 
     if (lexer->currChar == '-') {
-      Token *token = initToken(TOK_MINUS, NULL, false, copyPosition(lexer->pos), NULL);
-
-      if (!token) {
-        _freeTokens(tokens, size);
-        return NULL;
-      }
-      
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
-          return NULL;
-        }
-      } 
-
-      tokens[size++] = token;
-      advanceLexer(lexer);
-      
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MINUS)) return NULL; 
       continue;
     }
 
     if (lexer->currChar == '*') {
-      Token *token = initToken(TOK_MUL, NULL, false, copyPosition(lexer->pos), NULL);
-
-      if (!token) {
-        _freeTokens(tokens, size);
-        return NULL;
-      }
-      
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-      advanceLexer(lexer);
-
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MUL)) return NULL;
       continue;
     }
 
     if (lexer->currChar == '/') {
-      Token *token = initToken(TOK_DIV, NULL, false, copyPosition(lexer->pos), NULL);
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DIV)) return NULL;
+      continue;
+    }
 
-      if (!token) {
-        _freeTokens(tokens, size);
-        return NULL;
-      }
-      
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-      advanceLexer(lexer);
-
+    if (lexer->currChar == '^') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_POW)) return NULL;
       continue;
     }
 
     if (lexer->currChar == '(') {
-      Token *token = initToken(TOK_LPAREN, NULL, false, copyPosition(lexer->pos), NULL);
-
-      if (!token) {
-        _freeTokens(tokens, size);
-        return NULL;
-      }
-      
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-      advanceLexer(lexer);
-
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LPAREN)) return NULL;
       continue;
     }
 
     if (lexer->currChar == ')') {
-      Token *token = initToken(TOK_RPAREN, NULL, false, copyPosition(lexer->pos), NULL);
-
-      if (!token) {
-        _freeTokens(tokens, size);
-        return NULL;
-      }
-      
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity, size)) {
-          _freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-      advanceLexer(lexer);
-
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RPAREN)) return NULL;
       continue;
     }
 
@@ -394,7 +313,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       *error = initIllegalCharError(start, end, lexer->filename, details);
     }
 
-    _freeTokens(tokens, size);
+    freeTokens(tokens, size);
     return NULL;
   }
   

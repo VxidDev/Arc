@@ -72,7 +72,10 @@ void run(char *text, Error **error, unsigned long *size) {
   
   Token **tokens = makeTokensLexer(lexer, error, size);
   
-  if (!tokens) return;
+  if (!tokens) {
+    freeLexer(lexer);
+    return;
+  }
   
   if (_DEBUG) {
     printf("\n%sTokens: %s", ANSI_CYAN_FG, ANSI_BRIGHT_BLUE_FG);
@@ -101,6 +104,15 @@ void run(char *text, Error **error, unsigned long *size) {
 
   if (!ast) {
     printf("%sArc: %sFailed to construct AST.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+
+    if (*error) {
+      char *errStr = errorAsString(*error);
+      printf("%s%s%s\n", ANSI_BRIGHT_RED_FG, errStr, ANSI_RESET);
+      free(errStr);
+
+      freeError(*error);
+    }
+
     freeTokens(tokens, *size);
     free(parser);
     freeLexer(lexer);
@@ -108,10 +120,9 @@ void run(char *text, Error **error, unsigned long *size) {
     return;
   }
 
-  Number* result = visitNode(ast);
+  Number* result = visitNode(ast, "<stdin>", error);
 
   if (!result) {
-    printf("%sArc: %sFailed to calculate result.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
     freeAST(ast);
     freeTokens(tokens, *size);
     free(parser);

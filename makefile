@@ -12,7 +12,7 @@ C_SRC = $(shell find $(SRC_DIR) -name '*.c')
 OBJ = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
 
 LDFLAGS =
-LDLIBS =
+LDLIBS = -lm
 
 .PHONY: all install uninstall clean
 

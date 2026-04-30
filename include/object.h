@@ -1,6 +1,8 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include "error.h"
+
 typedef enum ObjType {
   OBJ_NUMBER_INT,
   OBJ_NUMBER_FLOAT,
@@ -20,12 +22,18 @@ typedef struct Number {
 
 } Number;
 
+typedef struct EvalResultNumber {
+  Number* num;
+  ErrType err;
+} EvalResultNumber;
+
 Number* initInt(long value);
 Number* initFloat(double value);
 
-Number* addNumber(const Number* dest, const Number* src);
-Number* subNumber(const Number* dest, const Number* src);
-Number* mulNumber(const Number* dest, const Number* src);
-Number* divNumber(const Number* dest, const Number* src);
+EvalResultNumber addNumber(const Number* dest, const Number* src);
+EvalResultNumber subNumber(const Number* dest, const Number* src);
+EvalResultNumber mulNumber(const Number* dest, const Number* src);
+EvalResultNumber divNumber(const Number* dest, const Number* src);
+EvalResultNumber powNumber(const Number* dest, const Number* src);
 
 #endif // OBJECT_H
