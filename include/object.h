@@ -29,6 +29,7 @@ typedef struct EvalResultNumber {
 
 Number* initInt(long value);
 Number* initFloat(double value);
+Number *copyNumber(Number *num);
 
 EvalResultNumber addNumber(const Number* dest, const Number* src);
 EvalResultNumber subNumber(const Number* dest, const Number* src);

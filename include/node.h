@@ -6,7 +6,9 @@
 typedef enum {
   NODE_NUMBER,
   NODE_BINOP,
-  NODE_UNARYOP
+  NODE_UNARYOP,
+  NODE_VARASSIGN,
+  NODE_VARACCESS
 } NodeType;
 
 typedef struct ASTNode {
@@ -17,6 +19,17 @@ typedef struct NumberNode {
   ASTNode base;
   Token* token;
 } NumberNode;
+
+typedef struct VarAccessNode {
+  ASTNode base;
+  Token *token;
+} VarAccessNode;
+
+typedef struct VarAssignNode {
+  ASTNode base;
+  char *identifier;
+  ASTNode *value;
+} VarAssignNode;
 
 typedef struct BinOpNode {
   ASTNode base;
@@ -36,6 +49,8 @@ typedef struct UnaryOpNode {
 NumberNode* initNumberNode(Token* token);
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode);
 UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node);
+VarAccessNode* initVarAccessNode(Token* token);
+VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
 
 void freeBinOpNode(BinOpNode* node);
 void freeNumberNode(NumberNode* node);

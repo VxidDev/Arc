@@ -1,12 +1,13 @@
 #include "../include/node.h"
 #include "../include/interpretator.h"
 #include "../include/object.h"
+#include "../include/symbol-table.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-Number* visitNumberNode(ASTNode* node, char *filename, Error **err) {
+Number* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
   if (!filename || !err) return NULL;
 
   NumberNode* numNode = (NumberNode*)node;
@@ -23,13 +24,13 @@ Number* visitNumberNode(ASTNode* node, char *filename, Error **err) {
   return initInt(*(long*)numNode->token->value);
 }
 
-Number* visitBinOpNode(ASTNode* node, char *filename, Error **err) {
+Number* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
   if (!filename || !err) return NULL;
 
   BinOpNode* binOper = (BinOpNode*)node;
 
-  Number *src = visitNode(binOper->leftNode, filename, err);
-  Number *dest = visitNode(binOper->rightNode, filename, err);
+  Number *src = visitNode(binOper->leftNode, filename, err, variables);
+  Number *dest = visitNode(binOper->rightNode, filename, err, variables);
   
   if (!src || !dest) {
     if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
@@ -71,10 +72,10 @@ Number* visitBinOpNode(ASTNode* node, char *filename, Error **err) {
   return output.num;
 }
 
-Number* visitUnaryOpNode(ASTNode* node, char *filename, Error **err) {
+Number* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
   UnaryOpNode* unaryOper = (UnaryOpNode*)node;
 
-  Number* number = visitNode(unaryOper->node, filename, err);
+  Number* number = visitNode(unaryOper->node, filename, err, variables);
 
   if (!number) {
     if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected Number* result, received NULL.");
@@ -97,13 +98,43 @@ Number* visitUnaryOpNode(ASTNode* node, char *filename, Error **err) {
   return output.num;
 }
 
-Number* visitNode(ASTNode* node, char *filename, Error** err) {
+Number* visitVarAccessNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
+  if (!node) return NULL;
+  
+  VarAccessNode* va = (VarAccessNode*)node;
+  char *varName = (char*)va->token->value;
+
+  if (!varName) return NULL;
+  
+  Number* stored = (Number*)getTable(variables, varName);
+  if (!stored) return NULL;
+
+  return copyNumber(stored); 
+}
+
+Number* visitVarAssignNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node) return NULL;
 
+  VarAssignNode* va = (VarAssignNode*)node;
+
+  Number* value = visitNode(va->value, filename, err, variables);
+
+  if (!value) return NULL;
+  
+  setTable(variables, va->identifier, value);
+
+  return value;
+}
+
+Number* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
+  if (!node || !filename || !err) return NULL;
+
   switch (node->type) {
-    case NODE_NUMBER: return visitNumberNode(node, filename, err); 
-    case NODE_BINOP: return visitBinOpNode(node, filename, err);
-    case NODE_UNARYOP: return visitUnaryOpNode(node, filename, err);
+    case NODE_NUMBER: return visitNumberNode(node, filename, err, variables); 
+    case NODE_BINOP: return visitBinOpNode(node, filename, err, variables);
+    case NODE_UNARYOP: return visitUnaryOpNode(node, filename, err, variables);
+    case NODE_VARACCESS: return visitVarAccessNode(node, filename, err, variables);
+    case NODE_VARASSIGN: return visitVarAssignNode(node, filename, err, variables);
     default: return NULL;
   }
 }

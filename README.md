@@ -1,27 +1,28 @@
 # Arc
 
-Arc is a small programming language project written in C. It focuses on building a clean and reliable frontend pipeline, along with a simple interpreter for evaluating expressions.
+Arc is a small programming language project written in C. It focuses on building a clean and reliable frontend pipeline, along with a simple interpreter for evaluating expressions and basic variable assignments.
 
 ---
 
 ## Current Features
 
-* Interactive REPL (`src/repl`)
-* Lexer for arithmetic expressions
+* Interactive REPL (`src/repl`) with `clear` and `exit` commands
+* Lexer for arithmetic expressions and identifiers
 * Parser with AST generation
 * Expression evaluation (interpreter)
 * Integer and floating-point number support
+* Variables and identifiers (using `VAR` keyword)
 * Basic arithmetic operators:
-
-  * `+`, `-`, `*`, `/`, '^'
+  * `+`, `-`, `*`, `/`, `^`
   * parentheses `(` `)`
+* Assignment operator `=`
 * Token system (`include/token.h`)
 * Structured error handling with position tracking:
-
   * file name
   * line number
   * column number
 * Debug mode for inspecting tokens and AST
+* Configurable floating-point precision
 * Focus on memory-safe design
 
 ---
@@ -31,10 +32,14 @@ Arc is a small programming language project written in C. It focuses on building
 ### Normal Mode
 
 ```text
-Arc > 3-3
-0
-Arc > 3*3*3
-27
+Arc > VAR x = 5
+5
+Arc > x * 10
+50
+Arc > VAR y = (x + 2) ^ 2
+49
+Arc > y / 7
+7
 ```
 
 ---
@@ -59,12 +64,12 @@ AST tree: (1 MINUS 1)
 
 0
 
-Arc > 3*3*3
+Arc > VAR a = 10
 
-Tokens: INT MUL INT MUL INT 
-AST tree: ((3 MUL 3) MUL 3)
+Tokens: KEYWORD IDENTIFIER EQ INT 
+AST tree: [a = 10]
 
-27
+10
 ```
 
 ---
@@ -85,12 +90,12 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 
 * No external dependencies
 * Clear separation of components:
-
   * lexer
   * tokens
   * parser
   * AST nodes
   * interpreter
+  * symbol table (for variables)
   * error handling
   * position tracking
   * REPL
@@ -115,6 +120,7 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 │   ├── position.h
 │   ├── repl/
 │   │   └── input.h
+│   ├── symbol-table.h
 │   ├── token.h
 │   └── utils.h
 ├── src
@@ -129,6 +135,7 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 │   ├── repl/
 │   │   ├── input.c
 │   │   └── main.c
+│   ├── symbol-table.c
 │   ├── token.c
 │   └── utils.c
 ├── makefile
@@ -144,37 +151,32 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 make
 ```
 
-Run:
+### Run
 
 ```bash
 ./arc
 ```
 
-Debug mode:
+### Options
 
-```bash
-./arc -d
-# or
-./arc --debug
-```
+* **Debug mode**:
+  ```bash
+  ./arc -d
+  # or
+  ./arc --debug
+  ```
 
-To install:
+* **Float precision**:
+  ```bash
+  ./arc -p 10
+  # or
+  ./arc --float-precision 10
+  ```
+
+### Install
 
 ```bash
 sudo make install
-```
-
-Run:
-```
-arc 
-# or 
-arc -d 
-# or 
-arc --debug 
-```
-```
-```
-```
 ```
 
 ---
@@ -195,13 +197,13 @@ valgrind --leak-check=full --show-leak-kinds=all ./arc
 
 ## Roadmap
 
-* Lexer (done)
-* Token system (done)
-* REPL (done)
-* Error reporting with position tracking (done)
-* Parser (AST generation) (done)
-* Expression evaluation (done)
-* Variables and identifiers
+* [x] Lexer
+* [x] Token system
+* [x] REPL
+* [x] Error reporting with position tracking
+* [x] Parser (AST generation)
+* [x] Expression evaluation
+* [x] Variables and identifiers
 * Scoped environments
 * Functions
 * Basic runtime system

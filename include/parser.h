@@ -3,6 +3,7 @@
 
 #include "token.h"
 #include "node.h"
+#include "error.h"
 
 typedef struct Parser {
   Token **tokens;
@@ -10,9 +11,11 @@ typedef struct Parser {
 
   long tokenIndex;
   unsigned long tokenAmount;
+
+  Error **error;
 } Parser;
 
-Parser* initParser(Token **tokens, const unsigned long tokenAmount);
+Parser* initParser(Token **tokens, const unsigned long tokenAmount, Error **error);
 Token* advanceParser(Parser* parser);
 
 ASTNode* parseParser(Parser* parser);

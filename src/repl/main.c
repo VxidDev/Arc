@@ -52,17 +52,33 @@ void printAST(ASTNode* node) {
     case NODE_UNARYOP: {
       UnaryOpNode* u = (UnaryOpNode*)node;
 
-      putchar('(');
-      printf("%s%s%s ", ANSI_BRIGHT_BLACK_FG, u->operTok->type, ANSI_RESET);
+      printf("(%s%s%s ", ANSI_BRIGHT_BLACK_FG, u->operTok->type, ANSI_RESET);
       printAST(u->node);
       putchar(')');
 
       break;
     }
+
+    case NODE_VARASSIGN: {
+      VarAssignNode* va = (VarAssignNode*)node;
+
+      printf("%s[%s = ", ANSI_BRIGHT_MAGENTA_FG, va->identifier);
+
+      printAST(va->value);
+
+      printf("]%s", ANSI_RESET);
+      break;
+    } 
+
+    case NODE_VARACCESS: {
+      VarAccessNode* va = (VarAccessNode*)node;
+      printf("%s[VAR-ACCESS:%s]%s", ANSI_BRIGHT_MAGENTA_FG, (char*)va->token->value, ANSI_RESET);
+      break;
+    }
   }
 }
 
-void run(char *text, Error **error, unsigned long *size) {
+void run(char *text, Error **error, unsigned long *size, SymbolTable* variables) {
   Lexer *lexer = initLexer("<stdin>", text);
 
   if (!lexer) {
@@ -87,7 +103,7 @@ void run(char *text, Error **error, unsigned long *size) {
     printf("%s\n", ANSI_RESET);
   }
   
-  Parser* parser = initParser(tokens, *size);
+  Parser* parser = initParser(tokens, *size, error);
 
   if (!parser) {
     freeLexer(lexer);
@@ -119,8 +135,8 @@ void run(char *text, Error **error, unsigned long *size) {
     
     return;
   }
-
-  Number* result = visitNode(ast, "<stdin>", error);
+  
+  Number* result = visitNode(ast, "<stdin>", error, variables);
 
   if (!result) {
     freeAST(ast);
@@ -168,7 +184,7 @@ void parseArguments(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
       _DEBUG = true;
-      break;
+      continue;
     } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--float-precision") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %sprecision cannot be empty.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
@@ -194,6 +210,7 @@ int main(int argc, char **argv) {
   parseArguments(argc, argv);
 
   char *userInput = NULL;
+  SymbolTable *variables = createTable(1024, NULL);
 
   char prompt[] = "\033[36mArc > \033[0m";
 
@@ -207,6 +224,7 @@ int main(int argc, char **argv) {
 
     if (strcmp(userInput, "exit") == 0) {
       free(userInput);
+      freeTable(variables);
       return 0;
     } else if (strcmp(userInput, "clear") == 0) {
       printf("\033[2J\033[H");
@@ -217,7 +235,7 @@ int main(int argc, char **argv) {
     Error *error = NULL;
     
     unsigned long size = 0; 
-    run(userInput, &error, &size);
+    run(userInput, &error, &size, variables);
      
     if (error) {
       char *errStr = errorAsString(error);

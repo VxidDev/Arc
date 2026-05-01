@@ -13,8 +13,14 @@
 
 void advanceLexer(Lexer *lexer) {
   if (!lexer) return;
-  advancePosition(lexer->pos, lexer->text[lexer->pos->index]); 
-  lexer->currChar = (lexer->pos->index < lexer->textLen) ? lexer->text[lexer->pos->index] : '\0';
+
+  advancePosition(lexer->pos, lexer->currChar);
+
+  if (lexer->pos->index < lexer->textLen) {
+    lexer->currChar = lexer->text[lexer->pos->index];
+  } else {
+    lexer->currChar = '\0';
+  }
 }
 
 Lexer* initLexer(char *filename, char *text) {
@@ -72,6 +78,22 @@ bool _resizeTokensList(Token ***tokens, unsigned long *capacity) {
 
 bool _is_digit(char c) {
   return (c >= '0' && c <= '9');
+}
+
+bool _is_letter(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool _is_alnum(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
+
+bool _is_keyword(char *s) {
+  for (unsigned int i = 0; KEYWORDS[i]; i++) {
+    if (strcmp(s, KEYWORDS[i]) == 0) return true;
+  }
+
+  return false;
 }
 
 Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
@@ -211,6 +233,37 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
   return token;
 }
 
+Token* makeIdentifierLexer(Lexer *lexer, Error **error) {
+  unsigned long size = 0;
+  unsigned long capacity = 32;
+
+  char *idStr = malloc(capacity);
+
+  if (!idStr) return NULL;
+
+  while (lexer->currChar && (_is_alnum(lexer->currChar) || lexer->currChar == '_')) {
+    if (size >= capacity) {
+      capacity *= 2;
+
+      void* tmp = realloc(idStr, capacity);
+
+      if (!tmp) {
+        free(idStr);
+        return NULL;
+      }
+
+      idStr = tmp; 
+    }
+    
+    idStr[size++] = lexer->currChar;
+    advanceLexer(lexer);
+  }
+
+  idStr[size] = '\0';
+
+  return initToken(_is_keyword(idStr) ? TOK_KEYWORD : TOK_IDENTIFIER, idStr, true, copyPosition(lexer->pos), NULL);
+}
+
 bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned long *capacity, char *tokenType) {
   if (*size >= *capacity) {
     if (!_resizeTokensList(tokens, capacity)) {
@@ -267,6 +320,26 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       continue;
     } 
 
+    if (_is_letter(lexer->currChar)) {
+      Token *token = makeIdentifierLexer(lexer, error);
+
+      if (!token) {
+        freeTokens(tokens, size);
+        return NULL;
+      }
+
+      if (size >= capacity) {
+        if (!_resizeTokensList(&tokens, &capacity)) {
+          freeTokens(tokens, size);
+          return NULL;
+        }
+      }
+
+      tokens[size++] = token;
+
+      continue; 
+    }
+
     if (lexer->currChar == '+') {
       if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_PLUS)) return NULL;
       continue;
@@ -289,6 +362,11 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
     if (lexer->currChar == '^') {
       if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_POW)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == '=') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_EQ)) return NULL;
       continue;
     }
 

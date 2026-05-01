@@ -1,5 +1,6 @@
 #include "../include/node.h"
 #include "../include/token.h"
+#include "../include/utils.h"
 
 #include <stdlib.h>
 
@@ -37,13 +38,60 @@ UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node) {
 
   UnaryOpNode* unaryNode = malloc(sizeof(UnaryOpNode));
 
-  if (!node) return NULL;
+  if (!unaryNode) return NULL;
   
   unaryNode->base.type = NODE_UNARYOP;
   unaryNode->operTok = operTok;
   unaryNode->node = node;
 
   return unaryNode;
+}
+
+VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
+  if (!identifier || !value) return NULL;
+
+  VarAssignNode* varAssignNode = malloc(sizeof(VarAssignNode));
+
+  if (!varAssignNode) return NULL;
+
+  varAssignNode->identifier = stringDup(identifier);
+  
+  if (!varAssignNode->identifier) {
+    free(varAssignNode);
+    return NULL;
+  }
+  
+  varAssignNode->base.type = NODE_VARASSIGN;
+  varAssignNode->value = value;
+
+  return varAssignNode;
+}
+
+VarAccessNode* initVarAccessNode(Token* token) {
+  if (!token) return NULL;
+
+  VarAccessNode* node = malloc(sizeof(VarAccessNode));
+
+  if (!node) return NULL;
+  
+  node->base.type = NODE_VARACCESS;
+  node->token = token;
+  return node;
+}
+
+void freeVarAssignNode(VarAssignNode* node) {
+  if (!node) return;
+
+  if (node->identifier) free(node->identifier);
+  if (node->value) freeAST(node->value);
+
+  free(node);
+}
+
+void freeVarAccessNode(VarAccessNode* node) {
+  if (!node) return;
+
+  free(node);
 }
 
 void freeNumberNode(NumberNode *node) {
@@ -82,6 +130,14 @@ void freeAST(ASTNode *node) {
 
     case NODE_UNARYOP:
       freeUnaryOpNode((UnaryOpNode*)node);
+      break;
+
+    case NODE_VARASSIGN:
+      freeVarAssignNode((VarAssignNode*)node);
+      break;
+
+    case NODE_VARACCESS:
+      freeVarAccessNode((VarAccessNode*)node);
       break;
   }
 }

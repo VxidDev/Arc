@@ -10,6 +10,11 @@
 #define TOK_POW "POW"
 #define TOK_LPAREN "LPAREN"
 #define TOK_RPAREN "RPAREN"
+#define TOK_EQ "EQ"
+#define TOK_IDENTIFIER "IDENTIFIER"
+#define TOK_KEYWORD "KEYWORD"
+
+extern const char *KEYWORDS[];
 
 #include "position.h"
 

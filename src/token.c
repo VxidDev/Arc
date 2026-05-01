@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+const char *KEYWORDS[] = {
+  "VAR", NULL
+};
+
 Token* initToken(char *type, void* value, bool needsToBeFreed, Position* start, Position* end) {
   if (!type) return NULL;
 

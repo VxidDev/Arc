@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-Parser* initParser(Token** tokens, const unsigned long tokenAmount) {
-  if (!tokens) return NULL;
+Parser* initParser(Token** tokens, const unsigned long tokenAmount, Error **error) {
+  if (!tokens || !error) return NULL;
 
   Parser* parser = malloc(sizeof(Parser));
 
@@ -15,6 +15,8 @@ Parser* initParser(Token** tokens, const unsigned long tokenAmount) {
   parser->tokenAmount = tokenAmount;
   parser->tokenIndex = -1;
   parser->currentToken = NULL;
+
+  parser->error = error;
 
   advanceParser(parser);
 
@@ -59,6 +61,9 @@ ASTNode* atomParser(Parser* parser) {
   if (strcmp(token->type, TOK_INT) == 0 || strcmp(token->type, TOK_FLOAT) == 0) {
     advanceParser(parser);
     return (ASTNode*)initNumberNode(token);
+  } else if (strcmp(token->type, TOK_IDENTIFIER) == 0) {
+    advanceParser(parser);
+    return (ASTNode*)initVarAccessNode(token);
   } else if (strcmp(token->type, TOK_LPAREN) == 0) {
     advanceParser(parser);
 
@@ -150,6 +155,26 @@ ASTNode* termParser(Parser* parser) {
 
 ASTNode* exprParser(Parser* parser) {
   if (!parser) return NULL;
+
+  if (strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "VAR") == 0) {
+    advanceParser(parser);
+
+    if (strcmp(parser->currentToken->type, TOK_IDENTIFIER) != 0) return NULL;
+
+    char *varName = (char*)parser->currentToken->value;
+
+    advanceParser(parser);
+
+    if (strcmp(parser->currentToken->type, TOK_EQ) != 0) return NULL;
+
+    advanceParser(parser);
+
+    ASTNode* expr = exprParser(parser);
+
+    if (!expr) return NULL;
+
+    return (ASTNode*)initVarAssignNode(varName, expr);
+  }
 
   ASTNode* left = termParser(parser);
   if (!left) return NULL;

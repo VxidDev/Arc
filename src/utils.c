@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-char *stringDup(char *s) {
+char *stringDup(const char *s) {
   unsigned long len = strlen(s) + 1;
   char *sDup = malloc(len * sizeof(char));
   

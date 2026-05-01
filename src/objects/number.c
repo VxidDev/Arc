@@ -44,6 +44,14 @@ Number *initFloat(double value) {
   return number;
 }
 
+Number *copyNumber(Number *num) {
+  if (!num) return NULL;
+
+  if (num->base.type == OBJ_NUMBER_INT) return initInt(num->as.i);
+  
+  return initFloat(num->as.f);
+}
+
 EvalResultNumber addNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
 
