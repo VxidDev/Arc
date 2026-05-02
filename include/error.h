@@ -10,7 +10,7 @@ typedef enum ErrType {
 } ErrType;
 
 typedef struct Error {
-  char *name, *details, *filename;
+  char *name, *details, *filename, *filetext;
   Position *start, *end;
 } Error;
 
@@ -20,6 +20,7 @@ Error* initSyntaxError(Position* start, Position* end, char *filename, char *det
 Error* initValueError(Position* start, Position* end, char *filename, char *details);
 Error* initLexerError(Position* start, Position* end, char *filename, char *details);
 Error* initSemanticError(Position* start, Position* end, char *filename, char *details);
+Error* initNameError(Position* start, Position* end, char *filename, char *details);
 
 char *errorAsString(const Error *error);
 

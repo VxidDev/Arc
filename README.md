@@ -78,8 +78,11 @@ AST tree: [a = 10]
 
 ```text
 Arc > s
-Illegal Character: 's'
-File <stdin>, line 1, column 0
+Name Error: Undefined variable "s"
+File <stdin>, line 1, column 1
+
+s
+^
 ```
 
 ---

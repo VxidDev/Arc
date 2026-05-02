@@ -48,7 +48,7 @@ Error* initError(Position* start, Position* end, char *name, char *filename, cha
     free(error);
     return NULL;
   }
-
+ 
   error->start = start;
   error->end = end;
 
@@ -75,62 +75,90 @@ Error *initSemanticError(Position* start, Position *end, char *filename, char* d
   return initError(start, end, "Semantic Error", filename, details); 
 }
 
+Error *initNameError(Position* start, Position *end, char *filename, char* details) {
+  return initError(start, end, "Name Error", filename, details);
+}
+
 char* errorAsString(const Error* error) {
-  if (!error || !error->name || !error->details || !error->filename || !error->start)
+  if (!error || !error->name || !error->details || !error->filename || !error->start || !error->end)
     return NULL;
 
-  unsigned long nameLen = strlen(error->name);
-  unsigned long detailsLen = strlen(error->details);
-  unsigned long fileLen = strlen(error->filename);
+  const char *text = error->start->filetext;
+  unsigned long startIdx = error->start->index;
 
-  char lineBuf[32];
-  snprintf(lineBuf, sizeof(lineBuf), "%lu", error->start->line + 1);
-  unsigned long lineLen = strlen(lineBuf);
+  unsigned long lineStart = startIdx;
+  while (lineStart > 0 && text[lineStart - 1] != '\n')
+    lineStart--;
 
-  char colBuf[32];
-  snprintf(colBuf, sizeof(colBuf), "%lu", error->start->column + 1);
-  unsigned long colLen = strlen(colBuf);
+  unsigned long lineEnd = startIdx;
+  while (text[lineEnd] && text[lineEnd] != '\n')
+    lineEnd++;
 
-  const char *prefix1 = ": ";
-  const char *prefix2 = "\nFile ";
-  const char *prefix3 = ", line ";
-  const char *prefix4 = ", column ";
+  unsigned long lineLen = lineEnd - lineStart;
 
-  unsigned long total = nameLen + strlen(prefix1) + detailsLen + strlen(prefix2) + fileLen + strlen(prefix3) + lineLen + strlen(prefix4) + colLen + 1;
+  char *lineStr = malloc(lineLen + 1);
+  if (!lineStr) return NULL;
 
-  char *s = malloc(total);
-  if (!s) return NULL;
+  memcpy(lineStr, text + lineStart, lineLen);
+  lineStr[lineLen] = '\0';
 
-  char *p = s;
+  unsigned long startCol = error->start->column;
+  unsigned long endCol = error->end->column;
 
-  memcpy(p, error->name, nameLen);
-  p += nameLen;
+  if (endCol < startCol) endCol = startCol;
 
-  memcpy(p, prefix1, strlen(prefix1));
-  p += strlen(prefix1);
+  unsigned long underlineLen = endCol;
+  char *underline = malloc(underlineLen + 1);
+  if (!underline) {
+    free(lineStr);
+    return NULL;
+  }
 
-  memcpy(p, error->details, detailsLen);
-  p += detailsLen;
+  for (unsigned long i = 0; i < underlineLen; i++) {
+    underline[i] = (i >= startCol && i <= endCol) ? '^' : ' ';
+  }
 
-  memcpy(p, prefix2, strlen(prefix2));
-  p += strlen(prefix2);
+  underline[underlineLen] = '\0';
 
-  memcpy(p, error->filename, fileLen);
-  p += fileLen;
+  int needed = snprintf(
+    NULL, 0,
+    "%s: %s\n"
+    "File %s, line %lu, column %lu\n\n"
+    "%s\n"
+    "%s\n",
+    error->name,
+    error->details,
+    error->filename,
+    error->start->line + 1,
+    error->start->column + 1,
+    lineStr,
+    underline
+  );
 
-  memcpy(p, prefix3, strlen(prefix3));
-  p += strlen(prefix3);
+  char *result = malloc(needed + 1);
+  if (!result) {
+    free(lineStr);
+    free(underline);
+    return NULL;
+  }
 
-  memcpy(p, lineBuf, lineLen);
-  p += lineLen;
+  snprintf(
+    result, needed + 1,
+    "%s: %s\n"
+    "File %s, line %lu, column %lu\n\n"
+    "%s\n"
+    "%s\n",
+    error->name,
+    error->details,
+    error->filename,
+    error->start->line + 1,
+    error->start->column + 1,
+    lineStr,
+    underline
+  );
 
-  memcpy(p, prefix4, strlen(prefix4));
-  p += strlen(prefix4);
+  free(lineStr);
+  free(underline);
 
-  memcpy(p, colBuf, colLen);
-  p += colLen;
-
-  *p = '\0';
-
-  return s;
+  return result;
 }

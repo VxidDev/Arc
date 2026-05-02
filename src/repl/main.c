@@ -17,7 +17,7 @@
 #include <errno.h>
 #include <limits.h>
 
-bool _DEBUG;
+bool _DEBUG = false;
 int _FLOAT_PRECISION = 6;
 
 void printAST(ASTNode* node) {
@@ -127,6 +127,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
       free(errStr);
 
       freeError(*error);
+      *error = NULL;
     }
 
     freeTokens(tokens, *size);
@@ -179,7 +180,7 @@ int parseInt(const char *s, int *out) {
 }
 
 void parseArguments(int argc, char **argv) {
-  if (argc < 1) return;
+  if (argc < 2) return;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
@@ -219,7 +220,13 @@ int main(int argc, char **argv) {
 
     if (!userInput) {
       printf("%sArc: %sFailed to get user input.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+      freeTable(variables);
       break;
+    }
+    
+    if (userInput[0] == '\0') {
+      free(userInput);
+      continue;
     }
 
     if (strcmp(userInput, "exit") == 0) {
@@ -241,10 +248,10 @@ int main(int argc, char **argv) {
       char *errStr = errorAsString(error);
       printf("%s%s%s\n", ANSI_BRIGHT_RED_FG, errStr, ANSI_RESET);
       free(errStr);
+      freeError(error);
     }
     
-    free(userInput); 
-    freeError(error);  
+    free(userInput);
   } 
 
   return 0;

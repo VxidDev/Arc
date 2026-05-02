@@ -13,7 +13,7 @@ Number* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
   NumberNode* numNode = (NumberNode*)node;
 
   if (!numNode->token) {
-    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+    if (*err == NULL) *err = initValueError(copyPosition(numNode->token->start), copyPosition(numNode->token->end), filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     return NULL;
   }
   
@@ -33,7 +33,7 @@ Number* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   Number *dest = visitNode(binOper->rightNode, filename, err, variables);
   
   if (!src || !dest) {
-    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+    if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     if (src) free(src);
     if (dest) free(dest);
     return NULL;
@@ -55,10 +55,10 @@ Number* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
   if (output.err) {
     if (output.err == ERR_NULL) {
-      if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+      if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     } else if (output.err == ERR_DIV_BY_ZERO) {
-      if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Division by zero");
-    } else { if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Unknown error."); }
+      if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Division by zero");
+    } else { if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Unknown error."); }
 
     free(src);
     free(dest);
@@ -78,7 +78,7 @@ Number* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
   Number* number = visitNode(unaryOper->node, filename, err, variables);
 
   if (!number) {
-    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename, "<empty>"), NULL, filename, "Expected Number* result, received NULL.");
+    if (*err == NULL) *err = initValueError(copyPosition(unaryOper->operTok->start), copyPosition(unaryOper->operTok->end), filename, "Expected Number* result, received NULL.");
     return NULL;
   }
   
@@ -90,7 +90,7 @@ Number* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
     free(number);
     free(negOne);
   } else {
-    if (*err == NULL) *err = initValueError(initPosition(1, 0, 0, filename,"<empty>"), NULL, filename, "Unknown unary operator");
+    if (*err == NULL) *err = initValueError(copyPosition(unaryOper->operTok->start), copyPosition(unaryOper->operTok->end), filename, "Unknown unary operator");
     free(number);
     return NULL;
   }
@@ -107,7 +107,18 @@ Number* visitVarAccessNode(ASTNode* node, char *filename, Error** err, SymbolTab
   if (!varName) return NULL;
   
   Number* stored = (Number*)getTable(variables, varName);
-  if (!stored) return NULL;
+
+  if (!stored) {
+    int len = snprintf(NULL, 0, "Undefined variable \"%s\"", varName);
+    char *buffer = malloc(len + 1);
+
+    snprintf(buffer, len + 1, "Undefined variable \"%s\"", varName);
+
+    if (*err == NULL) *err = initNameError(copyPosition(va->token->start), copyPosition(va->token->end), filename, buffer);
+    free(buffer);
+
+    return NULL;
+  }
 
   return copyNumber(stored); 
 }
