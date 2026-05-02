@@ -9,6 +9,9 @@
 #include "../../include/object.h"
 
 #include "../../include/ansi-colors.h"
+#include "../../include/repl/repl.h"
+#include "../../include/repl/printast.h"
+#include "../../include/repl/help.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,71 +21,15 @@
 #include <limits.h>
 
 bool _DEBUG = false;
+bool _IS_COLORED = true;
 int _FLOAT_PRECISION = 6;
-
-void printAST(ASTNode* node) {
-  if (!node) return;
-
-  switch (node->type) {
-    case NODE_NUMBER: {
-      NumberNode* n = (NumberNode*)node;
-
-      if (strcmp(n->token->type, TOK_INT) == 0) {
-        printf("%s%d%s", ANSI_BRIGHT_YELLOW_FG, *(int*)n->token->value, ANSI_RESET);
-      } else if (strcmp(n->token->type, TOK_FLOAT) == 0) {
-        printf("%s%s%.*f%s", ANSI_DIM, ANSI_YELLOW_FG, _FLOAT_PRECISION, *(double*)n->token->value, ANSI_RESET);
-      }
-
-      break;
-    }
-
-    case NODE_BINOP: {
-      BinOpNode* b = (BinOpNode*)node;
-
-      putchar('(');
-      printAST(b->leftNode);
-
-      printf(" %s%s%s ", ANSI_BRIGHT_CYAN_FG, b->operTok->type, ANSI_RESET);
-
-      printAST(b->rightNode);
-      putchar(')');
-      break;
-    }
-
-    case NODE_UNARYOP: {
-      UnaryOpNode* u = (UnaryOpNode*)node;
-
-      printf("(%s%s%s ", ANSI_BRIGHT_BLACK_FG, u->operTok->type, ANSI_RESET);
-      printAST(u->node);
-      putchar(')');
-
-      break;
-    }
-
-    case NODE_VARASSIGN: {
-      VarAssignNode* va = (VarAssignNode*)node;
-
-      printf("%s[%s = ", ANSI_BRIGHT_MAGENTA_FG, va->identifier);
-
-      printAST(va->value);
-
-      printf("]%s", ANSI_RESET);
-      break;
-    } 
-
-    case NODE_VARACCESS: {
-      VarAccessNode* va = (VarAccessNode*)node;
-      printf("%s[VAR-ACCESS:%s]%s", ANSI_BRIGHT_MAGENTA_FG, (char*)va->token->value, ANSI_RESET);
-      break;
-    }
-  }
-}
+char *_CODE = NULL;
 
 void run(char *text, Error **error, unsigned long *size, SymbolTable* variables) {
   Lexer *lexer = initLexer("<stdin>", text);
 
   if (!lexer) {
-    printf("%sArc: %sFailed to initialize lexer.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+    printf("%sArc: %sFailed to initialize lexer.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return;
   }
   
@@ -94,13 +41,14 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
   }
   
   if (_DEBUG) {
-    printf("\n%sTokens: %s", ANSI_CYAN_FG, ANSI_BRIGHT_BLUE_FG);
+    printf("\n%sTokens: %s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG));
 
     for (size_t i = 0; i < *size; i++) {
       printf("%s ", tokens[i]->type);
     }
 
-    printf("%s\n", ANSI_RESET);
+    if (_IS_COLORED) printf("%s\n", ANSI_RESET);
+    else putchar('\n');
   }
   
   Parser* parser = initParser(tokens, *size, error);
@@ -113,17 +61,18 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
   ASTNode* ast = parseParser(parser);
   
   if (_DEBUG) {
-    printf("%sAST tree: ", ANSI_CYAN_FG);
+    printf("%sAST tree: ", COLOR(ANSI_CYAN_FG));
     printAST(ast);
-    printf("%s\n\n", ANSI_RESET);
+    if (_IS_COLORED) printf("%s\n\n", ANSI_RESET);
+    else puts("\n"); // puts adds an additional newline
   }
 
   if (!ast) {
-    printf("%sArc: %sFailed to construct AST.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+    if (_DEBUG) printf("%sArc: %sFailed to construct AST.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
 
     if (*error) {
       char *errStr = errorAsString(*error);
-      printf("%s%s%s\n", ANSI_BRIGHT_RED_FG, errStr, ANSI_RESET);
+      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
       free(errStr);
 
       freeError(*error);
@@ -149,9 +98,9 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
   }
   
   if (result->base.type == OBJ_NUMBER_INT) {
-    printf("%s%s%ld%s\n", ANSI_BRIGHT_CYAN_FG, ANSI_BOLD, result->as.i, ANSI_RESET);
+    printf("%s%s%ld%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), result->as.i, COLOR(ANSI_RESET));
   } else if (result->base.type == OBJ_NUMBER_FLOAT){
-    printf("%s%s%.*f%s\n", ANSI_BRIGHT_CYAN_FG, ANSI_BOLD, _FLOAT_PRECISION, result->as.f, ANSI_RESET);
+    printf("%s%s%.*f%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), _FLOAT_PRECISION, result->as.f, COLOR(ANSI_RESET));
   }
 
   free(result);
@@ -188,20 +137,33 @@ void parseArguments(int argc, char **argv) {
       continue;
     } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--float-precision") == 0) {
       if (i + 1 >= argc) {
-        printf("%sArc: %sprecision cannot be empty.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+        printf("%sArc: %sprecision cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
         exit(1);
       }
 
       int precision;
 
       if (!parseInt(argv[++i], &precision)) {
-        printf("%sArc: %sprecision must be a valid integer%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+        printf("%sArc: %sprecision must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
         exit(1);
       }
 
       _FLOAT_PRECISION = precision;
+    } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--code") == 0) {
+      if (i + 1 >= argc) {
+        printf("%sArc: %scode cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        exit(1);
+      }
+
+      _CODE = argv[++i];
+    } else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--disable-colored-formatting") == 0){
+      _IS_COLORED = false;
+      continue;
+    } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help")) {
+      printHelp();
+      exit(0);
     } else {
-      printf("%sArc: %sunknown argument \"%s\"%s\n", ANSI_CYAN_FG, ANSI_WHITE_FG, argv[i], ANSI_RESET);
+      printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
       exit(1);
     } 
   }
@@ -213,13 +175,34 @@ int main(int argc, char **argv) {
   char *userInput = NULL;
   SymbolTable *variables = createTable(1024, NULL);
 
-  char prompt[] = "\033[36mArc > \033[0m";
+  if (_CODE) {
+    Error *error = NULL;
+    
+    unsigned long size = 0; 
+    run(_CODE, &error, &size, variables);
+     
+    if (error) {
+      char *errStr = errorAsString(error);
+      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
+      free(errStr);
+      freeError(error);
+    }
+
+    freeTable(variables);
+
+    return 0;
+  }
+  
+  char *prompt;
+
+  if (_IS_COLORED) prompt = "\033[36mArc > \033[0m";
+  else prompt = "Arc > ";
 
   for (;;) {
     userInput = input(prompt);
 
     if (!userInput) {
-      printf("%sArc: %sFailed to get user input.%s\n", ANSI_CYAN_FG, ANSI_BRIGHT_RED_FG, ANSI_RESET);
+      printf("%sArc: %sFailed to get user input.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
       freeTable(variables);
       break;
     }
@@ -246,7 +229,7 @@ int main(int argc, char **argv) {
      
     if (error) {
       char *errStr = errorAsString(error);
-      printf("%s%s%s\n", ANSI_BRIGHT_RED_FG, errStr, ANSI_RESET);
+      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
       free(errStr);
       freeError(error);
     }

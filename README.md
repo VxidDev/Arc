@@ -111,39 +111,43 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 
 ```
 .
-├── arc
 ├── include
-│   ├── ansi-colors.h
-│   ├── error.h
-│   ├── interpretator.h
-│   ├── lexer.h
-│   ├── node.h
-│   ├── object.h
-│   ├── parser.h
-│   ├── position.h
-│   ├── repl/
-│   │   └── input.h
-│   ├── symbol-table.h
-│   ├── token.h
-│   └── utils.h
-├── src
-│   ├── error.c
-│   ├── interpretator.c
-│   ├── lexer.c
-│   ├── node.c
-│   ├── objects/
-│   │   └── number.c
-│   ├── parser.c
-│   ├── position.c
-│   ├── repl/
-│   │   ├── input.c
-│   │   └── main.c
-│   ├── symbol-table.c
-│   ├── token.c
-│   └── utils.c
+│   ├── ansi-colors.h
+│   ├── error.h
+│   ├── interpretator.h
+│   ├── lexer.h
+│   ├── node.h
+│   ├── object.h
+│   ├── parser.h
+│   ├── position.h
+│   ├── repl
+│   │   ├── help.h
+│   │   ├── input.h
+│   │   ├── printast.h
+│   │   └── repl.h
+│   ├── symbol-table.h
+│   ├── token.h
+│   └── utils.h
+├── LICENSE
 ├── makefile
 ├── README.md
-└── LICENSE
+└── src
+    ├── error.c
+    ├── interpretator.c
+    ├── lexer.c
+    ├── node.c
+    ├── objects
+    │   └── number.c
+    ├── parser.c
+    ├── position.c
+    ├── repl
+    │   ├── help.c
+    │   ├── input.c
+    │   ├── main.c
+    │   └── printast.c
+    ├── symbol-table.c
+    ├── token.c
+    └── utils.c
 ```
 
 ---
