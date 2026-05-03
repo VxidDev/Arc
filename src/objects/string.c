@@ -39,3 +39,25 @@ String *addString(const String *dest, const String *src) {
 
   return res;
 }
+
+String *mulString(const String *dest, const Number *src) {
+  if (!dest || !src || !dest->value || !src->as.i) return NULL;
+  
+  size_t len = strlen(dest->value);
+
+  char *newStr = malloc(len * src->as.i + 1);
+  char *p = newStr;
+
+  for (size_t i = 0; i < src->as.i; i++) {
+    memcpy(p, dest->value, len);
+    p += len;
+  }
+
+  *p = '\0';
+
+  String *res = malloc(sizeof(String));
+  res->value = newStr;
+  res->base.type = OBJ_STRING;
+
+  return res;
+}

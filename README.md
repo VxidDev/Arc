@@ -13,7 +13,7 @@ Arc is a small programming language project written in C. It focuses on building
 * Integer and floating-point number support
 * String literal support
 * Support for operations on strings:
-  * `+`
+  * `+`, `*`
 * Variables and identifiers (using `VAR` keyword)
 * Basic arithmetic operators:
   * `+`, `-`, `*`, `/`, `^`
