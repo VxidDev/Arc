@@ -159,7 +159,7 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--disable-colored-formatting") == 0){
       _IS_COLORED = false;
       continue;
-    } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help")) {
+    } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       printHelp();
       exit(0);
     } else {
