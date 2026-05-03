@@ -17,6 +17,19 @@ NumberNode* initNumberNode(Token* token) {
   return node;
 }
 
+StringNode* initStringNode(Token* token) {
+  if (!token) return NULL;
+  
+  StringNode* node = malloc(sizeof(StringNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_STRING;
+  node->token = token;
+
+  return node;
+}
+
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode) {
   if (!leftNode || !operTok || !rightNode) return NULL;
 
@@ -94,6 +107,12 @@ void freeVarAccessNode(VarAccessNode* node) {
   free(node);
 }
 
+void freeStringNode(StringNode* node) {
+  if (!node) return;
+
+  free(node);
+}
+
 void freeNumberNode(NumberNode *node) {
     if (!node) return;
 
@@ -138,6 +157,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_VARACCESS:
       freeVarAccessNode((VarAccessNode*)node);
+      break;
+
+    case NODE_STRING:
+      freeStringNode((StringNode*)node);
       break;
   }
 }

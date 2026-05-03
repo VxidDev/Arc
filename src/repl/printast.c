@@ -61,6 +61,12 @@ void printAST(ASTNode* node) {
       printf("%s[VAR-ACCESS:%s]%s", COLOR(ANSI_BRIGHT_MAGENTA_FG), (char*)va->token->value, COLOR(ANSI_RESET));
       break;
     }
+
+    case NODE_STRING: {
+      StringNode* str = (StringNode*)node;
+      printf("%sSTRING:\"%s\"%s", COLOR(ANSI_BRIGHT_GREEN_FG), (char*)str->token->value, COLOR(ANSI_RESET));
+      break;
+    }
   }
 }
 

@@ -13,6 +13,7 @@
 #define TOK_EQ "EQ"
 #define TOK_IDENTIFIER "IDENTIFIER"
 #define TOK_KEYWORD "KEYWORD"
+#define TOK_STRING "STRING"
 
 extern const char *KEYWORDS[];
 

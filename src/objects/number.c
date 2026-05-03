@@ -22,6 +22,10 @@ static inline ObjType promote(const Number* a, const Number* b) {
     : OBJ_NUMBER_INT;
 }
 
+static inline bool isValid(const Object* a, const Object* b) {
+  return ((a->type == OBJ_NUMBER_FLOAT || a->type == OBJ_NUMBER_INT) && (b->type == OBJ_NUMBER_FLOAT || b->type == OBJ_NUMBER_INT));
+}
+
 Number *initInt(long value) {
   Number* number = malloc(sizeof(Number));
 
@@ -55,6 +59,8 @@ Number *copyNumber(Number *num) {
 EvalResultNumber addNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
 
+  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -68,6 +74,8 @@ EvalResultNumber addNumber(const Number* dest, const Number* src) {
 
 EvalResultNumber subNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
 
   ObjType type = promote(dest, src);
 
@@ -82,6 +90,8 @@ EvalResultNumber subNumber(const Number* dest, const Number* src) {
 
 EvalResultNumber divNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+
+  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
 
   ObjType type = promote(dest, src);
 
@@ -108,6 +118,8 @@ EvalResultNumber divNumber(const Number* dest, const Number* src) {
 
 EvalResultNumber mulNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
 
   ObjType type = promote(dest, src);
 
@@ -122,6 +134,8 @@ EvalResultNumber mulNumber(const Number* dest, const Number* src) {
 
 EvalResultNumber powNumber(const Number* dest, const Number* src) {
   if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE}; 
 
   double result = pow(toDouble(src), toDouble(dest));
   return (EvalResultNumber){initFloat(result), ERR_NONE};

@@ -6,6 +6,7 @@
 typedef enum ObjType {
   OBJ_NUMBER_INT,
   OBJ_NUMBER_FLOAT,
+  OBJ_STRING
 } ObjType;
 
 typedef struct Object {
@@ -22,6 +23,11 @@ typedef struct Number {
 
 } Number;
 
+typedef struct String {
+  Object base;
+  char *value;
+} String;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -29,7 +35,12 @@ typedef struct EvalResultNumber {
 
 Number* initInt(long value);
 Number* initFloat(double value);
-Number *copyNumber(Number *num);
+Number* copyNumber(Number *num);
+
+String* initString(char *value);
+String* copyString(String *str);
+
+Object* copyObject(Object *obj);
 
 EvalResultNumber addNumber(const Number* dest, const Number* src);
 EvalResultNumber subNumber(const Number* dest, const Number* src);

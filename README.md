@@ -7,10 +7,11 @@ Arc is a small programming language project written in C. It focuses on building
 ## Current Features
 
 * Interactive REPL (`src/repl`) with `clear` and `exit` commands
-* Lexer for arithmetic expressions and identifiers
+* Lexer for arithmetic expressions, identifiers, and **string literals**
 * Parser with AST generation
 * Expression evaluation (interpreter)
 * Integer and floating-point number support
+* **String literal support**
 * Variables and identifiers (using `VAR` keyword)
 * Basic arithmetic operators:
   * `+`, `-`, `*`, `/`, `^`
@@ -23,6 +24,8 @@ Arc is a small programming language project written in C. It focuses on building
   * column number
 * Debug mode for inspecting tokens and AST
 * Configurable floating-point precision
+* **Execute code from string via CLI**
+* **Option to disable colored output**
 * Focus on memory-safe design
 
 ---
@@ -36,10 +39,12 @@ Arc > VAR x = 5
 5
 Arc > x * 10
 50
+Arc > VAR name = "Arc Language"
+Arc Language
 Arc > VAR y = (x + 2) ^ 2
-49
+49.000000
 Arc > y / 7
-7
+7.000000
 ```
 
 ---
@@ -137,7 +142,8 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
     ├── lexer.c
     ├── node.c
     ├── objects
-    │   └── number.c
+    │   ├── number.c
+    │   └── string.c
     ├── parser.c
     ├── position.c
     ├── repl
@@ -180,6 +186,20 @@ make
   ./arc --float-precision 10
   ```
 
+* **Execute code**:
+  ```bash
+  ./arc -c "5 + 5"
+  # or
+  ./arc --code "VAR x = 10"
+  ```
+
+* **Disable colors**:
+  ```bash
+  ./arc -n
+  # or
+  ./arc --disable-colored-formatting
+  ```
+
 ### Install
 
 ```bash
@@ -211,6 +231,7 @@ valgrind --leak-check=full --show-leak-kinds=all ./arc
 * [x] Parser (AST generation)
 * [x] Expression evaluation
 * [x] Variables and identifiers
+* [x] String literals
 * Scoped environments
 * Functions
 * Basic runtime system

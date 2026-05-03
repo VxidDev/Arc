@@ -30,7 +30,7 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   return table;
 }
 
-void setTable(SymbolTable *table, const char *name, Number *value) {
+void setTable(SymbolTable *table, const char *name, Object *value) {
   unsigned long index = hash(name) % table->capacity;
 
   Symbol *sym = table->buckets[index];
@@ -38,7 +38,7 @@ void setTable(SymbolTable *table, const char *name, Number *value) {
   while (sym) {
     if (strcmp(sym->name, name) == 0) {
       free(sym->value);
-      sym->value = copyNumber(value);
+      sym->value = copyObject(value);
       return;
     }
     sym = sym->next;
@@ -54,7 +54,7 @@ void setTable(SymbolTable *table, const char *name, Number *value) {
     return;
   }
   
-  Number *copy = copyNumber(value);
+  Object *copy = copyObject(value);
   newSym->value = copy;
 
   newSym->next = table->buckets[index];

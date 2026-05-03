@@ -268,6 +268,42 @@ Token* makeIdentifierLexer(Lexer *lexer, Error **error) {
   return initToken(_is_keyword(idStr) ? TOK_KEYWORD : TOK_IDENTIFIER, idStr, true, start, copyPosition(lexer->pos));
 }
 
+Token* makeStringLexer(Lexer* lexer, Error** error) {
+  Position *start = copyPosition(lexer->pos);
+
+  advanceLexer(lexer); // Skip opening quote
+  
+  char *buffer = calloc(1024, 1); // fixed length for now 
+  unsigned long len = 0;
+
+  while (lexer->currChar && lexer->currChar != '"') {
+    if (lexer->currChar == '\\') {
+        advanceLexer(lexer);
+
+        switch (lexer->currChar) {
+            case 'n': buffer[len++] = '\n'; break;
+            case 't': buffer[len++] = '\t'; break;
+            case '"': buffer[len++] = '"'; break;
+            case '\\': buffer[len++] = '\\'; break;
+            default: buffer[len++] = lexer->currChar; break;
+        }
+    } else {
+        buffer[len++] = lexer->currChar;
+    }
+
+    advanceLexer(lexer);
+  }
+
+  if (!lexer->currChar) {
+    if (*error == NULL) *error = initSyntaxError(start, copyPosition(lexer->pos), lexer->filename, "Unterminated string");
+    return NULL;
+  }
+
+  advanceLexer(lexer); // skip closing quote
+
+  return initToken(TOK_STRING, buffer, true, start, copyPosition(lexer->pos));
+}
+
 bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned long *capacity, char *tokenType) {
   if (*size >= *capacity) {
     if (!_resizeTokensList(tokens, capacity)) {
@@ -348,6 +384,26 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       tokens[size++] = token;
 
       continue; 
+    }
+
+    if (lexer->currChar == '"') {
+      Token *token = makeStringLexer(lexer, error);
+
+      if (!token) {
+        freeTokens(tokens, size);
+        return NULL;
+      }
+
+      if (size >= capacity) {
+        if (!_resizeTokensList(&tokens, &capacity)) {
+          freeTokens(tokens, size);
+          return NULL;
+        }
+      }
+
+      tokens[size++] = token;
+
+      continue;  
     }
 
     if (lexer->currChar == '+') {

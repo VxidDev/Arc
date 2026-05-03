@@ -63,6 +63,11 @@ ASTNode* atomParser(Parser* parser) {
     return (ASTNode*)initUnaryOpNode(token, expr);
   }
 
+  if (strcmp(token->type, TOK_STRING) == 0) {
+    advanceParser(parser);
+    return (ASTNode*)initStringNode(token);
+  }
+
   if (strcmp(token->type, TOK_INT) == 0 || strcmp(token->type, TOK_FLOAT) == 0) {
     advanceParser(parser);
     return (ASTNode*)initNumberNode(token);

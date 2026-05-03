@@ -86,7 +86,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
     return;
   }
   
-  Number* result = visitNode(ast, "<stdin>", error, variables);
+  Object* result = visitNode(ast, "<stdin>", error, variables);
 
   if (!result) {
     freeAST(ast);
@@ -97,10 +97,12 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
     return;
   }
   
-  if (result->base.type == OBJ_NUMBER_INT) {
-    printf("%s%s%ld%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), result->as.i, COLOR(ANSI_RESET));
-  } else if (result->base.type == OBJ_NUMBER_FLOAT){
-    printf("%s%s%.*f%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), _FLOAT_PRECISION, result->as.f, COLOR(ANSI_RESET));
+  if (result->type == OBJ_NUMBER_INT) {
+    printf("%s%s%ld%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), ((Number*)result)->as.i, COLOR(ANSI_RESET));
+  } else if (result->type == OBJ_NUMBER_FLOAT){
+    printf("%s%s%.*f%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), _FLOAT_PRECISION, ((Number*)result)->as.f, COLOR(ANSI_RESET));
+  } else if (result->type == OBJ_STRING) {
+    printf("%s%s%s%s\n", COLOR(ANSI_BRIGHT_GREEN_FG), COLOR(ANSI_BOLD), ((String*)result)->value, COLOR(ANSI_RESET));
   }
 
   free(result);
