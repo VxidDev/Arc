@@ -1,5 +1,6 @@
 #include "../include/symbol-table.h"
 #include "../include/utils.h"
+#include "../include/object.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -111,7 +112,7 @@ void freeTable(SymbolTable *table) {
       Symbol *next = sym->next;
 
       free(sym->name);  
-      free(sym->value);
+      freeObject(sym->value);
       free(sym);      
 
       sym = next;

@@ -109,7 +109,8 @@ void freeVarAccessNode(VarAccessNode* node) {
 
 void freeStringNode(StringNode* node) {
   if (!node) return;
-
+  
+  // if (node->token->value) free(node->token->value);
   free(node);
 }
 

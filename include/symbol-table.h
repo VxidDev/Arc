@@ -5,7 +5,7 @@
 
 typedef struct Symbol {
   char *name;
-  void *value;
+  Object *value;
   struct Symbol *next;
 } Symbol;
 

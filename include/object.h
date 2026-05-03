@@ -48,4 +48,7 @@ EvalResultNumber mulNumber(const Number* dest, const Number* src);
 EvalResultNumber divNumber(const Number* dest, const Number* src);
 EvalResultNumber powNumber(const Number* dest, const Number* src);
 
+String* addString(const String* dest, const String* src);
+
+void freeObject(Object* obj);
 #endif // OBJECT_H

@@ -11,7 +11,9 @@ Arc is a small programming language project written in C. It focuses on building
 * Parser with AST generation
 * Expression evaluation (interpreter)
 * Integer and floating-point number support
-* **String literal support**
+* String literal support
+* Support for operations on strings:
+  * `+`
 * Variables and identifiers (using `VAR` keyword)
 * Basic arithmetic operators:
   * `+`, `-`, `*`, `/`, `^`
@@ -24,8 +26,8 @@ Arc is a small programming language project written in C. It focuses on building
   * column number
 * Debug mode for inspecting tokens and AST
 * Configurable floating-point precision
-* **Execute code from string via CLI**
-* **Option to disable colored output**
+* Execute code from string via CLI
+* Option to disable colored output
 * Focus on memory-safe design
 
 ---

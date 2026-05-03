@@ -105,7 +105,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
     printf("%s%s%s%s\n", COLOR(ANSI_BRIGHT_GREEN_FG), COLOR(ANSI_BOLD), ((String*)result)->value, COLOR(ANSI_RESET));
   }
 
-  free(result);
+  freeObject(result);
   
   freeAST(ast);
   freeTokens(tokens, *size);

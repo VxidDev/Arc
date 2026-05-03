@@ -25,6 +25,27 @@ Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
   return (Object*)initInt(*(long*)numNode->token->value);
 }
 
+Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char op, Object* destObj, char *filename, Error **err, SymbolTable* variables) {
+  if (op != '+') {
+    char buffer[256];
+    
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%c': string %c string", op, op); 
+
+    freeObject(srcObj);
+    freeObject(destObj);
+    
+    if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+    return NULL;
+  }
+
+  Object* out = (Object*)addString((String*)srcObj, (String*)destObj);
+
+  freeObject(srcObj);
+  freeObject(destObj);
+
+  return out;
+}
+
 Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
   if (!filename || !err || !node) return NULL;
 
@@ -59,8 +80,10 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     destObj->type == OBJ_STRING ? "string" : "unknown";
 
   if (srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) {
-    char buffer[256];
+    if (srcObj->type == OBJ_STRING && destObj->type == OBJ_STRING) return _stringBinOp(binOper, srcObj, op, destObj, filename, err, variables);
 
+    char buffer[256];
+    
     snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%c': %s %c %s", op, leftType, op, rightType); 
 
     free(srcObj);
@@ -70,7 +93,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     return NULL;
   }
 
-  if (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT) {
+  if (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT) { 
     char buffer[256];
     
     snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%c': %s %c %s", op, leftType, op, rightType); 
