@@ -17,6 +17,17 @@ NumberNode* initNumberNode(Token* token) {
   return node;
 }
 
+ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
+  ProgramNode *node = malloc(sizeof(ProgramNode));
+  if (!node) return NULL;
+
+  node->base.type = NODE_PROGRAM;
+  node->statements = statements;
+  node->count = count;
+
+  return node;
+}
+
 StringNode* initStringNode(Token* token) {
   if (!token) return NULL;
   
@@ -136,6 +147,22 @@ void freeUnaryOpNode(UnaryOpNode *node) {
     free(node);
 }
 
+void freeProgramNode(ProgramNode *node) {
+  if (!node) return;
+
+  if (node->statements) {
+    for (size_t i = 0; i < node->count; i++) {
+      if (node->statements[i]) {
+        freeAST(node->statements[i]);
+      }
+    }
+
+    free(node->statements);
+  }
+
+  free(node);
+}
+
 void freeAST(ASTNode *node) {
   if (!node) return;
 
@@ -162,6 +189,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_STRING:
       freeStringNode((StringNode*)node);
+      break;
+
+    case NODE_PROGRAM:
+      freeProgramNode((ProgramNode*)node);
       break;
   }
 }

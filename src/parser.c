@@ -301,3 +301,48 @@ ASTNode* parseParser(Parser* parser) {
 
   return res;
 }
+
+ASTNode* parseProgram(Parser* parser) {
+  if (!parser) return NULL;
+  
+  size_t size = 0;
+  size_t capacity = 32;
+
+  ASTNode **statements = calloc(capacity, sizeof(ASTNode*));
+
+  while (parser->currentToken != NULL) {
+    ASTNode *statement = exprParser(parser);
+
+    if (!statement) {
+      for (size_t i = 0; i < size; i++) {
+        freeAST(statements[i]);
+      }
+
+      free(statements);
+      return NULL;
+    }
+
+    if (size >= capacity) {
+      capacity *= 2;
+
+      void *tmp = realloc(statements, sizeof(ASTNode*) * capacity);
+
+      if (!tmp) {
+        for (size_t i = 0; i < size; i++) {
+          freeAST(statements[i]);
+        }
+
+        free(statements);
+        return NULL;
+      }
+
+      statements = tmp;
+    }
+
+    statements[size++] = statement;
+  }
+
+  statements[size] = NULL;
+
+  return (ASTNode*)initProgramNode(statements, size);
+}

@@ -24,6 +24,68 @@ bool _DEBUG = false;
 bool _IS_COLORED = true;
 int _FLOAT_PRECISION = 6;
 char *_CODE = NULL;
+char *_INPUT_FILE = NULL;
+
+bool isValidExtension(const char *filename) {
+  if (!filename) return false;
+
+  const char *dot = strrchr(filename, '.');
+
+  // no dot or dot is first character
+  if (!dot || dot == filename) return false;
+
+  return strcmp(dot, ".arc") == 0;
+}
+
+char *readFile(char *filename) {
+  if (!isValidExtension(filename)) {
+    printf("%sArc: %sInvalid file extension: expected \".arc\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+    return NULL;
+  }
+
+  FILE* file = fopen(filename, "rb");
+  
+  if (!file) {
+    printf("%sArc: %sFailed to open file: \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), filename, COLOR(ANSI_RESET));
+    return NULL;
+  }
+
+  size_t size = 0;
+  size_t capacity = 128;
+
+  char *buf = calloc(capacity, 1);
+
+  if (!buf) {
+    fclose(file);
+    printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+    return NULL;
+  } 
+
+  size_t c = 0; 
+
+  while ((c = getc(file)) != EOF) {
+    if (size >= capacity - 1) {
+      capacity *= 2;
+      void *tmp = realloc(buf, sizeof(char) * capacity);
+
+      if (!tmp) {
+        free(buf);
+        printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        return NULL;
+      }
+
+      buf = tmp;
+    }
+
+    buf[size++] = c;
+  }
+
+  buf[size] = '\0';
+  
+  fclose(file);
+
+  return buf;  
+}
 
 void run(char *text, Error **error, unsigned long *size, SymbolTable* variables) {
   Lexer *lexer = initLexer("<stdin>", text);
@@ -58,7 +120,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
     return;
   }
 
-  ASTNode* ast = parseParser(parser);
+  ASTNode* ast = parseProgram(parser);
   
   if (_DEBUG) {
     printf("%sAST tree: ", COLOR(ANSI_CYAN_FG));
@@ -134,6 +196,16 @@ void parseArguments(int argc, char **argv) {
   if (argc < 2) return;
 
   for (int i = 1; i < argc; i++) {
+    if (argv[i][0] != '-') {
+      if (!_INPUT_FILE) {
+        _INPUT_FILE = argv[i];
+      } else {
+        printf("%sArc: %smultiple input files not supported%s\n", COLOR(ANSI_CYAN_FG), ANSI_BRIGHT_RED_FG, ANSI_RESET);
+        exit(1);
+      }
+      continue;
+    }
+
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
       _DEBUG = true;
       continue;
@@ -177,12 +249,28 @@ int main(int argc, char **argv) {
   char *userInput = NULL;
   SymbolTable *variables = createTable(1024, NULL);
 
+  char *code = NULL;
+
   if (_CODE) {
+    code = _CODE;
+  } else if (_INPUT_FILE) {
+    code = readFile(_INPUT_FILE); 
+
+    if (!code) { 
+      return 1;
+    }
+
+    if (_DEBUG) {
+      printf("%sArc: %s%sFile contents:%s\n%s%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BOLD), COLOR(ANSI_BRIGHT_BLUE_FG), COLOR(ANSI_WHITE_FG), code, COLOR(ANSI_RESET));
+    }
+  }
+
+  if (code) {
     Error *error = NULL;
-    
-    unsigned long size = 0; 
-    run(_CODE, &error, &size, variables);
-     
+    unsigned long size = 0;
+
+    run(code, &error, &size, variables);
+
     if (error) {
       char *errStr = errorAsString(error);
       printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
@@ -190,11 +278,14 @@ int main(int argc, char **argv) {
       freeError(error);
     }
 
-    freeTable(variables);
+    if (!_CODE) {
+      free(code);
+    }
 
+    freeTable(variables);
     return 0;
-  }
-  
+  } 
+
   char *prompt;
 
   if (_IS_COLORED) prompt = "\033[36mArc > \033[0m";

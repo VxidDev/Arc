@@ -281,6 +281,25 @@ Object* visitStringNode(ASTNode* node, char *filename, Error** err, SymbolTable*
   return (Object*)initString((char*)str->token->value);
 }
 
+Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
+  ProgramNode* prog = (ProgramNode*)node;
+
+  Object* last = NULL;
+
+  for (size_t i = 0; i < prog->count; i++) {
+    if (last) {
+      freeObject(last); 
+      last = NULL;
+    }
+
+    last = visitNode(prog->statements[i], filename, err, variables);
+
+    if (!last) return NULL; // error already set
+  }
+
+  return last; 
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -291,6 +310,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_VARACCESS: return visitVarAccessNode(node, filename, err, variables);
     case NODE_VARASSIGN: return visitVarAssignNode(node, filename, err, variables);
     case NODE_STRING: return visitStringNode(node, filename, err, variables);
+    case NODE_PROGRAM: return visitProgramNode(node, filename, err, variables);
     default: return NULL;
   }
 }

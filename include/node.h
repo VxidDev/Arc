@@ -2,6 +2,7 @@
 #define NODE_H
 
 #include "token.h"
+#include <stddef.h>
 
 typedef enum {
   NODE_NUMBER,
@@ -9,7 +10,8 @@ typedef enum {
   NODE_UNARYOP,
   NODE_VARASSIGN,
   NODE_VARACCESS,
-  NODE_STRING
+  NODE_STRING,
+  NODE_PROGRAM,
 } NodeType;
 
 typedef struct ASTNode {
@@ -52,12 +54,19 @@ typedef struct UnaryOpNode {
   ASTNode* node;
 } UnaryOpNode;
 
+typedef struct {
+    ASTNode base;          
+    ASTNode **statements;  
+    size_t count;         
+} ProgramNode;
+
 NumberNode* initNumberNode(Token* token);
 StringNode* initStringNode(Token* token);
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode);
 UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node);
 VarAccessNode* initVarAccessNode(Token* token);
 VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
+ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 
 void freeBinOpNode(BinOpNode* node);
 void freeNumberNode(NumberNode* node);

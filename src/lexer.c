@@ -341,7 +341,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   if (!tokens) return NULL;
   
   while (lexer->currChar != 0) {
-    if (lexer->currChar == ' ' || lexer->currChar == '\t') {
+    if (lexer->currChar == ' ' || lexer->currChar == '\t' || lexer->currChar == '\n') {
       advanceLexer(lexer);
       continue;
     }

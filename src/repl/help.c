@@ -6,7 +6,7 @@
 
 void printHelp() {
   printf(
-    "%sUsage: %s%sarc %s[options]\n"
+    "%sUsage: %s%sarc [file|optional] %s[options]\n"
     "\n Options:"
     "\n    -h, --help                               Show this help message"
     "\n    -c, --code <str>                         Execute code from given string"

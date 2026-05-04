@@ -19,5 +19,6 @@ Parser* initParser(Token **tokens, const unsigned long tokenAmount, Error **erro
 Token* advanceParser(Parser* parser);
 
 ASTNode* parseParser(Parser* parser);
+ASTNode* parseProgram(Parser* parser);
 
 #endif // PARSER_H 

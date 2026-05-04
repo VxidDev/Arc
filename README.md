@@ -7,6 +7,7 @@ Arc is a small programming language project written in C. It focuses on building
 ## Current Features
 
 * Interactive REPL (`src/repl`) with `clear` and `exit` commands
+* File execution
 * Lexer for arithmetic expressions, identifiers, and **string literals**
 * Parser with AST generation
 * Expression evaluation (interpreter)
