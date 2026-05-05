@@ -40,6 +40,8 @@ Token* advanceParser(Parser* parser) {
 ASTNode* exprParser(Parser* parser);
 ASTNode* termParser(Parser* parser);
 ASTNode* factorParser(Parser* parser);
+ASTNode* andOrParser(Parser* parser);
+ASTNode* compExprParser(Parser* parser);
 
 ASTNode* atomParser(Parser* parser) {
   if (!parser || !parser->currentToken) return NULL;
@@ -79,7 +81,7 @@ ASTNode* atomParser(Parser* parser) {
     
     Token* tok = token; // safe copy 
 
-    ASTNode* expr = exprParser(parser);
+    ASTNode* expr = andOrParser(parser);
 
     if (!expr) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(tok->start), copyPosition(tok->end), tok->start->filename, "Expression expected");
@@ -239,7 +241,7 @@ ASTNode* exprParser(Parser* parser) {
 
     advanceParser(parser);
 
-    ASTNode* expr = exprParser(parser);
+    ASTNode* expr = andOrParser(parser);
 
     if (!expr) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(tok->start), copyPosition(tok->end), tok->start->filename, "Expected expression after '='"); 
@@ -278,10 +280,85 @@ ASTNode* exprParser(Parser* parser) {
   return left;
 }
 
+ASTNode* andOrParser(Parser* parser) {
+  if (!parser) return NULL;
+
+  ASTNode* left = compExprParser(parser);
+  if (!left) return NULL;
+
+  while (parser->currentToken &&
+         strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 &&
+        (strcmp((char*)parser->currentToken->value, "AND") == 0 ||
+         strcmp((char*)parser->currentToken->value, "OR")  == 0)) {
+
+    Token* opTok = parser->currentToken;
+    advanceParser(parser);
+
+    ASTNode* right = compExprParser(parser);
+
+    if (!right) {
+      freeAST(left);
+      if (*parser->error == NULL)
+        *parser->error = initSyntaxError(
+          copyPosition(opTok->start), copyPosition(opTok->end),
+          opTok->start->filename, "Expression expected after logical operator");
+      return NULL;
+    }
+
+    left = (ASTNode*)initBinOpNode(left, opTok, right);
+
+    if (!left) {
+      freeAST(right);
+      return NULL;
+    }
+  }
+
+  return left;
+}
+
+ASTNode* compExprParser(Parser* parser) {
+  if (!parser) return NULL;
+
+  ASTNode* left = exprParser(parser);
+  if (!left) return NULL;
+
+  while (parser->currentToken &&
+        (strcmp(parser->currentToken->type, TOK_EE)  == 0 ||
+         strcmp(parser->currentToken->type, TOK_NE)  == 0 ||
+         strcmp(parser->currentToken->type, TOK_LT)  == 0 ||
+         strcmp(parser->currentToken->type, TOK_GT)  == 0 ||
+         strcmp(parser->currentToken->type, TOK_LTE) == 0 ||
+         strcmp(parser->currentToken->type, TOK_GTE) == 0)) {
+
+    Token* opTok = parser->currentToken;
+    advanceParser(parser);
+
+    ASTNode* right = exprParser(parser);
+
+    if (!right) {
+      freeAST(left);
+      if (*parser->error == NULL)
+        *parser->error = initSyntaxError(
+          copyPosition(opTok->start), copyPosition(opTok->end),
+          opTok->start->filename, "Expression expected after comparison operator");
+      return NULL;
+    }
+
+    left = (ASTNode*)initBinOpNode(left, opTok, right);
+
+    if (!left) {
+      freeAST(right);
+      return NULL;
+    }
+  }
+
+  return left;
+}
+
 ASTNode* parseParser(Parser* parser) {
   if (!parser) return NULL;
 
-  ASTNode* res = exprParser(parser);
+  ASTNode* res = andOrParser(parser);
 
   if (!res) return NULL; // error is already set
 
@@ -311,7 +388,7 @@ ASTNode* parseProgram(Parser* parser) {
   ASTNode **statements = calloc(capacity, sizeof(ASTNode*));
 
   while (parser->currentToken != NULL) {
-    ASTNode *statement = exprParser(parser);
+    ASTNode *statement = andOrParser(parser);
 
     if (!statement) {
       for (size_t i = 0; i < size; i++) {

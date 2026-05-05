@@ -7,24 +7,28 @@ Arc is a small programming language project written in C. It focuses on building
 ## Current Features
 
 * Interactive REPL (`src/repl`) with `clear` and `exit` commands
-* File execution
+* File execution (supports `.arc` files)
 * Lexer for arithmetic expressions, identifiers, and **string literals**
-* Parser with AST generation
+* Parser with AST generation, supporting multiple statements
 * Expression evaluation (interpreter)
 * Integer and floating-point number support
 * String literal support
 * Support for operations on strings:
-  * `+`, `*`
+  * `+` (concatenation), `*` (repetition)
 * Variables and identifiers (using `VAR` keyword)
 * Basic arithmetic operators:
   * `+`, `-`, `*`, `/`, `^`
-  * parentheses `(` `)`
+  * Parentheses `(` `)`
+* Comparison operators:
+  * `==`, `!=`, `<`, `>`, `<=`, `>=`
+* Logical operators:
+  * `AND`, `OR`
 * Assignment operator `=`
 * Token system (`include/token.h`)
 * Structured error handling with position tracking:
-  * file name
-  * line number
-  * column number
+  * File name
+  * Line number
+  * Column number
 * Debug mode for inspecting tokens and AST
 * Configurable floating-point precision
 * Execute code from string via CLI
@@ -48,6 +52,10 @@ Arc > VAR y = (x + 2) ^ 2
 49.000000
 Arc > y / 7
 7.000000
+Arc > x == 5
+1
+Arc > x > 10 OR name == "Arc Language"
+1
 ```
 
 ---
@@ -101,14 +109,14 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 
 * No external dependencies
 * Clear separation of components:
-  * lexer
-  * tokens
-  * parser
+  * Lexer
+  * Tokens
+  * Parser
   * AST nodes
-  * interpreter
-  * symbol table (for variables)
-  * error handling
-  * position tracking
+  * Interpreter
+  * Symbol table (for variables)
+  * Error handling
+  * Position tracking
   * REPL
 * Predictable memory ownership
 * Debuggability over cleverness
@@ -203,6 +211,11 @@ make
   ./arc --disable-colored-formatting
   ```
 
+* **Run a file**:
+  ```bash
+  ./arc script.arc
+  ```
+
 ### Install
 
 ```bash
@@ -235,10 +248,12 @@ valgrind --leak-check=full --show-leak-kinds=all ./arc
 * [x] Expression evaluation
 * [x] Variables and identifiers
 * [x] String literals
-* Scoped environments
-* Functions
-* Basic runtime system
-* Bytecode virtual machine (long-term goal)
+* [x] Comparison and Logical operators
+* [ ] Logical `NOT` operator
+* [ ] Scoped environments
+* [ ] Functions
+* [ ] Basic runtime system
+* [ ] Bytecode virtual machine (long-term goal)
 
 ---
 

@@ -98,6 +98,15 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
   Token **tokens = makeTokensLexer(lexer, error, size);
   
   if (!tokens) {
+    if (*error) {
+      char *errStr = errorAsString(*error);
+      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
+      free(errStr);
+
+      freeError(*error);
+      *error = NULL;
+    }
+
     freeLexer(lexer);
     return;
   }
@@ -200,7 +209,7 @@ void parseArguments(int argc, char **argv) {
       if (!_INPUT_FILE) {
         _INPUT_FILE = argv[i];
       } else {
-        printf("%sArc: %smultiple input files not supported%s\n", COLOR(ANSI_CYAN_FG), ANSI_BRIGHT_RED_FG, ANSI_RESET);
+        printf("%sArc: %smultiple input files not supported%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
         exit(1);
       }
       continue;

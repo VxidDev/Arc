@@ -6,7 +6,7 @@
 #include <string.h>
 
 const char *KEYWORDS[] = {
-  "VAR", NULL
+  "VAR", "AND", "OR", "NOT", NULL
 };
 
 Token* initToken(char *type, void* value, bool needsToBeFreed, Position* start, Position* end) {

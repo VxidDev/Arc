@@ -25,49 +25,47 @@ Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
   return (Object*)initInt(*(long*)numNode->token->value);
 }
 
-Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char op, Object* destObj, const char *leftType, const char *rightType, char *filename, Error **err, SymbolTable* variables) {
+Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destObj, const char *leftType, const char *rightType, char *filename, Error **err, SymbolTable* variables) {
   Object* out = NULL;
 
-  switch (op) {
-    case '+': 
-      if (srcObj->type != OBJ_STRING || destObj->type != OBJ_STRING) {
-        char buffer[256];
-
-        snprintf(buffer, sizeof(buffer), "Unsupported operand types for '+': %s + %s", leftType, rightType); 
-
-        freeObject(srcObj);
-        freeObject(destObj);
-    
-        if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
-        return NULL; 
-      }
-
-      out = (Object*)addString((String*)srcObj, (String*)destObj);
-      break;
-    case '*':
-      if (srcObj->type != OBJ_STRING || destObj->type != OBJ_NUMBER_INT) {
-        char buffer[256];
-
-        snprintf(buffer, sizeof(buffer), "Unsupported operand types for '*': %s * %s", leftType, rightType); 
-
-        freeObject(srcObj);
-        freeObject(destObj);
-    
-        if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
-        return NULL; 
-      }
-
-      out = (Object*)mulString((String*)srcObj, (Number*)destObj); break;
-    default:
+  if (strcmp(op, "+") == 0) {
+    if (srcObj->type != OBJ_STRING || destObj->type != OBJ_STRING) {
       char buffer[256];
-    
-      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%c': string %c string", op, op); 
+
+      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '+': %s + %s", leftType, rightType); 
 
       freeObject(srcObj);
       freeObject(destObj);
-    
+  
       if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
       return NULL; 
+    }
+
+    out = (Object*)addString((String*)srcObj, (String*)destObj);
+  } else if (strcmp(op, "*") == 0) {
+    if (srcObj->type != OBJ_STRING || destObj->type != OBJ_NUMBER_INT) {
+      char buffer[256];
+
+      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '*': %s * %s", leftType, rightType); 
+
+      freeObject(srcObj);
+      freeObject(destObj);
+  
+      if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+      return NULL; 
+    }
+
+    out = (Object*)mulString((String*)srcObj, (Number*)destObj);
+  } else {
+    char buffer[256];
+  
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': string %s string", op, op); 
+
+    freeObject(srcObj);
+    freeObject(destObj);
+  
+    if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+    return NULL; 
   } 
 
   freeObject(srcObj);
@@ -81,14 +79,29 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
   BinOpNode* binOper = (BinOpNode*)node;
 
-  char op;
+  char *op;
 
-  if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) op = '+';
-  else if (strcmp(binOper->operTok->type, TOK_MINUS) == 0) op = '-';
-  else if (strcmp(binOper->operTok->type, TOK_MUL) == 0) op = '*';
-  else if (strcmp(binOper->operTok->type, TOK_DIV) == 0) op = '/';
-  else if (strcmp(binOper->operTok->type, TOK_POW) == 0) op = '^';
-  else op = '?';
+  if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) op = "+";
+  else if (strcmp(binOper->operTok->type, TOK_MINUS) == 0) op = "-";
+  else if (strcmp(binOper->operTok->type, TOK_MUL) == 0) op = "*";
+  else if (strcmp(binOper->operTok->type, TOK_DIV) == 0) op = "/";
+  else if (strcmp(binOper->operTok->type, TOK_POW) == 0) op = "^";
+
+  else if (strcmp(binOper->operTok->type, TOK_EQ) == 0) op = "=";
+  else if (strcmp(binOper->operTok->type, TOK_EE) == 0) op = "==";
+  else if (strcmp(binOper->operTok->type, TOK_NE) == 0) op = "!=";
+  else if (strcmp(binOper->operTok->type, TOK_LT) == 0) op = "<";
+  else if (strcmp(binOper->operTok->type, TOK_GT) == 0) op = ">";
+  else if (strcmp(binOper->operTok->type, TOK_LTE) == 0) op = "<=";
+  else if (strcmp(binOper->operTok->type, TOK_GTE) == 0) op = ">=";
+
+  else if (strcmp(binOper->operTok->type, TOK_KEYWORD) == 0) {
+    if (strcmp((char*)binOper->operTok->value, "AND") == 0) op = "AND";
+    else if (strcmp((char*)binOper->operTok->value, "OR") == 0) op = "OR";
+    else op = "?";
+  }
+
+  else op = "?"; 
 
   Object *srcObj = visitNode(binOper->leftNode, filename, err, variables);
   Object *destObj = visitNode(binOper->rightNode, filename, err, variables);
@@ -115,7 +128,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   if (srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) { 
     char buffer[256];
     
-    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%c': %s %c %s", op, leftType, op, rightType); 
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
 
     free(srcObj);
     free(destObj);
@@ -127,7 +140,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   if (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT) { 
     char buffer[256];
     
-    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%c': %s %c %s", op, leftType, op, rightType); 
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
     
     free(srcObj);
     free(destObj);
@@ -158,6 +171,22 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     output = divNumber(dest, src);
   } else if (strcmp(binOper->operTok->type, TOK_POW) == 0) {
     output = powNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_EE) == 0) {
+    output = isEqualNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_LT) == 0) {
+    output = isLessThanNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_GT) == 0) {
+    output = isGreaterThanNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_LTE) == 0) {
+    output = isLessThanEqualNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_GTE) == 0) {
+    output = isGreaterThanEqualNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_NE) == 0) {
+    output = isNotEqualNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_KEYWORD) == 0 && strcmp((char*)binOper->operTok->value, "AND") == 0) {
+    output = andNumber(dest, src);
+  } else if (strcmp(binOper->operTok->type, TOK_KEYWORD) == 0 && strcmp((char*)binOper->operTok->value, "OR") == 0) {
+    output = orNumber(dest, src);
   }
 
   if (output.err) {

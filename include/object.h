@@ -48,6 +48,16 @@ EvalResultNumber mulNumber(const Number* dest, const Number* src);
 EvalResultNumber divNumber(const Number* dest, const Number* src);
 EvalResultNumber powNumber(const Number* dest, const Number* src);
 
+EvalResultNumber isEqualNumber(const Number* dest, const Number* src);
+EvalResultNumber isNotEqualNumber(const Number* dest, const Number* src);
+EvalResultNumber isLessThanEqualNumber(const Number* dest, const Number* src);
+EvalResultNumber isGreaterThanEqualNumber(const Number* dest, const Number* src);
+EvalResultNumber isLessThanNumber(const Number* dest, const Number* src);
+EvalResultNumber isGreaterThanNumber(const Number* dest, const Number* src);
+
+EvalResultNumber andNumber(const Number* dest, const Number* src);
+EvalResultNumber orNumber(const Number* dest, const Number* src);
+
 String* addString(const String* dest, const String* src);
 String* mulString(const String* dest, const Number* src);
 

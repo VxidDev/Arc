@@ -141,4 +141,100 @@ EvalResultNumber powNumber(const Number* dest, const Number* src) {
   return (EvalResultNumber){initFloat(result), ERR_NONE};
 }
 
+EvalResultNumber isEqualNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(dest) == toDouble(src)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(dest) == toLong(src)), ERR_NONE};
+}
+
+EvalResultNumber isNotEqualNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) != toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) != toLong(dest)), ERR_NONE};
+}
+
+EvalResultNumber isLessThanEqualNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) <= toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) <= toLong(dest)), ERR_NONE};
+}
+
+EvalResultNumber isGreaterThanEqualNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) >= toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) >= toLong(dest)), ERR_NONE};
+}
+
+EvalResultNumber isLessThanNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) < toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) < toLong(dest)), ERR_NONE};
+}
+
+EvalResultNumber isGreaterThanNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) > toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) > toLong(dest)), ERR_NONE};
+}
+
+EvalResultNumber andNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) && toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) && toLong(dest)), ERR_NONE};
+}
+
+EvalResultNumber orNumber(const Number* dest, const Number* src) {
+  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    return (EvalResultNumber){initInt(toDouble(src) || toDouble(dest)), ERR_NONE};
+  }
+
+  return (EvalResultNumber){initInt(toLong(src) || toLong(dest)), ERR_NONE};
+}
+
 

@@ -332,6 +332,80 @@ bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned
   return true;
 }
 
+bool _appendToken(Token* token, Token*** tokens, unsigned long *size, unsigned long *capacity) {
+  if (!token) {
+    freeTokens(*tokens, *size);
+    return false;
+  }
+
+  if (*size >= *capacity) {
+    if (!_resizeTokensList(tokens, capacity)) {
+      freeTokens(*tokens, *size);
+      return false;
+    }
+  }
+
+  (*tokens)[(*size)++] = token;
+  return true;
+}
+
+Token* makeNotEqualsToken(Lexer* lexer, Error** error) {
+  Position* start = copyPosition(lexer->pos);
+  advanceLexer(lexer);
+
+  if (!lexer->currChar) {
+    if (*error == NULL) *error = initSyntaxError(start, copyPosition(lexer->pos), start->filename, "Expected '=' symbol after '!'");
+    return NULL;
+  }
+
+  if (lexer->currChar == '=') {
+    advanceLexer(lexer);
+    return initToken(TOK_NE, NULL, false, start, copyPosition(lexer->pos));
+  }
+
+  if (*error == NULL) *error = initSyntaxError(start, copyPosition(lexer->pos), start->filename, "Expected '=' symbol after '!'");
+  return NULL;
+}
+
+Token* makeEqualsToken(Lexer* lexer, Error** error) {
+  Position* start = copyPosition(lexer->pos);
+
+  advanceLexer(lexer);
+
+  if (lexer->currChar == '=') {
+    advanceLexer(lexer);
+    return initToken(TOK_EE, NULL, false, start, copyPosition(lexer->pos));
+  }
+
+  return initToken(TOK_EQ, NULL, false, start, copyPosition(lexer->pos));
+}
+
+Token* makeLessThanToken(Lexer* lexer, Error** error) {
+  Position* start = copyPosition(lexer->pos);
+
+  advanceLexer(lexer);
+
+  if (lexer->currChar == '=') {
+    advanceLexer(lexer);
+    return initToken(TOK_LTE, NULL, false, start, copyPosition(lexer->pos));
+  }
+
+  return initToken(TOK_LT, NULL, false, start, copyPosition(lexer->pos));
+}
+
+Token* makeGreaterThanToken(Lexer* lexer, Error** error) {
+  Position* start = copyPosition(lexer->pos);
+
+  advanceLexer(lexer);
+
+  if (lexer->currChar == '=') {
+    advanceLexer(lexer);
+    return initToken(TOK_GTE, NULL, false, start, copyPosition(lexer->pos));
+  }
+
+  return initToken(TOK_GT, NULL, false, start, copyPosition(lexer->pos));
+}
+
 // Will get optimized / shortened later.
 Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   unsigned long size = 0;
@@ -347,63 +421,38 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (_is_digit(lexer->currChar)) {
-      Token *token = makeNumberTokenLexer(lexer, error);
-
-      if (!token) {
-        freeTokens(tokens, size);
-        return NULL;
-      }
-
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity)) {
-          freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-
+      if (!_appendToken(makeNumberTokenLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
       continue;
     } 
 
     if (_is_letter(lexer->currChar)) {
-      Token *token = makeIdentifierLexer(lexer, error);
-
-      if (!token) {
-        freeTokens(tokens, size);
-        return NULL;
-      }
-
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity)) {
-          freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-
+      if (!_appendToken(makeIdentifierLexer(lexer, error), &tokens, &size, &capacity)) return NULL; 
       continue; 
     }
 
     if (lexer->currChar == '"') {
-      Token *token = makeStringLexer(lexer, error);
-
-      if (!token) {
-        freeTokens(tokens, size);
-        return NULL;
-      }
-
-      if (size >= capacity) {
-        if (!_resizeTokensList(&tokens, &capacity)) {
-          freeTokens(tokens, size);
-          return NULL;
-        }
-      }
-
-      tokens[size++] = token;
-
+      if (!_appendToken(makeStringLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
       continue;  
+    }
+
+    if (lexer->currChar == '!') {
+      if (!_appendToken(makeNotEqualsToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == '=') {
+      if (!_appendToken(makeEqualsToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == '<') {
+      if (!_appendToken(makeLessThanToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == '>') {
+      if (!_appendToken(makeGreaterThanToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      continue;
     }
 
     if (lexer->currChar == '+') {
@@ -428,11 +477,6 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
     if (lexer->currChar == '^') {
       if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_POW)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '=') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_EQ)) return NULL;
       continue;
     }
 

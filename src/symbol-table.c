@@ -38,10 +38,11 @@ void setTable(SymbolTable *table, const char *name, Object *value) {
 
   while (sym) {
     if (strcmp(sym->name, name) == 0) {
-      free(sym->value);
+      freeObject(sym->value);
       sym->value = copyObject(value);
       return;
     }
+
     sym = sym->next;
   }
 
