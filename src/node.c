@@ -112,6 +112,23 @@ void freeVarAssignNode(VarAssignNode* node) {
   free(node);
 }
 
+IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr) {
+  if (!condition || !thenExpr) return NULL;
+ 
+  IfNode* node = malloc(sizeof(IfNode));
+  if (!node) return NULL;
+ 
+  node->base.type = NODE_IF; 
+  node->condition = condition;
+  node->thenExpr = thenExpr;
+  node->elifConds = elifConds;
+  node->elifExprs = elifExprs;
+  node->elifCount = elifCount;
+  node->elseExpr = elseExpr;
+ 
+  return node;
+}
+
 void freeVarAccessNode(VarAccessNode* node) {
   if (!node) return;
 
@@ -163,6 +180,23 @@ void freeProgramNode(ProgramNode *node) {
   free(node);
 }
 
+void freeIfNode(IfNode* node) {
+  if (!node) return;
+
+  freeAST(node->condition);
+  freeAST(node->thenExpr);
+
+  for (size_t i = 0; i < node->elifCount; i++) {
+    freeAST(node->elifConds[i]);
+    freeAST(node->elifExprs[i]);
+  }
+
+  free(node->elifConds);
+  free(node->elifExprs);
+  freeAST(node->elseExpr);
+  free(node);
+}
+
 void freeAST(ASTNode *node) {
   if (!node) return;
 
@@ -193,6 +227,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_PROGRAM:
       freeProgramNode((ProgramNode*)node);
+      break;
+
+    case NODE_IF:
+      freeIfNode((IfNode*)node);
       break;
   }
 }

@@ -67,6 +67,37 @@ void printAST(ASTNode* node) {
       printf("%sSTRING:\"%s\"%s", COLOR(ANSI_BRIGHT_GREEN_FG), (char*)str->token->value, COLOR(ANSI_RESET));
       break;
     }
+
+    case NODE_IF: {
+      IfNode* n = (IfNode*)node;
+      printf("%sIF:%s", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_RESET));
+      printAST(n->condition);
+      printf("%s THEN:%s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_RESET));
+      printAST(n->thenExpr);
+
+      for (size_t i = 0; i < n->elifCount; i++) {
+        printf("%s ELIF:%s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_RESET));
+        printAST(n->elifConds[i]);
+        printf("%s THEN:%s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_RESET));
+        printAST(n->elifExprs[i]);
+      }
+
+      if (n->elseExpr) {
+        printf("%s ELSE:%s", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_RESET));
+        printAST(n->elseExpr);
+      }
+
+      break;
+    }
+
+    case NODE_PROGRAM: {
+      ProgramNode* p = (ProgramNode*)node;
+      for (size_t i = 0; i < p->count; i++) {
+        printAST(p->statements[i]);
+        putchar('\n');
+      }
+      break;
+    }
   }
 }
 

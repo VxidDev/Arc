@@ -16,6 +16,7 @@ Arc is a small programming language project written in C. It focuses on building
 * Support for operations on strings:
   * `+` (concatenation), `*` (repetition)
 * Variables and identifiers (using `VAR` keyword)
+* **Conditional statements**: `IF`, `THEN`, `ELIF`, `ELSE`
 * Basic arithmetic operators:
   * `+`, `-`, `*`, `/`, `^`
   * Parentheses `(` `)`
@@ -48,13 +49,15 @@ Arc > x * 10
 50
 Arc > VAR name = "Arc Language"
 Arc Language
+Arc > IF x == 5 THEN "Matched" ELSE "No Match"
+Matched
 Arc > VAR y = (x + 2) ^ 2
 49.000000
 Arc > y / 7
 7.000000
 Arc > x == 5
 1
-Arc > x > 10 OR name == "Arc Language"
+Arc > x > 10 OR x == 5 
 1
 ```
 
@@ -65,9 +68,9 @@ Arc > x > 10 OR name == "Arc Language"
 Run with:
 
 ```bash
-./arc -d
+arc -d
 # or
-./arc --debug
+arc --debug
 ```
 
 Example session:
@@ -112,7 +115,7 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
   * Lexer
   * Tokens
   * Parser
-  * AST nodes
+  * AST nodes (including support for multiple statements)
   * Interpreter
   * Symbol table (for variables)
   * Error handling
@@ -152,6 +155,7 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
     ├── interpretator.c
     ├── lexer.c
     ├── node.c
+    ├── object.c
     ├── objects
     │   ├── number.c
     │   └── string.c
@@ -177,7 +181,11 @@ make
 
 ### Run
 
+Arc can be run using the `arc` command if installed, or via the local executable.
+
 ```bash
+arc
+# or
 ./arc
 ```
 
@@ -185,35 +193,35 @@ make
 
 * **Debug mode**:
   ```bash
-  ./arc -d
+  arc -d
   # or
-  ./arc --debug
+  arc --debug
   ```
 
 * **Float precision**:
   ```bash
-  ./arc -p 10
+  arc -p 10
   # or
-  ./arc --float-precision 10
+  arc --float-precision 10
   ```
 
 * **Execute code**:
   ```bash
-  ./arc -c "5 + 5"
+  arc -c "5 + 5"
   # or
-  ./arc --code "VAR x = 10"
+  arc --code "VAR x = 10"
   ```
 
 * **Disable colors**:
   ```bash
-  ./arc -n
+  arc -n
   # or
-  ./arc --disable-colored-formatting
+  arc --disable-colored-formatting
   ```
 
 * **Run a file**:
   ```bash
-  ./arc script.arc
+  arc script.arc
   ```
 
 ### Install
@@ -233,7 +241,7 @@ Arc is regularly tested with Valgrind to ensure:
 * Clear and consistent ownership rules
 
 ```bash
-valgrind --leak-check=full --show-leak-kinds=all ./arc
+valgrind --leak-check=full --show-leak-kinds=all arc
 ```
 
 ---
@@ -249,6 +257,7 @@ valgrind --leak-check=full --show-leak-kinds=all ./arc
 * [x] Variables and identifiers
 * [x] String literals
 * [x] Comparison and Logical operators
+* [x] `IF`, `THEN`, `ELIF`, `ELSE` statements
 * [ ] Logical `NOT` operator
 * [ ] Scoped environments
 * [ ] Functions

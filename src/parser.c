@@ -144,7 +144,7 @@ ASTNode* factorParser(Parser* parser) {
       return NULL;
     }
 
-    ASTNode* unaryOpNode = (ASTNode*) initUnaryOpNode(token, factor);
+    ASTNode* unaryOpNode = (ASTNode*)initUnaryOpNode(token, factor);
     return unaryOpNode; 
   }
 
@@ -205,6 +205,192 @@ ASTNode* exprParser(Parser* parser) {
     if (*parser->error == NULL); // Will be implemented after addition of EOF token
 
     return NULL;
+  }
+
+  if (strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "IF") == 0) {
+    Token* ifTok = parser->currentToken; // safe copy for error reporting
+    advanceParser(parser);
+
+    ASTNode* condition = andOrParser(parser);
+
+    if (!condition) return NULL;
+
+    if (!parser->currentToken || strcmp((char*)parser->currentToken->value, "THEN") != 0) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(ifTok->start), copyPosition(ifTok->end), ifTok->start->filename, "Expected THEN");
+      freeAST(condition);
+      return NULL;
+    }
+
+    advanceParser(parser);
+
+    ASTNode* thenExpr = andOrParser(parser);
+
+    if (!thenExpr) {
+      freeAST(condition);
+      return NULL;
+    }
+
+    size_t size = 0;
+    size_t capacity = 8;
+    ASTNode** elifConds = calloc(capacity, sizeof(ASTNode*));
+    ASTNode** elifExprs = calloc(capacity, sizeof(ASTNode*));
+
+    if (!elifConds || !elifExprs) {
+      free(elifConds);
+      free(elifExprs);
+      freeAST(condition);
+      freeAST(thenExpr);
+      return NULL;
+    }
+
+    while (parser->currentToken && strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "ELIF") == 0) {
+      Token* elifTok = parser->currentToken; // safe copy for error reporting
+      advanceParser(parser);
+
+      if (!parser->currentToken) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(elifTok->start), copyPosition(elifTok->end), elifTok->start->filename, "Expected expression after 'ELIF' keyword.");
+        for (size_t i = 0; i < size; i++) {
+          freeAST(elifConds[i]);
+          freeAST(elifExprs[i]);
+        }
+
+        free(elifConds);
+        free(elifExprs);
+        freeAST(condition);
+        freeAST(thenExpr);
+
+        return NULL;
+      }
+
+      ASTNode* elifCond = andOrParser(parser);
+
+      if (!elifCond) {
+        for (size_t i = 0; i < size; i++) {
+          freeAST(elifConds[i]);
+          freeAST(elifExprs[i]);
+        }
+
+        free(elifConds);
+        free(elifExprs);
+        freeAST(condition);
+        freeAST(thenExpr);
+
+        return NULL;
+      }
+
+      if (!parser->currentToken || strcmp((char*)parser->currentToken->value, "THEN") != 0) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(elifTok->start), copyPosition(elifTok->end), elifTok->start->filename, "Expected THEN after ELIF condition");
+        freeAST(elifCond);
+
+        for (size_t i = 0; i < size; i++) {
+          freeAST(elifConds[i]);
+          freeAST(elifExprs[i]);
+        }
+
+        free(elifConds);
+        free(elifExprs);
+        freeAST(condition);
+        freeAST(thenExpr);
+
+        return NULL;
+      }
+
+      advanceParser(parser);
+
+      ASTNode* elifExpr = andOrParser(parser);
+
+      if (!elifExpr) {
+        freeAST(elifCond);
+        for (size_t i = 0; i < size; i++) {
+          freeAST(elifConds[i]);
+          freeAST(elifExprs[i]);
+        }
+
+        free(elifConds);
+        free(elifExprs);
+        freeAST(condition);
+        freeAST(thenExpr);
+
+        return NULL;
+      }
+
+      if (size >= capacity) {
+        capacity *= 2;
+        void* tmp1 = realloc(elifConds, sizeof(ASTNode*) * capacity);
+        void* tmp2 = realloc(elifExprs, sizeof(ASTNode*) * capacity);
+
+        if (!tmp1 || !tmp2) {
+          free(tmp1 ? tmp1 : elifConds);
+          free(tmp2 ? tmp2 : elifExprs);
+          freeAST(elifCond);
+          freeAST(elifExpr);
+
+          for (size_t i = 0; i < size; i++) {
+            freeAST(elifConds[i]);
+            freeAST(elifExprs[i]);
+          }
+
+          freeAST(condition);
+          freeAST(thenExpr);
+
+          return NULL;
+        }
+
+        elifConds = tmp1;
+        elifExprs = tmp2;
+      }
+
+      elifConds[size] = elifCond;
+      elifExprs[size] = elifExpr;
+      size++;
+    }
+
+    ASTNode* elseExpr = NULL;
+
+    if (parser->currentToken &&
+        strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 &&
+        strcmp((char*)parser->currentToken->value, "ELSE") == 0) {
+
+      Token* tok = parser->currentToken; // safe copy 
+
+      advanceParser(parser);
+
+      if (!parser->currentToken) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(tok->start), copyPosition(tok->end), tok->start->filename, "Expected expression after 'ELSE' keyword.");
+        for (size_t i = 0; i < size; i++) {
+          freeAST(elifConds[i]);
+          freeAST(elifExprs[i]);
+        }
+
+        free(elifConds);
+        free(elifExprs);
+        freeAST(condition);
+        freeAST(thenExpr);
+
+        return NULL;
+      } 
+
+      elseExpr = andOrParser(parser);
+
+      if (!elseExpr) {
+        for (size_t i = 0; i < size; i++) {
+          freeAST(elifConds[i]);
+          freeAST(elifExprs[i]);
+        }
+
+        free(elifConds);
+        free(elifExprs);
+
+        freeAST(condition);
+        freeAST(thenExpr);
+
+        if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(tok->start), copyPosition(tok->end), tok->start->filename, "Expected expression after 'ELSE' keyword.");
+
+        return NULL;
+      }
+    }
+
+    return (ASTNode*)initIfNode(condition, thenExpr, elifConds, elifExprs, size, elseExpr);
   }
 
   if (strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "VAR") == 0) {

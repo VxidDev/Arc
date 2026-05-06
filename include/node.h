@@ -12,6 +12,7 @@ typedef enum {
   NODE_VARACCESS,
   NODE_STRING,
   NODE_PROGRAM,
+  NODE_IF
 } NodeType;
 
 typedef struct ASTNode {
@@ -54,10 +55,20 @@ typedef struct UnaryOpNode {
   ASTNode* node;
 } UnaryOpNode;
 
+typedef struct IfNode {
+  ASTNode base;           
+  ASTNode* condition;
+  ASTNode* thenExpr;
+  ASTNode** elifConds;   
+  ASTNode** elifExprs; 
+  size_t elifCount;
+  ASTNode* elseExpr;   
+} IfNode;
+
 typedef struct {
-    ASTNode base;          
-    ASTNode **statements;  
-    size_t count;         
+  ASTNode base;          
+  ASTNode **statements;  
+  size_t count;         
 } ProgramNode;
 
 NumberNode* initNumberNode(Token* token);
@@ -66,6 +77,7 @@ BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode);
 UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node);
 VarAccessNode* initVarAccessNode(Token* token);
 VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
+IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr);
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 
 void freeBinOpNode(BinOpNode* node);

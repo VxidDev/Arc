@@ -329,6 +329,47 @@ Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable
   return last; 
 }
 
+Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variables) {
+  if (!n) return NULL;
+
+  IfNode* node = (IfNode*)n;
+
+  Object* condition = visitNode(node->condition, filename, err, variables);
+
+  if (!condition) return NULL;
+  if (condition->type != OBJ_NUMBER_INT) return NULL;
+
+  Number* cond = (Number*)condition;
+
+  if (cond->as.i != 0) {
+    free(cond);
+    return visitNode(node->thenExpr, filename, err, variables);
+  }
+
+  free(cond);
+
+  for (size_t i = 0; i < node->elifCount; i++) {
+    Object* elifVal = visitNode(node->elifConds[i], filename, err, variables);
+    if (!elifVal) return NULL;
+    
+    if (elifVal->type != OBJ_NUMBER_INT) return NULL;
+
+    if (((Number*)elifVal)->as.i != 0) {
+      free(elifVal);
+      return visitNode(node->elifExprs[i], filename, err, variables);
+    }
+
+    free(elifVal);
+  }
+
+  // Fall through to ELSE if present
+  if (node->elseExpr) {
+    return visitNode(node->elseExpr, filename, err, variables);
+  }
+
+  return NULL;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -340,6 +381,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_VARASSIGN: return visitVarAssignNode(node, filename, err, variables);
     case NODE_STRING: return visitStringNode(node, filename, err, variables);
     case NODE_PROGRAM: return visitProgramNode(node, filename, err, variables);
+    case NODE_IF: return visitIfNode(node, filename, err, variables);
     default: return NULL;
   }
 }
