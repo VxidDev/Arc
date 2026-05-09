@@ -26,6 +26,8 @@ int _FLOAT_PRECISION = 6;
 char *_CODE = NULL;
 char *_INPUT_FILE = NULL;
 
+int currentArg = 1;
+
 bool isValidExtension(const char *filename) {
   if (!filename) return false;
 
@@ -201,16 +203,24 @@ int parseInt(const char *s, int *out) {
   return 1;
 }
 
-void parseArguments(int argc, char **argv) {
-  if (argc < 2) return;
+void parseArguments(int argc, char **argv, SymbolTable* variables) {
+  if (argc < 2) return; // repl 
 
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] != '-') {
       if (!_INPUT_FILE) {
         _INPUT_FILE = argv[i];
       } else {
-        printf("%sArc: %smultiple input files not supported%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        exit(1);
+        char buf[64];
+
+        snprintf(buf, sizeof(buf), "arg%d", currentArg);
+        currentArg++;
+        
+        String* arg = initString(argv[i]);
+        setTable(variables, buf, (Object*)arg);
+
+        free(arg->value);
+        free(arg);
       }
       continue;
     }
@@ -253,10 +263,28 @@ void parseArguments(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-  parseArguments(argc, argv);
-
   char *userInput = NULL;
-  SymbolTable *variables = createTable(1024, NULL);
+  SymbolTable *variables = createTable(1024, NULL); 
+
+  parseArguments(argc, argv, variables);
+  
+  String* arg0 = initString(_INPUT_FILE ? _INPUT_FILE : argv[0]);
+  setTable(variables, "arg0", (Object*)arg0);
+  free(arg0->value);
+  free(arg0);
+
+  char buf[64];
+
+  snprintf(buf, sizeof(buf), "arg%d", currentArg);
+  
+  Number* nullTermVar = initInt(0);
+
+  setTable(variables, buf, (Object*)nullTermVar); // Null-Terminate
+  free(nullTermVar);
+
+  Number* argumentCount = initInt(currentArg);
+  setTable(variables, "argc", (Object*)argumentCount);
+  free(argumentCount);
 
   char *code = NULL;
 

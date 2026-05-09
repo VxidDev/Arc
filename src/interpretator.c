@@ -56,6 +56,22 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
     }
 
     out = (Object*)mulString((String*)srcObj, (Number*)destObj);
+  } else if (strcmp(op, "==") == 0) {
+    Number* res = NULL;
+
+    if ((srcObj->type == OBJ_NUMBER_INT || srcObj->type == OBJ_NUMBER_FLOAT) || (destObj->type == OBJ_NUMBER_FLOAT || destObj->type == OBJ_NUMBER_INT)) {
+      res = initInt(0);  
+    } else {
+      String *lhs = (String*)srcObj;
+      String *rhs = (String*)destObj;
+
+      res = initInt(strcmp(lhs->value, rhs->value) == 0);
+    }
+
+    freeObject(srcObj);
+    freeObject(destObj);
+
+    return (Object*)res;
   } else {
     char buffer[256];
   
@@ -161,7 +177,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   
   EvalResultNumber output;
 
-  if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) {
+  if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) { // This monstrocity is awful, switch case would be WAY better there but sadly type is string. Later I'll solve this issue
     output = addNumber(dest, src);
   } else if (strcmp(binOper->operTok->type, TOK_MINUS) == 0) {
     output = subNumber(dest, src);
