@@ -97,28 +97,30 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
   char *op;
 
-  if (binOper->operTok->type == TOK_PLUS) op = "+";
-  else if (binOper->operTok->type == TOK_MINUS) op = "-";
-  else if (binOper->operTok->type == TOK_MUL) op = "*";
-  else if (binOper->operTok->type == TOK_DIV) op = "/";
-  else if (binOper->operTok->type == TOK_POW) op = "^";
-
-  else if (binOper->operTok->type == TOK_EQ) op = "=";
-  else if (binOper->operTok->type == TOK_EE) op = "==";
-  else if (binOper->operTok->type == TOK_NE) op = "!=";
-  else if (binOper->operTok->type == TOK_LT) op = "<";
-  else if (binOper->operTok->type == TOK_GT) op = ">";
-  else if (binOper->operTok->type == TOK_LTE) op = "<=";
-  else if (binOper->operTok->type == TOK_GTE) op = ">=";
-
-  else if (binOper->operTok->type == TOK_KEYWORD) {
-    if (strcmp((char*)binOper->operTok->value, "AND") == 0) op = "AND";
-    else if (strcmp((char*)binOper->operTok->value, "OR") == 0) op = "OR";
-    else op = "?";
+  switch (binOper->operTok->type) {
+    case TOK_PLUS: op = "+"; break;
+    case TOK_MINUS: op = "-"; break;
+    case TOK_MUL: op = "*"; break;
+    case TOK_DIV: op = "/"; break;
+    case TOK_POW: op = "^"; break;
+    case TOK_EQ: op = "="; break;
+    case TOK_EE: op = "=="; break;
+    case TOK_NE: op = "!="; break;
+    case TOK_LT: op = "<"; break;
+    case TOK_GT: op = ">"; break;
+    case TOK_LTE: op = "<="; break;
+    case TOK_GTE: op = ">="; break;
+    case TOK_KEYWORD:
+      if (strcmp((char*)binOper->operTok->value, "AND") == 0) 
+        op = "AND";
+      else if (strcmp((char*)binOper->operTok->value, "OR") == 0) 
+        op = "OR";
+      else 
+        op = "?";
+      break;
+    default: op = "?"; break;
   }
-
-  else op = "?"; 
-
+ 
   Object *srcObj = visitNode(binOper->leftNode, filename, err, variables);
   Object *destObj = visitNode(binOper->rightNode, filename, err, variables);
   
