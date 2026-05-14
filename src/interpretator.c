@@ -37,7 +37,7 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
       freeObject(srcObj);
       freeObject(destObj);
   
-      if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+      if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
       return NULL; 
     }
 
@@ -51,7 +51,7 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
       freeObject(srcObj);
       freeObject(destObj);
   
-      if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+      if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
       return NULL; 
     }
 
@@ -80,7 +80,7 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
     freeObject(srcObj);
     freeObject(destObj);
   
-    if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+    if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
     return NULL; 
   } 
 
@@ -149,7 +149,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     free(srcObj);
     free(destObj);
     
-    if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+    if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
     return NULL;
   }
 
@@ -161,7 +161,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     free(srcObj);
     free(destObj);
 
-    if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, buffer);
+    if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
     return NULL;
   }
 
@@ -169,7 +169,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   Number* dest = (Number*)destObj;
 
   if (!src || !dest) {
-    if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+    if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     if (src) free(src);
     if (dest) free(dest);
     return NULL;
@@ -203,12 +203,12 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
   if (output.err) {
     if (output.err == ERR_NULL) {
-      if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     } else if (output.err == ERR_DIV_BY_ZERO) {
-      if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Division by zero");
+      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Division by zero");
     } else if (output.err == ERR_TYPE) {
-      if (*err == NULL) *err = initTypeError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Incompatible type for binary operation");
-    } else { if (*err == NULL) *err = initValueError(copyPosition(binOper->operTok->start), copyPosition(binOper->operTok->end), filename, "Unknown error."); }
+      if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, "Incompatible type for binary operation");
+    } else { if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Unknown error."); }
 
     free(src);
     free(dest);
@@ -237,7 +237,7 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
   Object* numberObj = (Object*)visitNode(unaryOper->node, filename, err, variables); 
 
   if (!numberObj) {
-    if (*err == NULL) *err = initValueError(copyPosition(unaryOper->operTok->start), copyPosition(unaryOper->operTok->end), filename, "Expected Number* result, received NULL.");
+    if (*err == NULL) *err = initValueError(unaryOper->operTok->start, unaryOper->operTok->end, filename, "Expected Number* result, received NULL.");
     return NULL;
   }
 
@@ -253,7 +253,7 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
 
     free(numberObj);
     
-    if (*err == NULL) *err = initTypeError(copyPosition(unaryOper->operTok->start), copyPosition(unaryOper->operTok->end), filename, buffer);
+    if (*err == NULL) *err = initTypeError(unaryOper->operTok->start, unaryOper->operTok->end, filename, buffer);
     return NULL;
   }
 
@@ -267,7 +267,7 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
     free(number);
     free(negOne);
   } else {
-    if (*err == NULL) *err = initValueError(copyPosition(unaryOper->operTok->start), copyPosition(unaryOper->operTok->end), filename, "Unknown unary operator");
+    if (*err == NULL) *err = initValueError(unaryOper->operTok->start, unaryOper->operTok->end, filename, "Unknown unary operator");
     free(number);
     return NULL;
   }
@@ -291,7 +291,7 @@ Object* visitVarAccessNode(ASTNode* node, char *filename, Error** err, SymbolTab
 
     snprintf(buffer, len + 1, "Undefined variable \"%s\"", varName);
 
-    if (*err == NULL) *err = initNameError(copyPosition(va->token->start), copyPosition(va->token->end), filename, buffer);
+    if (*err == NULL) *err = initNameError(va->token->start, va->token->end, filename, buffer);
     free(buffer);
 
     return NULL;

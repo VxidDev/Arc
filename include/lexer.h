@@ -8,7 +8,7 @@ typedef struct Lexer {
   char *text;
   char *filename;
   unsigned long textLen;
-  Position* pos;
+  Position pos;
   char currChar;
 } Lexer;
 

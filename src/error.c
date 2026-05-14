@@ -12,13 +12,10 @@ void freeError(Error* err) {
   if (err->details) free(err->details);
   if (err->filename) free(err->filename);
   
-  if (err->start) freePosition(err->start);
-  if (err->end) freePosition(err->end);
-
   free(err);
 }
 
-Error* initError(Position* start, Position* end, char *name, char *filename, char *details) {
+Error* initError(Position start, Position end, char *name, char *filename, char *details) {
   if (!name || !details) return NULL;
 
   Error *error = malloc(sizeof(Error));
@@ -40,14 +37,7 @@ Error* initError(Position* start, Position* end, char *name, char *filename, cha
     return NULL;
   }
   
-  error->filename = stringDup(filename);
-
-  if (!error->filename) {
-    free(error->name);
-    free(error->details);
-    free(error);
-    return NULL;
-  }
+  error->filename = filename;
  
   error->start = start;
   error->end = end;
@@ -55,40 +45,40 @@ Error* initError(Position* start, Position* end, char *name, char *filename, cha
   return error;
 }
 
-Error *initIllegalCharError(Position* start, Position* end, char *filename, char *details) {
+Error *initIllegalCharError(Position start, Position end, char *filename, char *details) {
   return initError(start, end, "Illegal Character", filename, details);
 }
 
-Error *initSyntaxError(Position* start, Position* end, char *filename, char* details) {
+Error *initSyntaxError(Position start, Position end, char *filename, char* details) {
   return initError(start, end, "Syntax Error", filename, details);
 }
 
-Error *initValueError(Position* start, Position* end, char *filename, char* details) {
+Error *initValueError(Position start, Position end, char *filename, char* details) {
   return initError(start, end, "Value Error", filename, details);
 }
 
-Error *initLexerError(Position* start, Position* end, char *filename, char* details) {
+Error *initLexerError(Position start, Position end, char *filename, char* details) {
   return initError(start, end, "Lexer Error", filename, details);
 }
 
-Error *initSemanticError(Position* start, Position *end, char *filename, char* details) {
+Error *initSemanticError(Position start, Position end, char *filename, char* details) {
   return initError(start, end, "Semantic Error", filename, details); 
 }
 
-Error *initNameError(Position* start, Position *end, char *filename, char* details) {
+Error *initNameError(Position start, Position end, char *filename, char* details) {
   return initError(start, end, "Name Error", filename, details);
 }
 
-Error *initTypeError(Position* start, Position *end, char *filename, char* details) {
+Error *initTypeError(Position start, Position end, char *filename, char* details) {
   return initError(start, end, "Type Error", filename, details);
 }
 
 char* errorAsString(const Error* error) {
-  if (!error || !error->name || !error->details || !error->filename || !error->start || !error->end)
+  if (!error || !error->name || !error->details || !error->filename)
     return NULL;
 
-  const char *text = error->start->filetext;
-  unsigned long startIdx = error->start->index;
+  const char *text = error->start.filetext;
+  unsigned long startIdx = error->start.index;
 
   unsigned long lineStart = startIdx;
   while (lineStart > 0 && text[lineStart - 1] != '\n')
@@ -106,8 +96,8 @@ char* errorAsString(const Error* error) {
   memcpy(lineStr, text + lineStart, lineLen);
   lineStr[lineLen] = '\0';
 
-  unsigned long startCol = error->start->column;
-  unsigned long endCol = error->end->column;
+  unsigned long startCol = error->start.column;
+  unsigned long endCol = error->end.column;
 
   if (endCol < startCol) endCol = startCol;
 
@@ -133,8 +123,8 @@ char* errorAsString(const Error* error) {
     error->name,
     error->details,
     error->filename,
-    error->start->line + 1,
-    error->start->column + 1,
+    error->start.line + 1,
+    error->start.column + 1,
     lineStr,
     underline
   );
@@ -155,8 +145,8 @@ char* errorAsString(const Error* error) {
     error->name,
     error->details,
     error->filename,
-    error->start->line + 1,
-    error->start->column + 1,
+    error->start.line + 1,
+    error->start.column + 1,
     lineStr,
     underline
   );

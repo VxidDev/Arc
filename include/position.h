@@ -6,11 +6,6 @@ typedef struct Position {
   char *filename, *filetext;
 } Position;
 
-Position *initPosition(unsigned long index, unsigned long line, unsigned long column, char *filename, char *filetext);
-
-Position* advancePosition(Position *pos, char c);
-Position* copyPosition(const Position *pos);
-
-void freePosition(Position *pos);
+void advancePosition(Position *pos, char c);
 
 #endif // POSITION_H

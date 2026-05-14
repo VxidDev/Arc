@@ -18,13 +18,13 @@ extern const char *KEYWORDS[];
 typedef struct Token {
   TokType type;
 
-  Position *start, *end;
+  Position start, end;
 
   void *value;
   bool needsToBeFreed;
 } Token;
 
-Token* initToken(TokType type, void *value, bool needsToBeFreed, Position* start, Position* end);
+Token* initToken(TokType type, void *value, bool needsToBeFreed, Position start, Position end);
 char *tokenRepr(const Token* t);
 
 void freeToken(Token* t);

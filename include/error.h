@@ -12,17 +12,17 @@ typedef enum ErrType {
 
 typedef struct Error {
   char *name, *details, *filename, *filetext;
-  Position *start, *end;
+  Position start, end;
 } Error;
 
-Error* initError(Position* start, Position* end, char *filename, char *name, char *details);
-Error* initIllegalCharError(Position* start, Position* end, char *filename, char *details);
-Error* initSyntaxError(Position* start, Position* end, char *filename, char *details);
-Error* initValueError(Position* start, Position* end, char *filename, char *details);
-Error* initLexerError(Position* start, Position* end, char *filename, char *details);
-Error* initSemanticError(Position* start, Position* end, char *filename, char *details);
-Error* initNameError(Position* start, Position* end, char *filename, char *details);
-Error* initTypeError(Position* start, Position* end, char *filename, char *details);
+Error* initError(Position start, Position end, char *filename, char *name, char *details);
+Error* initIllegalCharError(Position start, Position end, char *filename, char *details);
+Error* initSyntaxError(Position start, Position end, char *filename, char *details);
+Error* initValueError(Position start, Position end, char *filename, char *details);
+Error* initLexerError(Position start, Position end, char *filename, char *details);
+Error* initSemanticError(Position start, Position end, char *filename, char *details);
+Error* initNameError(Position start, Position end, char *filename, char *details);
+Error* initTypeError(Position start, Position end, char *filename, char *details);
 
 char *errorAsString(const Error *error);
 
