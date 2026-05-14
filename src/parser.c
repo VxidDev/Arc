@@ -48,9 +48,7 @@ ASTNode* atomParser(Parser* parser) {
     
   Token* token = parser->currentToken;
 
-  if (strcmp(token->type, TOK_PLUS) == 0 ||
-      strcmp(token->type, TOK_MINUS) == 0) {
-    
+  if ((token->type == TOK_PLUS) || (token->type == TOK_MINUS)) {
     Token* tok = token; // safe copy 
 
     advanceParser(parser);
@@ -65,18 +63,18 @@ ASTNode* atomParser(Parser* parser) {
     return (ASTNode*)initUnaryOpNode(token, expr);
   }
 
-  if (strcmp(token->type, TOK_STRING) == 0) {
+  if (token->type == TOK_STRING) {
     advanceParser(parser);
     return (ASTNode*)initStringNode(token);
   }
 
-  if (strcmp(token->type, TOK_INT) == 0 || strcmp(token->type, TOK_FLOAT) == 0) {
+  if ((token->type == TOK_INT) || (token->type == TOK_FLOAT)) {
     advanceParser(parser);
     return (ASTNode*)initNumberNode(token);
-  } else if (strcmp(token->type, TOK_IDENTIFIER) == 0) {
+  } else if (token->type == TOK_IDENTIFIER) {
     advanceParser(parser);
     return (ASTNode*)initVarAccessNode(token);
-  } else if (strcmp(token->type, TOK_LPAREN) == 0) {
+  } else if (token->type == TOK_LPAREN) {
     advanceParser(parser);
     
     Token* tok = token; // safe copy 
@@ -88,7 +86,7 @@ ASTNode* atomParser(Parser* parser) {
       return NULL;
     }
 
-    if (parser->currentToken && strcmp(parser->currentToken->type, TOK_RPAREN) == 0) {
+    if (parser->currentToken && (parser->currentToken->type == TOK_RPAREN)) {
       advanceParser(parser);
       return expr;
     } else {
@@ -108,7 +106,7 @@ ASTNode* powerParser(Parser* parser) {
   ASTNode* left = atomParser(parser);
   if (!left) return NULL; // error is already set
 
-  if (parser->currentToken && strcmp(parser->currentToken->type, TOK_POW) == 0) {
+  if (parser->currentToken && (parser->currentToken->type == TOK_POW)) {
     Token* opTok = parser->currentToken;
     advanceParser(parser);
 
@@ -133,7 +131,7 @@ ASTNode* factorParser(Parser* parser) {
 
   if (!token) return NULL;
 
-  if (strcmp(token->type, TOK_PLUS) == 0 || strcmp(token->type, TOK_MINUS) == 0) {
+  if ((token->type == TOK_PLUS) || (token->type == TOK_MINUS)) {
     Token* opTok = token;
 
     advanceParser(parser);
@@ -157,9 +155,7 @@ ASTNode* termParser(Parser* parser) {
   ASTNode* left = factorParser(parser);
   if (!left) return NULL; // error is already set
 
-  while (parser->currentToken &&
-        (strcmp(parser->currentToken->type, TOK_MUL) == 0 ||
-         strcmp(parser->currentToken->type, TOK_DIV) == 0)) {
+  while (parser->currentToken && ((parser->currentToken->type == TOK_MUL) || (parser->currentToken->type == TOK_DIV))) {
 
     Token* opTok = parser->currentToken;
     advanceParser(parser);
@@ -186,8 +182,7 @@ ASTNode* termParser(Parser* parser) {
 ASTNode* exprParser(Parser* parser) {
   if (!parser) return NULL;
 
-  if (parser->currentToken &&
-    strcmp(parser->currentToken->type, TOK_RPAREN) == 0) {
+  if (parser->currentToken && (parser->currentToken->type == TOK_RPAREN)) {
 
     if (*parser->error == NULL) {
       *parser->error = initSyntaxError(
@@ -207,7 +202,7 @@ ASTNode* exprParser(Parser* parser) {
     return NULL;
   }
 
-  if (strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "IF") == 0) {
+  if ((parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "IF") == 0) {
     Token* ifTok = parser->currentToken; // safe copy for error reporting
     advanceParser(parser);
 
@@ -243,7 +238,7 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    while (parser->currentToken && strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "ELIF") == 0) {
+    while (parser->currentToken && (parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "ELIF") == 0) {
       Token* elifTok = parser->currentToken; // safe copy for error reporting
       advanceParser(parser);
 
@@ -347,10 +342,7 @@ ASTNode* exprParser(Parser* parser) {
 
     ASTNode* elseExpr = NULL;
 
-    if (parser->currentToken &&
-        strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 &&
-        strcmp((char*)parser->currentToken->value, "ELSE") == 0) {
-
+    if (parser->currentToken && (parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "ELSE") == 0) {
       Token* tok = parser->currentToken; // safe copy 
 
       advanceParser(parser);
@@ -393,7 +385,7 @@ ASTNode* exprParser(Parser* parser) {
     return (ASTNode*)initIfNode(condition, thenExpr, elifConds, elifExprs, size, elseExpr);
   }
 
-  if (strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 && strcmp((char*)parser->currentToken->value, "VAR") == 0) {
+  if ((parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "VAR") == 0) {
     Token* tok = parser->currentToken; // safe copy
     advanceParser(parser);
 
@@ -402,7 +394,7 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    if (strcmp(parser->currentToken->type, TOK_IDENTIFIER) != 0) {
+    if (parser->currentToken->type != TOK_IDENTIFIER) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(parser->currentToken->start), copyPosition(parser->currentToken->end), parser->currentToken->start->filename, "Expected identifier after 'VAR'");
       return NULL;
     }
@@ -418,7 +410,7 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    if (strcmp(parser->currentToken->type, TOK_EQ) != 0) {
+    if (parser->currentToken->type != TOK_EQ) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(copyPosition(parser->currentToken->start), copyPosition(parser->currentToken->end), parser->currentToken->start->filename, "Expected '=' after identifier");
       return NULL;
     }
@@ -440,10 +432,7 @@ ASTNode* exprParser(Parser* parser) {
   ASTNode* left = termParser(parser);
   if (!left) return NULL; // error is already set
 
-  while (parser->currentToken &&
-        (strcmp(parser->currentToken->type, TOK_PLUS) == 0 ||
-         strcmp(parser->currentToken->type, TOK_MINUS) == 0)) {
-
+  while (parser->currentToken && ((parser->currentToken->type == TOK_PLUS) || (parser->currentToken->type == TOK_MINUS))) {
     Token* opTok = parser->currentToken;
     advanceParser(parser);
 
@@ -472,11 +461,7 @@ ASTNode* andOrParser(Parser* parser) {
   ASTNode* left = compExprParser(parser);
   if (!left) return NULL;
 
-  while (parser->currentToken &&
-         strcmp(parser->currentToken->type, TOK_KEYWORD) == 0 &&
-        (strcmp((char*)parser->currentToken->value, "AND") == 0 ||
-         strcmp((char*)parser->currentToken->value, "OR")  == 0)) {
-
+  while (parser->currentToken && (parser->currentToken->type == TOK_KEYWORD) && (strcmp((char*)parser->currentToken->value, "AND") == 0 || strcmp((char*)parser->currentToken->value, "OR")  == 0)) {
     Token* opTok = parser->currentToken;
     advanceParser(parser);
 
@@ -508,13 +493,12 @@ ASTNode* compExprParser(Parser* parser) {
   ASTNode* left = exprParser(parser);
   if (!left) return NULL;
 
-  while (parser->currentToken &&
-        (strcmp(parser->currentToken->type, TOK_EE)  == 0 ||
-         strcmp(parser->currentToken->type, TOK_NE)  == 0 ||
-         strcmp(parser->currentToken->type, TOK_LT)  == 0 ||
-         strcmp(parser->currentToken->type, TOK_GT)  == 0 ||
-         strcmp(parser->currentToken->type, TOK_LTE) == 0 ||
-         strcmp(parser->currentToken->type, TOK_GTE) == 0)) {
+  while (parser->currentToken && ((parser->currentToken->type == TOK_EE) ||
+         (parser->currentToken->type == TOK_NE) ||
+         (parser->currentToken->type == TOK_LT) ||
+         (parser->currentToken->type == TOK_GT) ||
+         (parser->currentToken->type == TOK_LTE) ||
+         (parser->currentToken->type == TOK_GTE))) {
 
     Token* opTok = parser->currentToken;
     advanceParser(parser);
@@ -569,9 +553,9 @@ ASTNode* parseProgram(Parser* parser) {
   if (!parser) return NULL;
   
   size_t size = 0;
-  size_t capacity = 32;
+  size_t capacity = 1024;
 
-  ASTNode **statements = calloc(capacity, sizeof(ASTNode*));
+  ASTNode **statements = malloc(capacity * sizeof(ASTNode*));
 
   while (parser->currentToken != NULL) {
     ASTNode *statement = andOrParser(parser);

@@ -18,7 +18,7 @@ Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
     return NULL;
   }
   
-  if (strcmp(numNode->token->type, TOK_FLOAT) == 0) {
+  if (numNode->token->type == TOK_FLOAT) {
     return (Object*)initFloat(*(double*)numNode->token->value);
   }
 
@@ -97,21 +97,21 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
   char *op;
 
-  if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) op = "+";
-  else if (strcmp(binOper->operTok->type, TOK_MINUS) == 0) op = "-";
-  else if (strcmp(binOper->operTok->type, TOK_MUL) == 0) op = "*";
-  else if (strcmp(binOper->operTok->type, TOK_DIV) == 0) op = "/";
-  else if (strcmp(binOper->operTok->type, TOK_POW) == 0) op = "^";
+  if (binOper->operTok->type == TOK_PLUS) op = "+";
+  else if (binOper->operTok->type == TOK_MINUS) op = "-";
+  else if (binOper->operTok->type == TOK_MUL) op = "*";
+  else if (binOper->operTok->type == TOK_DIV) op = "/";
+  else if (binOper->operTok->type == TOK_POW) op = "^";
 
-  else if (strcmp(binOper->operTok->type, TOK_EQ) == 0) op = "=";
-  else if (strcmp(binOper->operTok->type, TOK_EE) == 0) op = "==";
-  else if (strcmp(binOper->operTok->type, TOK_NE) == 0) op = "!=";
-  else if (strcmp(binOper->operTok->type, TOK_LT) == 0) op = "<";
-  else if (strcmp(binOper->operTok->type, TOK_GT) == 0) op = ">";
-  else if (strcmp(binOper->operTok->type, TOK_LTE) == 0) op = "<=";
-  else if (strcmp(binOper->operTok->type, TOK_GTE) == 0) op = ">=";
+  else if (binOper->operTok->type == TOK_EQ) op = "=";
+  else if (binOper->operTok->type == TOK_EE) op = "==";
+  else if (binOper->operTok->type == TOK_NE) op = "!=";
+  else if (binOper->operTok->type == TOK_LT) op = "<";
+  else if (binOper->operTok->type == TOK_GT) op = ">";
+  else if (binOper->operTok->type == TOK_LTE) op = "<=";
+  else if (binOper->operTok->type == TOK_GTE) op = ">=";
 
-  else if (strcmp(binOper->operTok->type, TOK_KEYWORD) == 0) {
+  else if (binOper->operTok->type == TOK_KEYWORD) {
     if (strcmp((char*)binOper->operTok->value, "AND") == 0) op = "AND";
     else if (strcmp((char*)binOper->operTok->value, "OR") == 0) op = "OR";
     else op = "?";
@@ -176,33 +176,29 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   } 
   
   EvalResultNumber output;
+  
+  switch (binOper->operTok->type) {
+    case TOK_PLUS: output = addNumber(dest, src); break;
+    case TOK_MINUS: output = subNumber(dest, src); break;
+    case TOK_MUL: output = mulNumber(dest, src); break;
+    case TOK_DIV: output = divNumber(dest, src); break;
+    case TOK_POW: output = powNumber(dest, src); break;
+    case TOK_EE: output = isEqualNumber(dest, src); break;
+    case TOK_LT: output = isLessThanNumber(dest, src); break;
+    case TOK_GT: output = isGreaterThanNumber(dest, src); break;
+    case TOK_LTE: output = isLessThanEqualNumber(dest, src); break;
+    case TOK_GTE: output = isGreaterThanNumber(dest, src); break;
+    case TOK_NE: output = isNotEqualNumber(dest, src); break;
+    case TOK_KEYWORD:
+      char *val = (char*)binOper->operTok->value;
 
-  if (strcmp(binOper->operTok->type, TOK_PLUS) == 0) { // This monstrocity is awful, switch case would be WAY better there but sadly type is string. Later I'll solve this issue
-    output = addNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_MINUS) == 0) {
-    output = subNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_MUL) == 0) {
-    output = mulNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_DIV) == 0) {
-    output = divNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_POW) == 0) {
-    output = powNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_EE) == 0) {
-    output = isEqualNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_LT) == 0) {
-    output = isLessThanNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_GT) == 0) {
-    output = isGreaterThanNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_LTE) == 0) {
-    output = isLessThanEqualNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_GTE) == 0) {
-    output = isGreaterThanEqualNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_NE) == 0) {
-    output = isNotEqualNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_KEYWORD) == 0 && strcmp((char*)binOper->operTok->value, "AND") == 0) {
-    output = andNumber(dest, src);
-  } else if (strcmp(binOper->operTok->type, TOK_KEYWORD) == 0 && strcmp((char*)binOper->operTok->value, "OR") == 0) {
-    output = orNumber(dest, src);
+      if (strcmp(val, "AND") == 0) {
+        output = andNumber(dest, src);
+      } else if (strcmp(val, "OR") == 0) {
+        output = orNumber(dest, src);
+      }
+
+      break;
   }
 
   if (output.err) {
@@ -231,11 +227,11 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
 
   char op;
 
-  if (strcmp(unaryOper->operTok->type, TOK_PLUS) == 0) op = '+';
-  else if (strcmp(unaryOper->operTok->type, TOK_MINUS) == 0) op = '-';
-  else if (strcmp(unaryOper->operTok->type, TOK_MUL) == 0) op = '*';
-  else if (strcmp(unaryOper->operTok->type, TOK_DIV) == 0) op = '/';
-  else if (strcmp(unaryOper->operTok->type, TOK_POW) == 0) op = '^';
+  if (unaryOper->operTok->type == TOK_PLUS) op = '+';
+  else if (unaryOper->operTok->type == TOK_MINUS) op = '-';
+  else if (unaryOper->operTok->type == TOK_MUL) op = '*';
+  else if (unaryOper->operTok->type == TOK_DIV) op = '/';
+  else if (unaryOper->operTok->type == TOK_POW) op = '^';
   else op = '?';
 
   Object* numberObj = (Object*)visitNode(unaryOper->node, filename, err, variables); 

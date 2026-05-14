@@ -10,20 +10,12 @@ const char *KEYWORDS[] = {
   "IF", "THEN", "ELIF", "ELSE", NULL
 };
 
-Token* initToken(char *type, void* value, bool needsToBeFreed, Position* start, Position* end) {
-  if (!type) return NULL;
-
+Token* initToken(TokType type, void* value, bool needsToBeFreed, Position* start, Position* end) {
   Token* token = malloc(sizeof(Token));
 
   if (!token) return NULL;
 
-  token->type = stringDup(type);
-
-  if (!token->type) {
-    free(token);
-    return NULL;
-  }
-
+  token->type = type;
   token->value = value;
   token->needsToBeFreed = needsToBeFreed;
   
@@ -70,7 +62,6 @@ char *tokenRepr(const Token *t) {
 void freeToken(Token *t) {
   if (!t) return;
 
-  if (t->type) free(t->type);
   if (t->value && t->needsToBeFreed) free(t->value);
   if (t->start) freePosition(t->start);
   if (t->end) freePosition(t->end);

@@ -1,3 +1,9 @@
+# benchmarking
+gen.py
+gen_py.py
+test.arc 
+test.py
+
 # Prerequisites
 *.d
 

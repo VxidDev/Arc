@@ -1,4 +1,5 @@
 #include "../../include/repl/input.h"
+#include "../../include/utils.h"
 
 #include "../../include/token.h"
 #include "../../include/lexer.h"
@@ -89,8 +90,8 @@ char *readFile(char *filename) {
   return buf;  
 }
 
-void run(char *text, Error **error, unsigned long *size, SymbolTable* variables) {
-  Lexer *lexer = initLexer("<stdin>", text);
+void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, const char *filename) {
+  Lexer *lexer = initLexer(filename, text);
 
   if (!lexer) {
     printf("%sArc: %sFailed to initialize lexer.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
@@ -117,7 +118,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
     printf("\n%sTokens: %s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG));
 
     for (size_t i = 0; i < *size; i++) {
-      printf("%s ", tokens[i]->type);
+      printf("%s ", tokToString(tokens[i]->type));
     }
 
     if (_IS_COLORED) printf("%s\n", ANSI_RESET);
@@ -159,7 +160,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables)
     return;
   }
   
-  Object* result = visitNode(ast, "<stdin>", error, variables);
+  Object* result = visitNode(ast, filename, error, variables);
 
   if (!result) {
     freeAST(ast);
@@ -306,7 +307,7 @@ int main(int argc, char **argv) {
     Error *error = NULL;
     unsigned long size = 0;
 
-    run(code, &error, &size, variables);
+    run(code, &error, &size, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
 
     if (error) {
       char *errStr = errorAsString(error);
@@ -355,7 +356,7 @@ int main(int argc, char **argv) {
     Error *error = NULL;
     
     unsigned long size = 0; 
-    run(userInput, &error, &size, variables);
+    run(userInput, &error, &size, variables, "<stdin>");
      
     if (error) {
       char *errStr = errorAsString(error);

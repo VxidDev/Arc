@@ -13,9 +13,9 @@ void printAST(ASTNode* node) {
     case NODE_NUMBER: {
       NumberNode* n = (NumberNode*)node;
 
-      if (strcmp(n->token->type, TOK_INT) == 0) {
+      if (n->token->type == TOK_INT) {
         printf("%s%d%s", COLOR(ANSI_BRIGHT_YELLOW_FG), *(int*)n->token->value, COLOR(ANSI_RESET));
-      } else if (strcmp(n->token->type, TOK_FLOAT) == 0) {
+      } else if (n->token->type == TOK_FLOAT) {
         printf("%s%s%.*f%s", COLOR(ANSI_DIM), COLOR(ANSI_YELLOW_FG), _FLOAT_PRECISION, *(double*)n->token->value, COLOR(ANSI_RESET));
       }
 
@@ -28,7 +28,7 @@ void printAST(ASTNode* node) {
       putchar('(');
       printAST(b->leftNode);
 
-      printf(" %s%s%s ", COLOR(ANSI_BRIGHT_CYAN_FG), b->operTok->type, COLOR(ANSI_RESET));
+      printf(" %s%s%s ", COLOR(ANSI_BRIGHT_CYAN_FG), "BINOP", COLOR(ANSI_RESET));
 
       printAST(b->rightNode);
       putchar(')');
@@ -38,7 +38,7 @@ void printAST(ASTNode* node) {
     case NODE_UNARYOP: {
       UnaryOpNode* u = (UnaryOpNode*)node;
 
-      printf("(%s%s%s ", COLOR(ANSI_BRIGHT_BLACK_FG), u->operTok->type, COLOR(ANSI_RESET));
+      printf("(%s%s%s ", COLOR(ANSI_BRIGHT_BLACK_FG), "UNARYOP", COLOR(ANSI_RESET));
       printAST(u->node);
       putchar(')');
 

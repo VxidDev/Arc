@@ -11,6 +11,12 @@
 
 #include <stdio.h>
 
+#define _is_letter(c) (((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')))
+#define _is_digit(c) (c >= '0' && c <= '9')
+#define _is_alnum(c) (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+
 void advanceLexer(Lexer *lexer) {
   if (!lexer) return;
 
@@ -30,7 +36,7 @@ Lexer* initLexer(char *filename, char *text) {
 
   if (!lexer) return NULL;
 
-  lexer->text = stringDup(text);
+  lexer->text = text;
 
   if (!lexer->text) {
     free(lexer);
@@ -74,18 +80,6 @@ bool _resizeTokensList(Token ***tokens, unsigned long *capacity) {
   *capacity = newCap;
 
   return true;
-}
-
-bool _is_digit(char c) {
-  return (c >= '0' && c <= '9');
-}
-
-bool _is_letter(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-bool _is_alnum(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
 bool _is_keyword(char *s) {
@@ -304,8 +298,8 @@ Token* makeStringLexer(Lexer* lexer, Error** error) {
   return initToken(TOK_STRING, buffer, true, start, copyPosition(lexer->pos));
 }
 
-bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned long *capacity, char *tokenType) {
-  if (*size >= *capacity) {
+bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned long *capacity, TokType tokenType) {
+  if (UNLIKELY(*size >= *capacity)) {
     if (!_resizeTokensList(tokens, capacity)) {
       freeTokens(*tokens, *size);
       return false;
@@ -409,7 +403,7 @@ Token* makeGreaterThanToken(Lexer* lexer, Error** error) {
 // Will get optimized / shortened later.
 Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   unsigned long size = 0;
-  unsigned long capacity = 16;
+  unsigned long capacity = 1024;
 
   Token** tokens = malloc(sizeof(Token*) * capacity);
   if (!tokens) return NULL;
@@ -513,9 +507,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 void freeLexer(Lexer *lexer) {
   if (!lexer) return;
 
-  if (lexer->text) free(lexer->text);
-  if (lexer->filename) free(lexer->filename);
-  
+  if (lexer->filename) free(lexer->filename);  
   if (lexer->pos) freePosition(lexer->pos); 
 
   free(lexer);

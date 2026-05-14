@@ -1,25 +1,13 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-#define TOK_INT "INT"
-#define TOK_FLOAT "FLOAT" 
-#define TOK_PLUS "PLUS"
-#define TOK_MINUS "MINUS"
-#define TOK_MUL "MUL"
-#define TOK_DIV "DIV"
-#define TOK_POW "POW"
-#define TOK_LPAREN "LPAREN"
-#define TOK_RPAREN "RPAREN"
-#define TOK_EQ "EQ"
-#define TOK_EE "EE"
-#define TOK_NE "NE"
-#define TOK_LT "LT"
-#define TOK_GT "GT"
-#define TOK_LTE "LTE"
-#define TOK_GTE "GTE"
-#define TOK_IDENTIFIER "IDENTIFIER"
-#define TOK_KEYWORD "KEYWORD"
-#define TOK_STRING "STRING"
+typedef enum TokType {
+  TOK_INT, TOK_FLOAT,
+  TOK_PLUS, TOK_MINUS, TOK_MUL, TOK_DIV, TOK_POW,
+  TOK_LPAREN, TOK_RPAREN,
+  TOK_EQ, TOK_EE, TOK_NE, TOK_LT, TOK_GT, TOK_LTE, TOK_GTE,
+  TOK_IDENTIFIER, TOK_KEYWORD, TOK_STRING
+} TokType;
 
 extern const char *KEYWORDS[];
 
@@ -28,7 +16,7 @@ extern const char *KEYWORDS[];
 #include <stdbool.h>
 
 typedef struct Token {
-  char *type;
+  TokType type;
 
   Position *start, *end;
 
@@ -36,7 +24,7 @@ typedef struct Token {
   bool needsToBeFreed;
 } Token;
 
-Token* initToken(char *type, void *value, bool needsToBeFreed, Position* start, Position* end);
+Token* initToken(TokType type, void *value, bool needsToBeFreed, Position* start, Position* end);
 char *tokenRepr(const Token* t);
 
 void freeToken(Token* t);
