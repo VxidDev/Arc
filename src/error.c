@@ -9,8 +9,7 @@ void freeError(Error* err) {
   if (!err) return;
 
   if (err->name) free(err->name);
-  if (err->details) free(err->details);
-  if (err->filename) free(err->filename);
+  if (err->details) free(err->details); 
   
   free(err);
 }
