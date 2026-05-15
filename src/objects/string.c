@@ -48,7 +48,7 @@ String *mulString(const String *dest, const Number *src) {
   char *newStr = malloc(len * src->as.i + 1);
   char *p = newStr;
 
-  for (size_t i = 0; i < src->as.i; i++) {
+  for (long int i = 0; i < src->as.i; i++) {
     memcpy(p, dest->value, len);
     p += len;
   }

@@ -49,8 +49,12 @@ Arc > x * 10
 50
 Arc > VAR name = "Arc Language"
 Arc Language
-Arc > IF x == 5 THEN "Matched" ELSE "No Match"
+Arc > IF x == 5 THEN "Matched" ELIF x == 6 THEN "Almost" ELSE "No Match"
 Matched
+Arc > "Arc " * 3
+Arc Arc Arc 
+Arc > "Hello " + "World"
+Hello World
 Arc > VAR y = (x + 2) ^ 2
 49.000000
 Arc > y / 7
@@ -202,9 +206,24 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
 
 ## Build
 
-```bash
-make
-```
+Arc uses a `makefile` with several build targets:
+
+* **dev** (default): Builds with optimizations disabled and debug symbols enabled.
+  ```bash
+  make dev
+  # or simply
+  make
+  ```
+
+* **debug**: Builds with AddressSanitizer and UndefinedBehaviorSanitizer for deep debugging.
+  ```bash
+  make debug
+  ```
+
+* **release**: Builds with full optimizations (`-O3`, `-flto`, `-march=native`) for maximum performance.
+  ```bash
+  make release
+  ```
 
 ### Run
 
@@ -253,8 +272,23 @@ arc
 
 ### Install
 
+The `install` target builds the **release** version and installs it to `/usr/bin` (by default).
+
 ```bash
 sudo make install
+```
+
+You can also install specific versions:
+```bash
+sudo make dev-install
+sudo make debug-install
+sudo make release-install
+```
+
+### Uninstall
+
+```bash
+sudo make uninstall
 ```
 
 ---

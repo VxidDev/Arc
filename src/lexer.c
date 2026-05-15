@@ -65,12 +65,43 @@ bool _resizeTokensList(Token ***tokens, unsigned long *capacity) {
   return true;
 }
 
-bool _is_keyword(char *s) {
-  for (unsigned int i = 0; KEYWORDS[i]; i++) {
-    if (strcmp(s, KEYWORDS[i]) == 0) return true;
+static TokType keywordType(const char *s) {
+  switch (s[0]) {
+    case 'A':
+      if (s[1] == 'N' && s[2] == 'D' && s[3] == '\0')
+        return TOK_AND;
+      break;
+
+    case 'E':
+      if (s[1] == 'L' && s[2] == 'I' && s[3] == 'F' && s[4] == '\0')
+        return TOK_ELIF;
+
+      if (s[1] == 'L' && s[2] == 'S' && s[3] == 'E' && s[4] == '\0')
+        return TOK_ELSE;
+      break;
+
+    case 'I':
+      if (s[1] == 'F' && s[2] == '\0')
+        return TOK_IF;
+      break;
+
+    case 'O':
+      if (s[1] == 'R' && s[2] == '\0')
+        return TOK_OR;
+      break;
+
+    case 'T':
+      if (s[1] == 'H' && s[2] == 'E' && s[3] == 'N' && s[4] == '\0')
+        return TOK_THEN;
+      break;
+
+    case 'V':
+      if (s[1] == 'A' && s[2] == 'R' && s[3] == '\0')
+        return TOK_VAR;
+      break;
   }
 
-  return false;
+  return TOK_IDENTIFIER;
 }
 
 Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
@@ -237,8 +268,14 @@ Token* makeIdentifierLexer(Lexer *lexer, Error **error) {
   }
 
   idStr[size] = '\0';
-
-  return initToken(_is_keyword(idStr) ? TOK_KEYWORD : TOK_IDENTIFIER, idStr, true, start, lexer->pos);
+  TokType type = keywordType(idStr);
+  
+  if (type == TOK_IDENTIFIER) {
+    return initToken(type, idStr, true, start, lexer->pos);
+  }
+  
+  free(idStr);
+  return initToken(type, NULL, false, start, lexer->pos);
 }
 
 Token* makeStringLexer(Lexer* lexer, Error** error) {

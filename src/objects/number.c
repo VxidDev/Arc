@@ -56,185 +56,188 @@ Number *copyNumber(Number *num) {
   return initFloat(num->as.f);
 }
 
-EvalResultNumber addNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType addNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    double result = toDouble(src) + toDouble(dest);
-    return (EvalResultNumber){initFloat(result), ERR_NONE};
+    dest->as.f = toDouble(src) + toDouble(dest);
+    return ERR_NONE;
   }
 
-  long result = toLong(src) + toLong(dest);
-  return (EvalResultNumber){initInt(result), ERR_NONE};
+  dest->as.i = toLong(src) + toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber subNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType subNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
-  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    double result = toDouble(src) - toDouble(dest);
-    return (EvalResultNumber){initFloat(result), ERR_NONE};
+    dest->as.f = toDouble(src) - toDouble(dest);
+    return ERR_NONE;
   }
 
-  long result = toLong(src) - toLong(dest);
-  return (EvalResultNumber){initInt(result), ERR_NONE};
+  dest->as.i = toLong(src) - toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber divNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType divNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
-
-  ObjType type = promote(dest, src);
-
-  if (type == OBJ_NUMBER_FLOAT) {
-    double destVal = toDouble(dest);
-
-    if (!destVal) {
-      return (EvalResultNumber){NULL, ERR_DIV_BY_ZERO};
-    }
-
-    double result = toDouble(src) / destVal;
-    return (EvalResultNumber){initFloat(result), ERR_NONE};
-  }
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE; 
   
-  long destVal = toLong(dest);
+  double destVal = toDouble(dest);
 
   if (!destVal) {
-    return (EvalResultNumber){NULL, ERR_DIV_BY_ZERO};
+    return ERR_DIV_BY_ZERO;
   }
 
-  long result = toLong(src) / destVal;
-  return (EvalResultNumber){initInt(result), ERR_NONE};
+  dest->as.f = toDouble(src) / destVal;
+  return ERR_NONE;
 }
 
-EvalResultNumber mulNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType mulNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
-  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE};
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    double result = toDouble(src) * toDouble(dest);
-    return (EvalResultNumber){initFloat(result), ERR_NONE};
+    dest->as.f = toDouble(src) * toDouble(dest);
+    return ERR_NONE;
   }
 
-  long result = toLong(src) * toLong(dest);
-  return (EvalResultNumber){initInt(result), ERR_NONE};
+  dest->as.i = toLong(src) * toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber powNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType powNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
-  if (!isValid((Object*)dest, (Object*)src)) return (EvalResultNumber){NULL, ERR_TYPE}; 
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE; 
 
-  double result = pow(toDouble(src), toDouble(dest));
-  return (EvalResultNumber){initFloat(result), ERR_NONE};
+  dest->as.f = pow(toDouble(src), toDouble(dest));
+  return ERR_NONE;
 }
 
-EvalResultNumber isEqualNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
-  
-  ObjType type = promote(dest, src);
-
-  if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(dest) == toDouble(src)), ERR_NONE};
-  }
-
-  return (EvalResultNumber){initInt(toLong(dest) == toLong(src)), ERR_NONE};
-}
-
-EvalResultNumber isNotEqualNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType isEqualNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) != toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(dest) == toDouble(src);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) != toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(dest) == toLong(src);
+  return ERR_NONE;
 }
 
-EvalResultNumber isLessThanEqualNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType isNotEqualNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) <= toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(src) != toDouble(dest);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) <= toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(src) != toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber isGreaterThanEqualNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType isLessThanEqualNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) >= toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(src) <= toDouble(dest);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) >= toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(src) <= toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber isLessThanNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType isGreaterThanEqualNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) < toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(src) >= toDouble(dest);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) < toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(src) >= toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber isGreaterThanNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType isLessThanNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) > toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(src) < toDouble(dest);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) > toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(src) < toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber andNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType isGreaterThanNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) && toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(src) > toDouble(dest);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) && toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(src) > toLong(dest);
+  return ERR_NONE;
 }
 
-EvalResultNumber orNumber(const Number* dest, const Number* src) {
-  if (!dest || !src) return (EvalResultNumber){NULL, ERR_NULL};
+ErrType andNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
   
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
-    return (EvalResultNumber){initInt(toDouble(src) || toDouble(dest)), ERR_NONE};
+    dest->as.i = toDouble(src) && toDouble(dest);
+    return ERR_NONE;
   }
 
-  return (EvalResultNumber){initInt(toLong(src) || toLong(dest)), ERR_NONE};
+  dest->as.i = toLong(src) && toLong(dest);
+  return ERR_NONE;
+}
+
+ErrType orNumber(Number* dest, const Number* src) {
+  if (!dest || !src) return ERR_NULL;
+  
+  ObjType type = promote(dest, src);
+
+  if (type == OBJ_NUMBER_FLOAT) {
+    dest->as.i = toDouble(src) || toDouble(dest);
+    return ERR_NONE;
+  }
+
+  dest->as.i = toLong(src) || toLong(dest);
+  return ERR_NONE;
 }
 
 

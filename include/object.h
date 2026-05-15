@@ -42,21 +42,21 @@ String* copyString(String *str);
 
 Object* copyObject(Object *obj);
 
-EvalResultNumber addNumber(const Number* dest, const Number* src);
-EvalResultNumber subNumber(const Number* dest, const Number* src);
-EvalResultNumber mulNumber(const Number* dest, const Number* src);
-EvalResultNumber divNumber(const Number* dest, const Number* src);
-EvalResultNumber powNumber(const Number* dest, const Number* src);
+ErrType addNumber(Number* dest, const Number* src);
+ErrType subNumber(Number* dest, const Number* src);
+ErrType mulNumber(Number* dest, const Number* src);
+ErrType divNumber(Number* dest, const Number* src);
+ErrType powNumber(Number* dest, const Number* src);
 
-EvalResultNumber isEqualNumber(const Number* dest, const Number* src);
-EvalResultNumber isNotEqualNumber(const Number* dest, const Number* src);
-EvalResultNumber isLessThanEqualNumber(const Number* dest, const Number* src);
-EvalResultNumber isGreaterThanEqualNumber(const Number* dest, const Number* src);
-EvalResultNumber isLessThanNumber(const Number* dest, const Number* src);
-EvalResultNumber isGreaterThanNumber(const Number* dest, const Number* src);
+ErrType isEqualNumber(Number* dest, const Number* src);
+ErrType isNotEqualNumber(Number* dest, const Number* src);
+ErrType isLessThanEqualNumber(Number* dest, const Number* src);
+ErrType isGreaterThanEqualNumber(Number* dest, const Number* src);
+ErrType isLessThanNumber(Number* dest, const Number* src);
+ErrType isGreaterThanNumber(Number* dest, const Number* src);
 
-EvalResultNumber andNumber(const Number* dest, const Number* src);
-EvalResultNumber orNumber(const Number* dest, const Number* src);
+ErrType andNumber(Number* dest, const Number* src);
+ErrType orNumber(Number* dest, const Number* src);
 
 String* addString(const String* dest, const String* src);
 String* mulString(const String* dest, const Number* src);

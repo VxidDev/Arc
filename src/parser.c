@@ -197,7 +197,7 @@ ASTNode* exprParser(Parser* parser) {
     return NULL;
   }
 
-  if ((parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "IF") == 0) {
+  if (parser->currentToken->type == TOK_IF) {
     Token* ifTok = parser->currentToken; // safe copy for error reporting
     advanceParser(parser);
 
@@ -205,7 +205,7 @@ ASTNode* exprParser(Parser* parser) {
 
     if (!condition) return NULL;
 
-    if (!parser->currentToken || strcmp((char*)parser->currentToken->value, "THEN") != 0) {
+    if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok->start, ifTok->end, ifTok->start.filename, "Expected THEN");
       freeAST(condition);
       return NULL;
@@ -233,7 +233,7 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    while (parser->currentToken && (parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "ELIF") == 0) {
+    while (parser->currentToken && parser->currentToken->type == TOK_ELIF) {
       Token* elifTok = parser->currentToken; // safe copy for error reporting
       advanceParser(parser);
 
@@ -268,7 +268,7 @@ ASTNode* exprParser(Parser* parser) {
         return NULL;
       }
 
-      if (!parser->currentToken || strcmp((char*)parser->currentToken->value, "THEN") != 0) {
+      if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
         if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok->start, elifTok->end, elifTok->start.filename, "Expected THEN after ELIF condition");
         freeAST(elifCond);
 
@@ -337,7 +337,7 @@ ASTNode* exprParser(Parser* parser) {
 
     ASTNode* elseExpr = NULL;
 
-    if (parser->currentToken && (parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "ELSE") == 0) {
+    if (parser->currentToken && parser->currentToken->type == TOK_ELSE) {
       Token* tok = parser->currentToken; // safe copy 
 
       advanceParser(parser);
@@ -380,7 +380,7 @@ ASTNode* exprParser(Parser* parser) {
     return (ASTNode*)initIfNode(condition, thenExpr, elifConds, elifExprs, size, elseExpr);
   }
 
-  if ((parser->currentToken->type == TOK_KEYWORD) && strcmp((char*)parser->currentToken->value, "VAR") == 0) {
+  if (parser->currentToken->type == TOK_VAR) {
     Token* tok = parser->currentToken; // safe copy
     advanceParser(parser);
 
@@ -456,7 +456,7 @@ ASTNode* andOrParser(Parser* parser) {
   ASTNode* left = compExprParser(parser);
   if (!left) return NULL;
 
-  while (parser->currentToken && (parser->currentToken->type == TOK_KEYWORD) && (strcmp((char*)parser->currentToken->value, "AND") == 0 || strcmp((char*)parser->currentToken->value, "OR")  == 0)) {
+  while (parser->currentToken && (parser->currentToken->type == TOK_AND || parser->currentToken->type == TOK_OR)) {
     Token* opTok = parser->currentToken;
     advanceParser(parser);
 

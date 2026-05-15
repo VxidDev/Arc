@@ -75,7 +75,7 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
   } else {
     char buffer[256];
   
-    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': string %s string", op, op); 
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
 
     freeObject(srcObj);
     freeObject(destObj);
@@ -110,14 +110,8 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case TOK_GT: op = ">"; break;
     case TOK_LTE: op = "<="; break;
     case TOK_GTE: op = ">="; break;
-    case TOK_KEYWORD:
-      if (strcmp((char*)binOper->operTok->value, "AND") == 0) 
-        op = "AND";
-      else if (strcmp((char*)binOper->operTok->value, "OR") == 0) 
-        op = "OR";
-      else 
-        op = "?";
-      break;
+    case TOK_AND: op = "AND"; break;
+    case TOK_OR: op = "OR"; break;
     default: op = "?"; break;
   }
  
@@ -125,25 +119,32 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   Object *destObj = visitNode(binOper->rightNode, filename, err, variables);
   
   if (!srcObj || !destObj) {
-    if (srcObj) free(srcObj);
-    if (destObj) free(destObj);
+    if (srcObj) freeObject(srcObj);
+    if (destObj) freeObject(destObj);
     return NULL;
   }
+  
+  const char* leftType;
+  const char* rightType;
 
-  const char* leftType =
-    srcObj->type == OBJ_NUMBER_INT ? "int" :
-    srcObj->type == OBJ_NUMBER_FLOAT ? "float" :
-    srcObj->type == OBJ_STRING ? "string" : "unknown";
+  switch (srcObj->type) {
+    case OBJ_NUMBER_INT: leftType = "int"; break;
+    case OBJ_NUMBER_FLOAT: leftType = "float"; break;
+    case OBJ_STRING: leftType = "string"; break;
+    default: leftType = "unknown"; break;
+  }
 
-  const char* rightType =
-    destObj->type == OBJ_NUMBER_INT ? "int" :
-    destObj->type == OBJ_NUMBER_FLOAT ? "float" :
-    destObj->type == OBJ_STRING ? "string" : "unknown";
+  switch (destObj->type) {
+    case OBJ_NUMBER_INT: rightType = "int"; break;
+    case OBJ_NUMBER_FLOAT: rightType = "float"; break;
+    case OBJ_STRING: rightType = "string"; break;
+    default: rightType = "unknown"; break;
+  }
   
   if (srcObj->type == OBJ_STRING || destObj->type == OBJ_STRING) 
     return _stringBinOp(binOper, srcObj, op, destObj, leftType, rightType, filename, err, variables);
 
-  if (srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) { 
+  if ((srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) || (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT)) { 
     char buffer[256];
     
     snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
@@ -151,18 +152,6 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     free(srcObj);
     free(destObj);
     
-    if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
-    return NULL;
-  }
-
-  if (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT) { 
-    char buffer[256];
-    
-    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
-    
-    free(srcObj);
-    free(destObj);
-
     if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
     return NULL;
   }
@@ -177,7 +166,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     return NULL;
   } 
   
-  EvalResultNumber output;
+  ErrType output;
   
   switch (binOper->operTok->type) {
     case TOK_PLUS: output = addNumber(dest, src); break;
@@ -191,50 +180,48 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case TOK_LTE: output = isLessThanEqualNumber(dest, src); break;
     case TOK_GTE: output = isGreaterThanNumber(dest, src); break;
     case TOK_NE: output = isNotEqualNumber(dest, src); break;
-    case TOK_KEYWORD:
-      char *val = (char*)binOper->operTok->value;
+    case TOK_AND: output = andNumber(dest, src); break;
+    case TOK_OR: output = orNumber(dest, src); break;
+    default: output = -1;
+  }
 
-      if (strcmp(val, "AND") == 0) {
-        output = andNumber(dest, src);
-      } else if (strcmp(val, "OR") == 0) {
-        output = orNumber(dest, src);
-      }
-
+  switch (output) {
+    case ERR_NONE:
+      break;
+    case ERR_NULL:
+      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
+      break;
+    case ERR_DIV_BY_ZERO:
+      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Division by zero");
+      break;
+    case ERR_TYPE:
+      *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, "Incompatible type for binary operation");
+      break;
+    default:
+      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Unknown error.");
       break;
   }
 
-  if (output.err) {
-    if (output.err == ERR_NULL) {
-      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
-    } else if (output.err == ERR_DIV_BY_ZERO) {
-      if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Division by zero");
-    } else if (output.err == ERR_TYPE) {
-      if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, "Incompatible type for binary operation");
-    } else { if (*err == NULL) *err = initValueError(binOper->operTok->start, binOper->operTok->end, filename, "Unknown error."); }
-
-    free(src);
-    free(dest);
-
-    return NULL;
-  }
-
-  free(dest);
   free(src);
 
-  return (Object*)output.num;
+  if (output != ERR_NONE) return NULL;
+
+  return (Object*)dest;
 }
 
 Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
   UnaryOpNode* unaryOper = (UnaryOpNode*)node;
 
   char op;
-
-  if (unaryOper->operTok->type == TOK_PLUS) op = '+';
-  else if (unaryOper->operTok->type == TOK_MINUS) op = '-';
-  else if (unaryOper->operTok->type == TOK_MUL) op = '*';
-  else if (unaryOper->operTok->type == TOK_DIV) op = '/';
-  else if (unaryOper->operTok->type == TOK_POW) op = '^';
-  else op = '?';
+  
+  switch (unaryOper->operTok->type) {
+    case TOK_PLUS: op = '+'; break;
+    case TOK_MINUS: op = '-'; break;
+    case TOK_MUL: op = '*'; break;
+    case TOK_DIV: op = '/'; break;
+    case TOK_POW: op = '^'; break;
+    default: op = '?'; break;
+  }
 
   Object* numberObj = (Object*)visitNode(unaryOper->node, filename, err, variables); 
 
@@ -242,11 +229,15 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
     if (*err == NULL) *err = initValueError(unaryOper->operTok->start, unaryOper->operTok->end, filename, "Expected Number* result, received NULL.");
     return NULL;
   }
+  
+  const char* type;
 
-  const char* type =
-    numberObj->type == OBJ_NUMBER_INT ? "int" :
-    numberObj->type == OBJ_NUMBER_FLOAT ? "float" :
-    numberObj->type == OBJ_STRING ? "string" : "unknown";
+  switch (numberObj->type) {
+    case OBJ_NUMBER_INT: type = "int"; break;
+    case OBJ_NUMBER_FLOAT: type = "float"; break;
+    case OBJ_STRING: type = "string"; break;
+    default: type = "unknown"; break;
+  }
 
   if (numberObj->type != OBJ_NUMBER_INT && numberObj->type != OBJ_NUMBER_FLOAT) {
     char buffer[256];
@@ -265,9 +256,8 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
 
   if (op == '-') {
     Number* negOne = initInt(-1);
-    output = mulNumber(number, negOne);
+    mulNumber(number, negOne);
     free(number);
-    free(negOne);
   } else {
     if (*err == NULL) *err = initValueError(unaryOper->operTok->start, unaryOper->operTok->end, filename, "Unknown unary operator");
     free(number);
