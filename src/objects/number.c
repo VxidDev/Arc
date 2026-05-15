@@ -99,6 +99,8 @@ ErrType divNumber(Number* dest, const Number* src) {
     return ERR_DIV_BY_ZERO;
   }
 
+  dest->base.type = OBJ_NUMBER_FLOAT;
+
   dest->as.f = toDouble(src) / destVal;
   return ERR_NONE;
 }
