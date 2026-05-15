@@ -394,7 +394,7 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    char *varName = (char*)parser->currentToken->value;
+    char *varName = parser->currentToken->val.s;
     
     tok = parser->currentToken; // update safe copy
 

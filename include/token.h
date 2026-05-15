@@ -22,8 +22,13 @@ typedef struct Token {
   TokType type;
 
   Position start, end;
+  
+  union {
+    char* s;
+    double f;
+    long i;
+  } val;
 
-  void *value;
   bool needsToBeFreed;
 } Token;
 

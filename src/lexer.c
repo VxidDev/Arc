@@ -169,21 +169,11 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
       free(numStr);
       *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
       return NULL;
-    }
+    } 
 
-    long *val = malloc(sizeof(long));
-
-    if (!val) {
-      free(numStr);
-      return NULL;
-    }
-
-    *val = value;
-
-    Token* token = initToken(TOK_INT, val, true, start, lexer->pos);
+    Token* token = initToken(TOK_INT, &value, false, start, lexer->pos);
 
     if (!token) {
-      free(val);
       free(numStr);
       return NULL;
     }
@@ -216,21 +206,11 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
     free(numStr);
     *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
     return NULL;
-  }
+  } 
 
-  double *val = malloc(sizeof(double));
-
-  if (!val) {
-    free(numStr);
-    return NULL;
-  }
-
-  *val = value;
-
-  Token* token = initToken(TOK_FLOAT, val, true, start, lexer->pos);
+  Token* token = initToken(TOK_FLOAT, &value, false, start, lexer->pos);
 
   if (!token) {
-    free(val);
     free(numStr);
     return NULL;
   }
@@ -283,7 +263,7 @@ Token* makeStringLexer(Lexer* lexer, Error** error) {
 
   advanceLexer(lexer); // Skip opening quote
   
-  char *buffer = calloc(1024, 1); // fixed length for now 
+  char *buffer = malloc(1024); // fixed length for now 
   unsigned long len = 0;
 
   while (lexer->currChar && lexer->currChar != '"') {
@@ -308,6 +288,8 @@ Token* makeStringLexer(Lexer* lexer, Error** error) {
     if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Unterminated string");
     return NULL;
   }
+
+  buffer[len] = '\0';
 
   advanceLexer(lexer); // skip closing quote
 

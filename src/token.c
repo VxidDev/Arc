@@ -16,7 +16,13 @@ Token* initToken(TokType type, void* value, bool needsToBeFreed, Position start,
   if (!token) return NULL;
 
   token->type = type;
-  token->value = value;
+  
+  switch (type) {
+    case TOK_INT: token->val.i = *(long*)value; break;
+    case TOK_FLOAT: token->val.f = *(double*)value; break;
+    default: token->val.s = (char*)value; break;
+  }
+
   token->needsToBeFreed = needsToBeFreed;
   
   token->start = start;
@@ -52,7 +58,8 @@ char *tokenRepr(const Token *t) {
 
 void freeToken(Token *t) {
   if (!t) return;
-  if (t->value && t->needsToBeFreed) free(t->value);
+  if (t->val.s && t->needsToBeFreed) free(t->val.s); // string is the only free'able object available
+
   free(t);
 }
 

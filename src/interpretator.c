@@ -19,10 +19,10 @@ Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
   }
   
   if (numNode->token->type == TOK_FLOAT) {
-    return (Object*)initFloat(*(double*)numNode->token->value);
+    return (Object*)initFloat(numNode->token->val.f);
   }
 
-  return (Object*)initInt(*(long*)numNode->token->value);
+  return (Object*)initInt(numNode->token->val.i);
 }
 
 Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destObj, const char *leftType, const char *rightType, char *filename, Error **err, SymbolTable* variables) {
@@ -248,30 +248,30 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
     
     if (*err == NULL) *err = initTypeError(unaryOper->operTok->start, unaryOper->operTok->end, filename, buffer);
     return NULL;
-  }
-
-  Number* number = (Number*)numberObj;
+  } 
   
-  EvalResultNumber output = {0};
-
   if (op == '-') {
-    Number* negOne = initInt(-1);
-    mulNumber(number, negOne);
-    free(number);
+    if (numberObj->type == OBJ_NUMBER_INT) {
+      ((Number*)numberObj)->as.i *= -1;
+      return numberObj;
+    }
+
+    ((Number*)numberObj)->as.f *= -1.0;
+    return numberObj;
   } else {
     if (*err == NULL) *err = initValueError(unaryOper->operTok->start, unaryOper->operTok->end, filename, "Unknown unary operator");
-    free(number);
+    free(numberObj);
     return NULL;
   }
 
-  return (Object*)output.num;
+  return NULL;
 }
 
 Object* visitVarAccessNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node) return NULL;
   
   VarAccessNode* va = (VarAccessNode*)node;
-  char *varName = (char*)va->token->value;
+  char *varName = va->token->val.s;
 
   if (!varName) return NULL;
   
@@ -311,7 +311,7 @@ Object* visitStringNode(ASTNode* node, char *filename, Error** err, SymbolTable*
 
   StringNode* str = (StringNode*)node;
 
-  return (Object*)initString((char*)str->token->value);
+  return (Object*)initString(str->token->val.s);
 }
 
 Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {

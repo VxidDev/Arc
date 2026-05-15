@@ -14,9 +14,9 @@ void printAST(ASTNode* node) {
       NumberNode* n = (NumberNode*)node;
 
       if (n->token->type == TOK_INT) {
-        printf("%s%d%s", COLOR(ANSI_BRIGHT_YELLOW_FG), *(int*)n->token->value, COLOR(ANSI_RESET));
+        printf("%s%d%s", COLOR(ANSI_BRIGHT_YELLOW_FG), n->token->val.i, COLOR(ANSI_RESET));
       } else if (n->token->type == TOK_FLOAT) {
-        printf("%s%s%.*f%s", COLOR(ANSI_DIM), COLOR(ANSI_YELLOW_FG), _FLOAT_PRECISION, *(double*)n->token->value, COLOR(ANSI_RESET));
+        printf("%s%s%.*f%s", COLOR(ANSI_DIM), COLOR(ANSI_YELLOW_FG), _FLOAT_PRECISION, n->token->val.f, COLOR(ANSI_RESET));
       }
 
       break;
@@ -58,13 +58,13 @@ void printAST(ASTNode* node) {
 
     case NODE_VARACCESS: {
       VarAccessNode* va = (VarAccessNode*)node;
-      printf("%s[VAR-ACCESS:%s]%s", COLOR(ANSI_BRIGHT_MAGENTA_FG), (char*)va->token->value, COLOR(ANSI_RESET));
+      printf("%s[VAR-ACCESS:%s]%s", COLOR(ANSI_BRIGHT_MAGENTA_FG), va->token->val.s, COLOR(ANSI_RESET));
       break;
     }
 
     case NODE_STRING: {
       StringNode* str = (StringNode*)node;
-      printf("%sSTRING:\"%s\"%s", COLOR(ANSI_BRIGHT_GREEN_FG), (char*)str->token->value, COLOR(ANSI_RESET));
+      printf("%sSTRING:\"%s\"%s", COLOR(ANSI_BRIGHT_GREEN_FG), str->token->val.s, COLOR(ANSI_RESET));
       break;
     }
 
