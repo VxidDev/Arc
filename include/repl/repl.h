@@ -1,6 +1,8 @@
 #ifndef REPL_H
 #define REPL_H
 
+#include <stdbool.h>
+
 extern char *_CODE;
 extern bool _DEBUG;
 extern int _FLOAT_PRECISION;

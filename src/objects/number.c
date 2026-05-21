@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <stdbool.h>
 
 static inline double toDouble(const Number* n) {
   return (n->base.type == OBJ_NUMBER_FLOAT)
