@@ -6,6 +6,7 @@
 #include "../../include/parser.h"
 #include "../../include/node.h"
 #include "../../include/error.h"
+
 #include "../../include/interpretator.h"
 #include "../../include/object.h"
 
@@ -47,7 +48,7 @@ char *readFile(char *filename) {
   }
 
   FILE* file = fopen(filename, "rb");
-  
+
   if (!file) {
     printf("%sArc: %sFailed to open file: \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), filename, COLOR(ANSI_RESET));
     return NULL;
@@ -62,9 +63,9 @@ char *readFile(char *filename) {
     fclose(file);
     printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return NULL;
-  } 
+  }
 
-  size_t c = 0; 
+  int c = 0;
 
   while ((c = getc(file)) != EOF) {
     if (size >= capacity - 1) {
@@ -84,22 +85,22 @@ char *readFile(char *filename) {
   }
 
   buf[size] = '\0';
-  
+
   fclose(file);
 
-  return buf;  
+  return buf;
 }
 
-void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, const char *filename) {
+void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
   Lexer *lexer = initLexer(filename, text);
 
   if (!lexer) {
     printf("%sArc: %sFailed to initialize lexer.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return;
   }
-  
+
   Token **tokens = makeTokensLexer(lexer, error, size);
-  
+
   if (!tokens) {
     if (*error) {
       char *errStr = errorAsString(*error);
@@ -113,7 +114,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     freeLexer(lexer);
     return;
   }
-  
+
   if (_DEBUG) {
     printf("\n%sTokens: %s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG));
 
@@ -124,7 +125,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     if (_IS_COLORED) printf("%s\n", ANSI_RESET);
     else putchar('\n');
   }
-  
+
   Parser* parser = initParser(tokens, *size, error);
 
   if (!parser) {
@@ -133,7 +134,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
   }
 
   ASTNode* ast = parseProgram(parser);
-  
+
   if (_DEBUG) {
     printf("%sAST tree: ", COLOR(ANSI_CYAN_FG));
     printAST(ast);
@@ -156,10 +157,10 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     freeTokens(tokens, *size);
     free(parser);
     freeLexer(lexer);
-    
+
     return;
   }
-  
+
   Object* result = visitNode(ast, filename, error, variables);
 
   if (!result) {
@@ -170,7 +171,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
 
     return;
   }
-  
+
   if (result->type == OBJ_NUMBER_INT) {
     printf("%s%s%ld%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), ((Number*)result)->as.i, COLOR(ANSI_RESET));
   } else if (result->type == OBJ_NUMBER_FLOAT){
@@ -180,7 +181,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
   }
 
   freeObject(result);
-  
+
   freeAST(ast);
   freeTokens(tokens, *size);
   free(parser);
@@ -194,10 +195,10 @@ int parseInt(const char *s, int *out) {
   long val = strtol(s, &end, 10);
 
   if (errno != 0) return 0; // overflow / underflow
-  
+
   while (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r') end++;
 
-  if (*end != '\0') return 0; // invalid chars 
+  if (*end != '\0') return 0; // invalid chars
   if (val < INT_MIN || val > INT_MAX) return 0;
 
   *out = (int)val;
@@ -205,7 +206,7 @@ int parseInt(const char *s, int *out) {
 }
 
 void parseArguments(int argc, char **argv, SymbolTable* variables) {
-  if (argc < 2) return; // repl 
+  if (argc < 2) return; // repl
 
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] != '-') {
@@ -216,7 +217,7 @@ void parseArguments(int argc, char **argv, SymbolTable* variables) {
 
         snprintf(buf, sizeof(buf), "arg%d", currentArg);
         currentArg++;
-        
+
         String* arg = initString(argv[i]);
         setTable(variables, buf, (Object*)arg);
 
@@ -259,16 +260,16 @@ void parseArguments(int argc, char **argv, SymbolTable* variables) {
     } else {
       printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
       exit(1);
-    } 
+    }
   }
 }
 
 int main(int argc, char **argv) {
   char *userInput = NULL;
-  SymbolTable *variables = createTable(1024, NULL); 
+  SymbolTable *variables = createTable(1024, NULL);
 
   parseArguments(argc, argv, variables);
-  
+
   String* arg0 = initString(_INPUT_FILE ? _INPUT_FILE : argv[0]);
   setTable(variables, "arg0", (Object*)arg0);
   free(arg0->value);
@@ -277,7 +278,7 @@ int main(int argc, char **argv) {
   char buf[64];
 
   snprintf(buf, sizeof(buf), "arg%d", currentArg);
-  
+
   Number* nullTermVar = initInt(0);
 
   setTable(variables, buf, (Object*)nullTermVar); // Null-Terminate
@@ -292,9 +293,9 @@ int main(int argc, char **argv) {
   if (_CODE) {
     code = _CODE;
   } else if (_INPUT_FILE) {
-    code = readFile(_INPUT_FILE); 
+    code = readFile(_INPUT_FILE);
 
-    if (!code) { 
+    if (!code) {
       return 1;
     }
 
@@ -322,7 +323,7 @@ int main(int argc, char **argv) {
 
     freeTable(variables);
     return 0;
-  } 
+  }
 
   char *prompt;
 
@@ -337,7 +338,7 @@ int main(int argc, char **argv) {
       freeTable(variables);
       break;
     }
-    
+
     if (userInput[0] == '\0') {
       free(userInput);
       continue;
@@ -352,21 +353,21 @@ int main(int argc, char **argv) {
       free(userInput);
       continue;
     }
-    
+
     Error *error = NULL;
-    
-    unsigned long size = 0; 
+
+    unsigned long size = 0;
     run(userInput, &error, &size, variables, "<stdin>");
-     
+
     if (error) {
       char *errStr = errorAsString(error);
       printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
       free(errStr);
       freeError(error);
     }
-    
+
     free(userInput);
-  } 
+  }
 
   return 0;
 }

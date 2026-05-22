@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <inttypes.h>
+
 void printAST(ASTNode* node) {
   if (!node) return;
 
@@ -14,7 +16,7 @@ void printAST(ASTNode* node) {
       NumberNode* n = (NumberNode*)node;
 
       if (n->token->type == TOK_INT) {
-        printf("%s%d%s", COLOR(ANSI_BRIGHT_YELLOW_FG), n->token->val.i, COLOR(ANSI_RESET));
+        printf("%s%" PRId64 "%s", COLOR(ANSI_BRIGHT_YELLOW_FG), n->token->val.i, COLOR(ANSI_RESET));
       } else if (n->token->type == TOK_FLOAT) {
         printf("%s%s%.*f%s", COLOR(ANSI_DIM), COLOR(ANSI_YELLOW_FG), _FLOAT_PRECISION, n->token->val.f, COLOR(ANSI_RESET));
       }
@@ -54,7 +56,7 @@ void printAST(ASTNode* node) {
 
       printf("]%s", COLOR(ANSI_RESET));
       break;
-    } 
+    }
 
     case NODE_VARACCESS: {
       VarAccessNode* va = (VarAccessNode*)node;

@@ -1,6 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdint.h>
+
 #include "token.h"
 #include "node.h"
 #include "error.h"
@@ -9,8 +11,8 @@ typedef struct Parser {
   Token **tokens;
   Token *currentToken;
 
-  long tokenIndex;
-  unsigned long tokenAmount;
+  int64_t tokenIndex;
+  uint64_t tokenAmount;
 
   Error **error;
 } Parser;
@@ -21,4 +23,4 @@ Token* advanceParser(Parser* parser);
 ASTNode* parseParser(Parser* parser);
 ASTNode* parseProgram(Parser* parser);
 
-#endif // PARSER_H 
+#endif // PARSER_H

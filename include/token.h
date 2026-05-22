@@ -16,17 +16,18 @@ extern const char *KEYWORDS[];
 
 #include "position.h"
 
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef struct Token {
   TokType type;
 
   Position start, end;
-  
+
   union {
     char* s;
     double f;
-    long i;
+    int64_t i;
   } val;
 
   bool needsToBeFreed;
@@ -38,4 +39,4 @@ char *tokenRepr(const Token* t);
 void freeToken(Token* t);
 void freeTokens(Token** t, unsigned long s);
 
-#endif // TOKEN_H 
+#endif // TOKEN_H

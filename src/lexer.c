@@ -218,7 +218,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
   return token;
 }
 
-Token* makeIdentifierLexer(Lexer *lexer, Error **error) {
+Token* makeIdentifierLexer(Lexer *lexer) {
   unsigned long size = 0;
   unsigned long capacity = 32;
 
@@ -357,7 +357,7 @@ Token* makeNotEqualsToken(Lexer* lexer, Error** error) {
   return NULL;
 }
 
-Token* makeEqualsToken(Lexer* lexer, Error** error) {
+Token* makeEqualsToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -370,7 +370,7 @@ Token* makeEqualsToken(Lexer* lexer, Error** error) {
   return initToken(TOK_EQ, NULL, false, start, lexer->pos);
 }
 
-Token* makeLessThanToken(Lexer* lexer, Error** error) {
+Token* makeLessThanToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -383,7 +383,7 @@ Token* makeLessThanToken(Lexer* lexer, Error** error) {
   return initToken(TOK_LT, NULL, false, start, lexer->pos);
 }
 
-Token* makeGreaterThanToken(Lexer* lexer, Error** error) {
+Token* makeGreaterThanToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -415,7 +415,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (_is_letter(lexer->currChar)) {
-      if (!_appendToken(makeIdentifierLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
+      if (!_appendToken(makeIdentifierLexer(lexer), &tokens, &size, &capacity)) return NULL;
       continue;
     }
 
@@ -430,17 +430,17 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (lexer->currChar == '=') {
-      if (!_appendToken(makeEqualsToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      if (!_appendToken(makeEqualsToken(lexer), &tokens, &size, &capacity)) return NULL;
       continue;
     }
 
     if (lexer->currChar == '<') {
-      if (!_appendToken(makeLessThanToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      if (!_appendToken(makeLessThanToken(lexer), &tokens, &size, &capacity)) return NULL;
       continue;
     }
 
     if (lexer->currChar == '>') {
-      if (!_appendToken(makeGreaterThanToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+      if (!_appendToken(makeGreaterThanToken(lexer), &tokens, &size, &capacity)) return NULL;
       continue;
     }
 

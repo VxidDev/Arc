@@ -45,15 +45,15 @@ ASTNode* compExprParser(Parser* parser);
 
 ASTNode* atomParser(Parser* parser) {
   if (!parser || !parser->currentToken) return NULL;
-    
+
   Token* token = parser->currentToken;
 
   if ((token->type == TOK_PLUS) || (token->type == TOK_MINUS)) {
-    Token* tok = token; // safe copy 
+    Token* tok = token; // safe copy
 
     advanceParser(parser);
 
-    ASTNode* expr = atomParser(parser); 
+    ASTNode* expr = atomParser(parser);
 
     if (!expr) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expression expected");
@@ -76,8 +76,8 @@ ASTNode* atomParser(Parser* parser) {
     return (ASTNode*)initVarAccessNode(token);
   } else if (token->type == TOK_LPAREN) {
     advanceParser(parser);
-    
-    Token* tok = token; // safe copy 
+
+    Token* tok = token; // safe copy
 
     ASTNode* expr = andOrParser(parser);
 
@@ -95,7 +95,7 @@ ASTNode* atomParser(Parser* parser) {
       return NULL;
     }
   }
-  
+
   if (*parser->error == NULL) *parser->error = initSyntaxError(token->start, token->end, token->start.filename, "Expression expected");
   return NULL;
 }
@@ -143,7 +143,7 @@ ASTNode* factorParser(Parser* parser) {
     }
 
     ASTNode* unaryOpNode = (ASTNode*)initUnaryOpNode(token, factor);
-    return unaryOpNode; 
+    return unaryOpNode;
   }
 
   return powerParser(parser);
@@ -190,10 +190,9 @@ ASTNode* exprParser(Parser* parser) {
 
     return NULL;
   }
-  
-  if (!parser->currentToken) {
-    if (*parser->error == NULL); // Will be implemented after addition of EOF token
 
+  if (!parser->currentToken) {
+    // if (*parser->error == NULL); Will be implemented after addition of EOF token
     return NULL;
   }
 
@@ -310,8 +309,9 @@ ASTNode* exprParser(Parser* parser) {
         void* tmp2 = realloc(elifExprs, sizeof(ASTNode*) * capacity);
 
         if (!tmp1 || !tmp2) {
-          free(tmp1 ? tmp1 : elifConds);
-          free(tmp2 ? tmp2 : elifExprs);
+          if (tmp1) elifConds = tmp1;
+          if (tmp2) elifExprs = tmp2;
+
           freeAST(elifCond);
           freeAST(elifExpr);
 
@@ -319,6 +319,9 @@ ASTNode* exprParser(Parser* parser) {
             freeAST(elifConds[i]);
             freeAST(elifExprs[i]);
           }
+
+          free(elifConds);
+          free(elifExprs);
 
           freeAST(condition);
           freeAST(thenExpr);
@@ -338,7 +341,7 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* elseExpr = NULL;
 
     if (parser->currentToken && parser->currentToken->type == TOK_ELSE) {
-      Token* tok = parser->currentToken; // safe copy 
+      Token* tok = parser->currentToken; // safe copy
 
       advanceParser(parser);
 
@@ -355,7 +358,7 @@ ASTNode* exprParser(Parser* parser) {
         freeAST(thenExpr);
 
         return NULL;
-      } 
+      }
 
       elseExpr = andOrParser(parser);
 
@@ -395,7 +398,7 @@ ASTNode* exprParser(Parser* parser) {
     }
 
     char *varName = parser->currentToken->val.s;
-    
+
     tok = parser->currentToken; // update safe copy
 
     advanceParser(parser);
@@ -417,7 +420,7 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* expr = andOrParser(parser);
 
     if (!expr) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after '='"); 
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after '='");
       return NULL;
     }
 
@@ -433,7 +436,7 @@ ASTNode* exprParser(Parser* parser) {
 
     ASTNode* right = termParser(parser);
 
-    if (!right) { 
+    if (!right) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected");
       freeAST(left);
       return NULL;
@@ -532,7 +535,7 @@ ASTNode* parseParser(Parser* parser) {
 
 ASTNode* parseProgram(Parser* parser) {
   if (!parser) return NULL;
-  
+
   size_t size = 0;
   size_t capacity = 1024;
 

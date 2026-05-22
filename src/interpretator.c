@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
+Object* visitNumberNode(ASTNode* node, char *filename, Error **err) {
   if (!filename || !err) return NULL;
 
   NumberNode* numNode = (NumberNode*)node;
@@ -24,7 +24,7 @@ Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
   return (Object*)initInt(numNode->token->val.i);
 }
 
-Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destObj, const char *leftType, const char *rightType, char *filename, Error **err, SymbolTable* variables) {
+Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destObj, const char *leftType, const char *rightType, char *filename, Error **err) {
   Object* out = NULL;
 
   if (strcmp(op, "+") == 0) {
@@ -141,7 +141,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   }
 
   if (srcObj->type == OBJ_STRING || destObj->type == OBJ_STRING)
-    return _stringBinOp(binOper, srcObj, op, destObj, leftType, rightType, filename, err, variables);
+    return _stringBinOp(binOper, srcObj, op, destObj, leftType, rightType, filename, err);
 
   if ((srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) || (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT)) {
     char buffer[256];
@@ -305,7 +305,7 @@ Object* visitVarAssignNode(ASTNode* node, char *filename, Error** err, SymbolTab
   return value;
 }
 
-Object* visitStringNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
+Object* visitStringNode(ASTNode* node) {
   if (!node) return NULL;
 
   StringNode* str = (StringNode*)node;
@@ -377,12 +377,12 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
   if (!node || !filename || !err) return NULL;
 
   switch (node->type) {
-    case NODE_NUMBER: return visitNumberNode(node, filename, err, variables);
+    case NODE_NUMBER: return visitNumberNode(node, filename, err);
     case NODE_BINOP: return visitBinOpNode(node, filename, err, variables);
     case NODE_UNARYOP: return visitUnaryOpNode(node, filename, err, variables);
     case NODE_VARACCESS: return visitVarAccessNode(node, filename, err, variables);
     case NODE_VARASSIGN: return visitVarAssignNode(node, filename, err, variables);
-    case NODE_STRING: return visitStringNode(node, filename, err, variables);
+    case NODE_STRING: return visitStringNode(node);
     case NODE_PROGRAM: return visitProgramNode(node, filename, err, variables);
     case NODE_IF: return visitIfNode(node, filename, err, variables);
     default: return NULL;
