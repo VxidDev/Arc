@@ -2,7 +2,6 @@
 #include "../include/interpretator.h"
 #include "../include/object.h"
 #include "../include/symbol-table.h"
-#include "../include/utils.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -17,7 +16,7 @@ Object* visitNumberNode(ASTNode* node, char *filename, Error **err, SymbolTable*
     // dereferencing will cause segfault -> if (*err == NULL) *err = initValueError(copyPosition(numNode->token->start), copyPosition(numNode->token->end), filename, "Expected TOK_FLOAT or TOK_INT token, received NULL");
     return NULL;
   }
-  
+
   if (numNode->token->type == TOK_FLOAT) {
     return (Object*)initFloat(numNode->token->val.f);
   }
@@ -32,13 +31,13 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
     if (srcObj->type != OBJ_STRING || destObj->type != OBJ_STRING) {
       char buffer[256];
 
-      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '+': %s + %s", leftType, rightType); 
+      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '+': %s + %s", leftType, rightType);
 
       freeObject(srcObj);
       freeObject(destObj);
-  
+
       if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
-      return NULL; 
+      return NULL;
     }
 
     out = (Object*)addString((String*)srcObj, (String*)destObj);
@@ -46,13 +45,13 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
     if (srcObj->type != OBJ_STRING || destObj->type != OBJ_NUMBER_INT) {
       char buffer[256];
 
-      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '*': %s * %s", leftType, rightType); 
+      snprintf(buffer, sizeof(buffer), "Unsupported operand types for '*': %s * %s", leftType, rightType);
 
       freeObject(srcObj);
       freeObject(destObj);
-  
+
       if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
-      return NULL; 
+      return NULL;
     }
 
     out = (Object*)mulString((String*)srcObj, (Number*)destObj);
@@ -60,7 +59,7 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
     Number* res = NULL;
 
     if ((srcObj->type == OBJ_NUMBER_INT || srcObj->type == OBJ_NUMBER_FLOAT) || (destObj->type == OBJ_NUMBER_FLOAT || destObj->type == OBJ_NUMBER_INT)) {
-      res = initInt(0);  
+      res = initInt(0);
     } else {
       String *lhs = (String*)srcObj;
       String *rhs = (String*)destObj;
@@ -74,15 +73,15 @@ Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, char* op, Object* destO
     return (Object*)res;
   } else {
     char buffer[256];
-  
-    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
+
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType);
 
     freeObject(srcObj);
     freeObject(destObj);
-  
+
     if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
-    return NULL; 
-  } 
+    return NULL;
+  }
 
   freeObject(srcObj);
   freeObject(destObj);
@@ -114,16 +113,16 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case TOK_OR: op = "OR"; break;
     default: op = "?"; break;
   }
- 
+
   Object *srcObj = visitNode(binOper->leftNode, filename, err, variables);
   Object *destObj = visitNode(binOper->rightNode, filename, err, variables);
-  
+
   if (!srcObj || !destObj) {
     if (srcObj) freeObject(srcObj);
     if (destObj) freeObject(destObj);
     return NULL;
   }
-  
+
   const char* leftType;
   const char* rightType;
 
@@ -140,18 +139,18 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case OBJ_STRING: rightType = "string"; break;
     default: rightType = "unknown"; break;
   }
-  
-  if (srcObj->type == OBJ_STRING || destObj->type == OBJ_STRING) 
+
+  if (srcObj->type == OBJ_STRING || destObj->type == OBJ_STRING)
     return _stringBinOp(binOper, srcObj, op, destObj, leftType, rightType, filename, err, variables);
 
-  if ((srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) || (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT)) { 
+  if ((srcObj->type != OBJ_NUMBER_INT && srcObj->type != OBJ_NUMBER_FLOAT) || (destObj->type != OBJ_NUMBER_INT && destObj->type != OBJ_NUMBER_FLOAT)) {
     char buffer[256];
-    
-    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType); 
+
+    snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType);
 
     free(srcObj);
     free(destObj);
-    
+
     if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
     return NULL;
   }
@@ -164,10 +163,10 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     if (src) free(src);
     if (dest) free(dest);
     return NULL;
-  } 
-  
+  }
+
   ErrType output;
-  
+
   switch (binOper->operTok->type) {
     case TOK_PLUS: output = addNumber(dest, src); break;
     case TOK_MINUS: output = subNumber(dest, src); break;
@@ -213,7 +212,7 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
   UnaryOpNode* unaryOper = (UnaryOpNode*)node;
 
   char op;
-  
+
   switch (unaryOper->operTok->type) {
     case TOK_PLUS: op = '+'; break;
     case TOK_MINUS: op = '-'; break;
@@ -223,13 +222,13 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
     default: op = '?'; break;
   }
 
-  Object* numberObj = (Object*)visitNode(unaryOper->node, filename, err, variables); 
+  Object* numberObj = (Object*)visitNode(unaryOper->node, filename, err, variables);
 
   if (!numberObj) {
     if (*err == NULL) *err = initValueError(unaryOper->operTok->start, unaryOper->operTok->end, filename, "Expected Number* result, received NULL.");
     return NULL;
   }
-  
+
   const char* type;
 
   switch (numberObj->type) {
@@ -242,14 +241,14 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
   if (numberObj->type != OBJ_NUMBER_INT && numberObj->type != OBJ_NUMBER_FLOAT) {
     char buffer[256];
 
-    snprintf(buffer, sizeof(buffer), "Can't apply unary operation '%c' to %s", op, type); 
+    snprintf(buffer, sizeof(buffer), "Can't apply unary operation '%c' to %s", op, type);
 
     free(numberObj);
-    
+
     if (*err == NULL) *err = initTypeError(unaryOper->operTok->start, unaryOper->operTok->end, filename, buffer);
     return NULL;
-  } 
-  
+  }
+
   if (op == '-') {
     if (numberObj->type == OBJ_NUMBER_INT) {
       ((Number*)numberObj)->as.i *= -1;
@@ -269,12 +268,12 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
 
 Object* visitVarAccessNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node) return NULL;
-  
+
   VarAccessNode* va = (VarAccessNode*)node;
   char *varName = va->token->val.s;
 
   if (!varName) return NULL;
-  
+
   Object* stored = (Object*)getTable(variables, varName);
 
   if (!stored) {
@@ -289,7 +288,7 @@ Object* visitVarAccessNode(ASTNode* node, char *filename, Error** err, SymbolTab
     return NULL;
   }
 
-  return copyObject(stored); 
+  return copyObject(stored);
 }
 
 Object* visitVarAssignNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
@@ -300,7 +299,7 @@ Object* visitVarAssignNode(ASTNode* node, char *filename, Error** err, SymbolTab
   Object* value = visitNode(va->value, filename, err, variables);
 
   if (!value) return NULL;
-  
+
   setTable(variables, va->identifier, value);
 
   return value;
@@ -321,7 +320,7 @@ Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable
 
   for (size_t i = 0; i < prog->count; i++) {
     if (last) {
-      freeObject(last); 
+      freeObject(last);
       last = NULL;
     }
 
@@ -330,7 +329,7 @@ Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable
     if (!last) return NULL; // error already set
   }
 
-  return last; 
+  return last;
 }
 
 Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variables) {
@@ -355,7 +354,7 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
   for (size_t i = 0; i < node->elifCount; i++) {
     Object* elifVal = visitNode(node->elifConds[i], filename, err, variables);
     if (!elifVal) return NULL;
-    
+
     if (elifVal->type != OBJ_NUMBER_INT) return NULL;
 
     if (((Number*)elifVal)->as.i != 0) {
@@ -378,7 +377,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
   if (!node || !filename || !err) return NULL;
 
   switch (node->type) {
-    case NODE_NUMBER: return visitNumberNode(node, filename, err, variables); 
+    case NODE_NUMBER: return visitNumberNode(node, filename, err, variables);
     case NODE_BINOP: return visitBinOpNode(node, filename, err, variables);
     case NODE_UNARYOP: return visitUnaryOpNode(node, filename, err, variables);
     case NODE_VARACCESS: return visitVarAccessNode(node, filename, err, variables);

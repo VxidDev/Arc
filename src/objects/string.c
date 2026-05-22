@@ -2,7 +2,6 @@
 #include "../../include/utils.h"
 
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
 String *initString(char *value) {
@@ -42,7 +41,7 @@ String *addString(const String *dest, const String *src) {
 
 String *mulString(const String *dest, const Number *src) {
   if (!dest || !src || !dest->value || !src->as.i) return NULL;
-  
+
   size_t len = strlen(dest->value);
 
   char *newStr = malloc(len * src->as.i + 1);

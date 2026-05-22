@@ -1,5 +1,4 @@
 #include "../include/lexer.h"
-#include "../include/utils.h"
 #include "../include/error.h"
 #include "../include/token.h"
 
@@ -137,7 +136,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
       dotCount++;
     }
 
-    numStr[size++] = lexer->currChar;  
+    numStr[size++] = lexer->currChar;
 
     advanceLexer(lexer);
   }
@@ -157,7 +156,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
       return NULL;
     }
 
-    // overflow / underflow 
+    // overflow / underflow
     if (errno == ERANGE || value > INT_MAX || value < INT_MIN) {
       free(numStr);
       *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
@@ -169,7 +168,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
       free(numStr);
       *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
       return NULL;
-    } 
+    }
 
     Token* token = initToken(TOK_INT, &value, false, start, lexer->pos);
 
@@ -177,7 +176,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
       free(numStr);
       return NULL;
     }
-  
+
     free(numStr);
     return token;
   }
@@ -194,7 +193,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
     return NULL;
   }
 
-  // overflow / underflow 
+  // overflow / underflow
   if (errno == ERANGE) {
     free(numStr);
     *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
@@ -206,7 +205,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
     free(numStr);
     *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
     return NULL;
-  } 
+  }
 
   Token* token = initToken(TOK_FLOAT, &value, false, start, lexer->pos);
 
@@ -214,7 +213,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
     free(numStr);
     return NULL;
   }
-  
+
   free(numStr);
   return token;
 }
@@ -240,20 +239,20 @@ Token* makeIdentifierLexer(Lexer *lexer, Error **error) {
         return NULL;
       }
 
-      idStr = tmp; 
+      idStr = tmp;
     }
-    
+
     idStr[size++] = lexer->currChar;
     advanceLexer(lexer);
   }
 
   idStr[size] = '\0';
   TokType type = keywordType(idStr);
-  
+
   if (type == TOK_IDENTIFIER) {
     return initToken(type, idStr, true, start, lexer->pos);
   }
-  
+
   free(idStr);
   return initToken(type, NULL, false, start, lexer->pos);
 }
@@ -262,8 +261,8 @@ Token* makeStringLexer(Lexer* lexer, Error** error) {
   Position start = lexer->pos;
 
   advanceLexer(lexer); // Skip opening quote
-  
-  char *buffer = malloc(1024); // fixed length for now 
+
+  char *buffer = malloc(1024); // fixed length for now
   unsigned long len = 0;
 
   while (lexer->currChar && lexer->currChar != '"') {
@@ -303,7 +302,7 @@ bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned
       return false;
     }
   }
-  
+
   Position start = lexer->pos;
   Position end = lexer->pos;
   advancePosition(&end, lexer->currChar);
@@ -403,7 +402,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
   Token** tokens = malloc(sizeof(Token*) * capacity);
   if (!tokens) return NULL;
-  
+
   while (lexer->currChar != 0) {
     if (lexer->currChar == ' ' || lexer->currChar == '\t' || lexer->currChar == '\n') {
       advanceLexer(lexer);
@@ -413,16 +412,16 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     if (_is_digit(lexer->currChar)) {
       if (!_appendToken(makeNumberTokenLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
       continue;
-    } 
+    }
 
     if (_is_letter(lexer->currChar)) {
-      if (!_appendToken(makeIdentifierLexer(lexer, error), &tokens, &size, &capacity)) return NULL; 
-      continue; 
+      if (!_appendToken(makeIdentifierLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
+      continue;
     }
 
     if (lexer->currChar == '"') {
       if (!_appendToken(makeStringLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
-      continue;  
+      continue;
     }
 
     if (lexer->currChar == '!') {
@@ -451,7 +450,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     }
 
     if (lexer->currChar == '-') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MINUS)) return NULL; 
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MINUS)) return NULL;
       continue;
     }
 
@@ -484,7 +483,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     Position start = lexer->pos;
     advanceLexer(lexer);
     Position end = lexer->pos;
-     
+
     if (error) {
       *error = initIllegalCharError(start, end, lexer->filename, details);
     }
@@ -492,7 +491,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     freeTokens(tokens, size);
     return NULL;
   }
-  
+
   tokens[size] = NULL;
   *outSize = size;
   return tokens;

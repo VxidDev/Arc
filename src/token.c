@@ -1,12 +1,11 @@
 #include "../include/token.h"
-#include "../include/utils.h"
 #include "../include/position.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 const char *KEYWORDS[] = {
-  "VAR", "AND", "OR", "NOT", 
+  "VAR", "AND", "OR", "NOT",
   "IF", "THEN", "ELIF", "ELSE", NULL
 };
 
@@ -16,7 +15,7 @@ Token* initToken(TokType type, void* value, bool needsToBeFreed, Position start,
   if (!token) return NULL;
 
   token->type = type;
-  
+
   switch (type) {
     case TOK_INT: token->val.i = *(long*)value; break;
     case TOK_FLOAT: token->val.f = *(double*)value; break;
@@ -24,7 +23,7 @@ Token* initToken(TokType type, void* value, bool needsToBeFreed, Position start,
   }
 
   token->needsToBeFreed = needsToBeFreed;
-  
+
   token->start = start;
   token->end = end;
 
@@ -35,16 +34,16 @@ Token* initToken(TokType type, void* value, bool needsToBeFreed, Position start,
  * WORKS ONLY FOR STRINGS
 char *tokenRepr(const Token *t) {
   if (!t || !t->type) return NULL;
-  
+
   unsigned long typeLen = strlen(t->type);
-  unsigned long valueLen = t ->value ? strlen(t->value) : 0;    
+  unsigned long valueLen = t ->value ? strlen(t->value) : 0;
 
   unsigned long needed = typeLen + (valueLen ? (valueLen + 1) : 0);
   char *output = malloc(needed * sizeof(char) + 1);
 
   if (!output) return NULL;
 
-  memcpy(output, t->type, typeLen); 
+  memcpy(output, t->type, typeLen);
 
   if (valueLen) {
     output[typeLen] = ':';

@@ -53,7 +53,7 @@ Number *copyNumber(Number *num) {
   if (!num) return NULL;
 
   if (num->base.type == OBJ_NUMBER_INT) return initInt(num->as.i);
-  
+
   return initFloat(num->as.f);
 }
 
@@ -75,7 +75,7 @@ ErrType addNumber(Number* dest, const Number* src) {
 
 ErrType subNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
@@ -92,8 +92,8 @@ ErrType subNumber(Number* dest, const Number* src) {
 ErrType divNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE; 
-  
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
+
   double destVal = toDouble(dest);
 
   if (!destVal) {
@@ -108,7 +108,7 @@ ErrType divNumber(Number* dest, const Number* src) {
 
 ErrType mulNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
@@ -124,16 +124,20 @@ ErrType mulNumber(Number* dest, const Number* src) {
 
 ErrType powNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE; 
+  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
-  dest->as.f = pow(toDouble(src), toDouble(dest));
+  double base = toDouble(src);
+  double exp  = toDouble(dest);
+
+  dest->base.type = OBJ_NUMBER_FLOAT;
+  dest->as.f = pow(base, exp);
+
   return ERR_NONE;
 }
 
 ErrType isEqualNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -147,7 +151,7 @@ ErrType isEqualNumber(Number* dest, const Number* src) {
 
 ErrType isNotEqualNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -161,7 +165,7 @@ ErrType isNotEqualNumber(Number* dest, const Number* src) {
 
 ErrType isLessThanEqualNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -175,7 +179,7 @@ ErrType isLessThanEqualNumber(Number* dest, const Number* src) {
 
 ErrType isGreaterThanEqualNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -189,7 +193,7 @@ ErrType isGreaterThanEqualNumber(Number* dest, const Number* src) {
 
 ErrType isLessThanNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -203,7 +207,7 @@ ErrType isLessThanNumber(Number* dest, const Number* src) {
 
 ErrType isGreaterThanNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -217,7 +221,7 @@ ErrType isGreaterThanNumber(Number* dest, const Number* src) {
 
 ErrType andNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
@@ -231,7 +235,7 @@ ErrType andNumber(Number* dest, const Number* src) {
 
 ErrType orNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  
+
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
