@@ -130,6 +130,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case OBJ_NUMBER_INT: leftType = "int"; break;
     case OBJ_NUMBER_FLOAT: leftType = "float"; break;
     case OBJ_STRING: leftType = "string"; break;
+    case OBJ_LIST: leftType = "list"; break;
     default: leftType = "unknown"; break;
   }
 
@@ -137,6 +138,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case OBJ_NUMBER_INT: rightType = "int"; break;
     case OBJ_NUMBER_FLOAT: rightType = "float"; break;
     case OBJ_STRING: rightType = "string"; break;
+    case OBJ_LIST: rightType = "list"; break;
     default: rightType = "unknown"; break;
   }
 
@@ -148,8 +150,8 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
     snprintf(buffer, sizeof(buffer), "Unsupported operand types for '%s': %s %s %s", op, leftType, op, rightType);
 
-    free(srcObj);
-    free(destObj);
+    freeObject(srcObj);
+    freeObject(destObj);
 
     if (*err == NULL) *err = initTypeError(binOper->operTok->start, binOper->operTok->end, filename, buffer);
     return NULL;
@@ -389,6 +391,109 @@ Object* visitListNode(ASTNode* node, char* filename, Error** err, SymbolTable* v
   return (Object*)list;
 }
 
+Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* variables) {
+  if (!node) return NULL;
+
+  IndexNode* idx = (IndexNode*)node;
+  
+  Position start = {0};
+
+  switch (idx->target->type) {
+    case NODE_NUMBER: start = ((NumberNode*)idx->target)->token->start; break;
+    case NODE_STRING: start = ((StringNode*)idx->target)->token->start; break;
+    case NODE_LIST: start = ((ListNode*)idx->target)->startBracket->start; break;
+    default: break;
+  }
+
+  Position end = {0};
+
+  switch (idx->index->type) {
+    case NODE_NUMBER: end = ((NumberNode*)idx->index)->token->end; break;
+    case NODE_STRING: end = ((StringNode*)idx->index)->token->end; break;
+    case NODE_LIST: end = ((ListNode*)idx->index)->endBracket->end; break;
+    default: break;
+  }
+
+  const char* targetType; 
+  const char* idxType; 
+
+  Object* target = visitNode(idx->target, filename, err, variables);
+
+  if (!target) {
+    return NULL;
+  }
+
+  switch (target->type) {
+    case OBJ_NUMBER_INT: targetType = "int"; break;
+    case OBJ_NUMBER_FLOAT: targetType = "float"; break;
+    case OBJ_STRING: targetType = "string"; break;
+    case OBJ_LIST: targetType = "list"; break;
+    default: targetType = "unknown"; break;
+  }
+
+  Object* index = visitNode(idx->index, filename, err, variables);
+
+  if (!index) {
+    return NULL;
+  }
+
+  switch (index->type) {
+    case OBJ_NUMBER_INT: idxType = "int"; break;
+    case OBJ_NUMBER_FLOAT: idxType = "float"; break;
+    case OBJ_STRING: idxType = "string"; break;
+    case OBJ_LIST: idxType = "list"; break;
+    default: idxType = "unknown"; break;
+  }
+
+  if (target->type == OBJ_NUMBER_INT || target->type == OBJ_NUMBER_FLOAT) {
+    char buff[256];
+
+    snprintf(buff, sizeof(buff), "Object of type \"%s\" is not subscriptable.", targetType);
+
+    if (*err == NULL) *err = initTypeError(start, end, start.filename, buff);
+
+    freeObject(target);
+    freeObject(index);
+
+    return NULL;
+  }
+
+  if (index->type != OBJ_NUMBER_INT) {
+    char buff[256];
+
+    snprintf(buff, sizeof(buff), "Cannot use a value of type \"%s\" as an index.", idxType);
+
+    if (*err == NULL) *err = initTypeError(start, end, start.filename, buff);
+
+    freeObject(target);
+    freeObject(index);
+
+    return NULL;
+  } 
+
+  if (target->type == OBJ_STRING) {
+    String* str = (String*)target;
+    Number* id = (Number*)index;
+    
+    char buff[2] = {str->value[id->as.i], '\0'};
+
+    freeObject(target);
+    freeObject(index);
+
+    return (Object*)initString(buff);
+  }
+  
+  List* list = (List*)target;
+  Number* id = (Number*)index;
+
+  Object* obj = copyObject(list->objects[id->as.i]);
+
+  freeObject(target);
+  freeObject(index);
+
+  return obj;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -402,6 +507,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_PROGRAM: return visitProgramNode(node, filename, err, variables);
     case NODE_IF: return visitIfNode(node, filename, err, variables);
     case NODE_LIST: return visitListNode(node, filename, err, variables);
+    case NODE_INDEX: return visitIndexNode(node, err, filename, variables);
     default: return NULL;
   }
 }

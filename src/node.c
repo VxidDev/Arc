@@ -60,6 +60,20 @@ StringNode* initStringNode(Token* token) {
   return node;
 }
 
+IndexNode* initIndexNode(ASTNode* target, ASTNode* index) {
+  if (!target || !index) return NULL;
+
+  IndexNode* node = malloc(sizeof(IndexNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_INDEX;
+  node->target = target;
+  node->index = index;
+
+  return node;
+}
+
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode) {
   if (!leftNode || !operTok || !rightNode) return NULL;
 
@@ -150,6 +164,15 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
 
 void freeVarAccessNode(VarAccessNode* node) {
   if (!node) return;
+
+  free(node);
+}
+
+void freeIndexNode(IndexNode* node) {
+  if (!node) return;
+
+  freeAST(node->target);
+  freeAST(node->index);
 
   free(node);
 }
@@ -268,6 +291,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_LIST:
       freeListNode((ListNode*)node);
+      break;
+
+    case NODE_INDEX:
+      freeIndexNode((IndexNode*)node);
       break;
   }
 }

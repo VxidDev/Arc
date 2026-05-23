@@ -115,6 +115,18 @@ void printAST(ASTNode* node) {
       putchar(']');
       break;
     }
+
+    case NODE_INDEX: {
+      IndexNode* idx = (IndexNode*)node;
+
+      printf("%sIndexAccess[", COLOR(ANSI_MAGENTA_FG));
+      printAST(idx->target);
+      printf(" , ");
+      printAST(idx->index);
+      printf("]%s\n", COLOR(ANSI_RESET));
+
+      break;
+    }
   }
 }
 

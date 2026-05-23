@@ -42,6 +42,7 @@ ASTNode* termParser(Parser* parser);
 ASTNode* factorParser(Parser* parser);
 ASTNode* andOrParser(Parser* parser);
 ASTNode* compExprParser(Parser* parser);
+ASTNode* postfixParser(Parser* parser);
 
 ASTNode* atomParser(Parser* parser) {
   if (!parser || !parser->currentToken) return NULL;
@@ -183,7 +184,7 @@ ASTNode* atomParser(Parser* parser) {
 ASTNode* powerParser(Parser* parser) {
   if (!parser) return NULL;
 
-  ASTNode* left = atomParser(parser);
+  ASTNode* left = postfixParser(parser);
   if (!left) return NULL; // error is already set
 
   if (parser->currentToken && (parser->currentToken->type == TOK_POW)) {
@@ -202,6 +203,44 @@ ASTNode* powerParser(Parser* parser) {
   }
 
   return left;
+}
+
+ASTNode* postfixParser(Parser* parser) {
+  ASTNode* node = atomParser(parser);
+  if (!node) return NULL;
+
+  while (parser->currentToken &&
+        (parser->currentToken->type == TOK_LBRACK)) {
+
+    advanceParser(parser); // skip '['
+
+    ASTNode* index = andOrParser(parser);
+    if (!index) {
+      freeAST(node);
+      return NULL;
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_RBRACK) {
+      freeAST(index);
+      freeAST(node);
+
+      if (*parser->error == NULL)
+        *parser->error = initSyntaxError(
+          parser->currentToken->start,
+          parser->currentToken->end,
+          parser->currentToken->start.filename,
+          "Expected ']'"
+        );
+
+      return NULL;
+    }
+
+    advanceParser(parser); // skip ']'
+
+    node = (ASTNode*)initIndexNode(node, index);
+  }
+
+  return node;
 }
 
 ASTNode* factorParser(Parser* parser) {
@@ -631,7 +670,7 @@ ASTNode* parseProgram(Parser* parser) {
 
       free(statements);
       return NULL;
-    }
+    } 
 
     if (size >= capacity) {
       capacity *= 2;
