@@ -28,7 +28,21 @@ int _FLOAT_PRECISION = 6;
 char *_CODE = NULL;
 char *_INPUT_FILE = NULL;
 
-int currentArg = 1;
+String** argVect;
+uint64_t argVectSize = 1;
+uint64_t argVectCap = 64;
+
+void appendArgv(String* s) {
+  if (!s) return;
+
+  if (argVectSize >= argVectCap) {
+    argVectCap *= 2;
+
+    argVect = realloc(argVect, sizeof(String*) * argVectCap);
+  }
+
+  argVect[argVectSize++] = s;
+}
 
 static void printObjInternal(Object* obj) {
   if (obj->type == OBJ_NUMBER_INT) {
@@ -243,7 +257,7 @@ int parseInt(const char *s, int *out) {
   return 1;
 }
 
-void parseArguments(int argc, char **argv, SymbolTable* variables) {
+void parseArguments(int argc, char **argv) {
   if (argc < 2) return; // repl
 
   for (int i = 1; i < argc; i++) {
@@ -251,16 +265,8 @@ void parseArguments(int argc, char **argv, SymbolTable* variables) {
       if (!_INPUT_FILE) {
         _INPUT_FILE = argv[i];
       } else {
-        char buf[64];
-
-        snprintf(buf, sizeof(buf), "arg%d", currentArg);
-        currentArg++;
-
         String* arg = initString(argv[i], strlen(argv[i]));
-        setTable(variables, buf, (Object*)arg);
-
-        free(arg->value);
-        free(arg);
+        appendArgv(arg);
       }
       continue;
     }
@@ -305,27 +311,33 @@ void parseArguments(int argc, char **argv, SymbolTable* variables) {
 int main(int argc, char **argv) {
   char *userInput = NULL;
   SymbolTable *variables = createTable(1024, NULL);
+  
+  argVect = malloc(sizeof(String*) * argVectCap);
 
-  parseArguments(argc, argv, variables);
+  if (!argVect) {
+    freeTable(variables);
+    printf("%sArc: %sFailed to initialize argv.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG), COLOR(ANSI_RESET));
+
+    return 1;
+  }
+
+  parseArguments(argc, argv);
   
   char *arg0raw = _INPUT_FILE ? _INPUT_FILE : argv[0];
   String* arg0 = initString(arg0raw, strlen(arg0raw));
-  setTable(variables, "arg0", (Object*)arg0);
-  free(arg0->value);
-  free(arg0);
 
-  char buf[64];
+  argVect[0] = arg0;
 
-  snprintf(buf, sizeof(buf), "arg%d", currentArg);
-
-  Number* nullTermVar = initInt(0);
-
-  setTable(variables, buf, (Object*)nullTermVar); // Null-Terminate
-  free(nullTermVar);
-
-  Number* argumentCount = initInt(currentArg);
+  Number* argumentCount = initInt(argVectSize);
   setTable(variables, "argc", (Object*)argumentCount);
   free(argumentCount);
+
+  List* list = initList((Object**)argVect, argVectSize, argVectCap);
+  
+  free(argVect);
+
+  setTable(variables, "argv", (Object*)list);
+  freeObject((Object*)list);
 
   char *code = NULL;
 
