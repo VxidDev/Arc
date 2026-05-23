@@ -100,6 +100,21 @@ void printAST(ASTNode* node) {
       }
       break;
     }
+
+    case NODE_LIST: {
+      ListNode* list = (ListNode*)node;
+
+      putchar('[');
+
+      for (uint64_t i = 0; i < list->size;) {
+        ASTNode* node = list->objects[i];
+        printAST(node);
+        if (++i < list->size) printf(" , ");
+      }
+
+      putchar(']');
+      break;
+    }
   }
 }
 

@@ -178,6 +178,18 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     printf("%s%s%.*f%s\n", COLOR(ANSI_BRIGHT_CYAN_FG), COLOR(ANSI_BOLD), _FLOAT_PRECISION, ((Number*)result)->as.f, COLOR(ANSI_RESET));
   } else if (result->type == OBJ_STRING) {
     printf("%s%s%s%s\n", COLOR(ANSI_BRIGHT_GREEN_FG), COLOR(ANSI_BOLD), ((String*)result)->value, COLOR(ANSI_RESET));
+  } else if (result->type == OBJ_LIST) {
+    List* list = (List*)result;
+
+    putchar('[');
+
+    for (uint64_t i = 0; i < list->list->size;) {
+      ASTNode* node = list->list->objects[i];
+      printAST(node);
+      if (++i < list->list->size) printf(" , ");
+    }
+
+    puts("]");
   }
 
   freeObject(result);

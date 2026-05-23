@@ -8,13 +8,32 @@ NumberNode* initNumberNode(Token* token) {
   if (!token) return NULL;
 
   NumberNode* node = malloc(sizeof(NumberNode));
-  
+
   if (!node) return NULL;
 
   node->base.type = NODE_NUMBER;
-  node->token = token; 
+  node->token = token;
 
   return node;
+}
+
+ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity) {
+  if (!startBracket || !endBracket || !objects) return NULL;
+
+  ListNode* list = malloc(sizeof(ListNode));
+ 
+  if (!list) return NULL;
+  
+  list->base.type = NODE_LIST;
+
+  list->startBracket = startBracket;
+  list->endBracket = endBracket;
+  list->objects = objects;
+
+  list->size = size;
+  list->capacity = capacity;
+
+  return list;
 }
 
 ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
@@ -30,7 +49,7 @@ ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
 
 StringNode* initStringNode(Token* token) {
   if (!token) return NULL;
-  
+
   StringNode* node = malloc(sizeof(StringNode));
 
   if (!node) return NULL;
@@ -63,7 +82,7 @@ UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node) {
   UnaryOpNode* unaryNode = malloc(sizeof(UnaryOpNode));
 
   if (!unaryNode) return NULL;
-  
+
   unaryNode->base.type = NODE_UNARYOP;
   unaryNode->operTok = operTok;
   unaryNode->node = node;
@@ -79,12 +98,12 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
   if (!varAssignNode) return NULL;
 
   varAssignNode->identifier = stringDup(identifier);
-  
+
   if (!varAssignNode->identifier) {
     free(varAssignNode);
     return NULL;
   }
-  
+
   varAssignNode->base.type = NODE_VARASSIGN;
   varAssignNode->value = value;
 
@@ -97,7 +116,7 @@ VarAccessNode* initVarAccessNode(Token* token) {
   VarAccessNode* node = malloc(sizeof(VarAccessNode));
 
   if (!node) return NULL;
-  
+
   node->base.type = NODE_VARACCESS;
   node->token = token;
   return node;
@@ -114,18 +133,18 @@ void freeVarAssignNode(VarAssignNode* node) {
 
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr) {
   if (!condition || !thenExpr) return NULL;
- 
+
   IfNode* node = malloc(sizeof(IfNode));
   if (!node) return NULL;
- 
-  node->base.type = NODE_IF; 
+
+  node->base.type = NODE_IF;
   node->condition = condition;
   node->thenExpr = thenExpr;
   node->elifConds = elifConds;
   node->elifExprs = elifExprs;
   node->elifCount = elifCount;
   node->elseExpr = elseExpr;
- 
+
   return node;
 }
 
@@ -135,10 +154,24 @@ void freeVarAccessNode(VarAccessNode* node) {
   free(node);
 }
 
+void freeListNode(ListNode* node) {
+  if (!node) return;
+
+  if (node->objects) {
+    for (uint64_t i = 0; i < node->size; i++) {
+      freeAST(node->objects[i]);
+    }
+
+    free(node->objects);
+  }
+
+  free(node);
+}
+
 void freeStringNode(StringNode* node) {
   if (!node) return;
-  
-  // if (node->token->value) free(node->token->value);
+
+  // if (node->token->val.s) free(node->token->val.s);
   free(node);
 }
 
@@ -231,6 +264,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_IF:
       freeIfNode((IfNode*)node);
+      break;
+
+    case NODE_LIST:
+      freeListNode((ListNode*)node);
       break;
   }
 }

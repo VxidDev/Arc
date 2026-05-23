@@ -12,7 +12,8 @@ typedef enum {
   NODE_VARACCESS,
   NODE_STRING,
   NODE_PROGRAM,
-  NODE_IF
+  NODE_IF,
+  NODE_LIST
 } NodeType;
 
 typedef struct ASTNode {
@@ -28,6 +29,14 @@ typedef struct StringNode {
   ASTNode base;
   Token* token;
 } StringNode;
+
+typedef struct ListNode {
+  ASTNode base;
+  ASTNode** objects;
+  uint64_t size, capacity;
+  Token* startBracket;
+  Token* endBracket;
+} ListNode;
 
 typedef struct VarAccessNode {
   ASTNode base;
@@ -56,19 +65,19 @@ typedef struct UnaryOpNode {
 } UnaryOpNode;
 
 typedef struct IfNode {
-  ASTNode base;           
+  ASTNode base;
   ASTNode* condition;
   ASTNode* thenExpr;
-  ASTNode** elifConds;   
-  ASTNode** elifExprs; 
+  ASTNode** elifConds;
+  ASTNode** elifExprs;
   size_t elifCount;
-  ASTNode* elseExpr;   
+  ASTNode* elseExpr;
 } IfNode;
 
 typedef struct {
-  ASTNode base;          
-  ASTNode **statements;  
-  size_t count;         
+  ASTNode base;
+  ASTNode **statements;
+  size_t count;
 } ProgramNode;
 
 NumberNode* initNumberNode(Token* token);
@@ -78,6 +87,7 @@ UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node);
 VarAccessNode* initVarAccessNode(Token* token);
 VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr);
+ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity); 
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 
 void freeBinOpNode(BinOpNode* node);

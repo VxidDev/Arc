@@ -7,7 +7,7 @@
 char *stringDup(const char *s) {
   size_t len = strlen(s) + 1;
   char *sDup = malloc(len);
-  
+
   memcpy(sDup, s, len);
 
   return sDup;
@@ -38,6 +38,10 @@ char* tokToString(const TokType type) {
     case TOK_IDENTIFIER: return "IDENTIFIER";
     case TOK_KEYWORD: return "KEYWORD";
     case TOK_STRING: return "STRING";
+
+    case TOK_LBRACK: return "LBRACK";
+    case TOK_RBRACK: return "RBRACK";
+    case TOK_COMMA: return "COMMA";
 
     default: return "UNKNOWN";
   }

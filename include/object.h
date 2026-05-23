@@ -2,11 +2,13 @@
 #define OBJECT_H
 
 #include "error.h"
+#include "node.h"
 
 typedef enum ObjType {
   OBJ_NUMBER_INT,
   OBJ_NUMBER_FLOAT,
-  OBJ_STRING
+  OBJ_STRING,
+  OBJ_LIST
 } ObjType;
 
 typedef struct Object {
@@ -28,6 +30,11 @@ typedef struct String {
   char *value;
 } String;
 
+typedef struct List {
+  Object base;
+  ListNode* list;
+} List;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -39,6 +46,9 @@ Number* copyNumber(Number *num);
 
 String* initString(char *value);
 String* copyString(String *str);
+
+List* initList(ListNode* list);
+List* copyList(List* list);
 
 Object* copyObject(Object *obj);
 

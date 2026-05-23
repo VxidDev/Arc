@@ -96,6 +96,86 @@ ASTNode* atomParser(Parser* parser) {
     }
   }
 
+  if (token->type == TOK_LBRACK) {
+    Token* start = token;
+
+    advanceParser(parser);
+    
+    if (!parser->currentToken) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(token->start, token->end, token->start.filename, "Unexpected EOF.");
+      return NULL;
+    }
+
+    uint64_t size = 0;
+    uint64_t capacity = 64;
+
+    ASTNode** objects = malloc(capacity * sizeof(ASTNode*));
+
+    if (!objects) {
+      return NULL;
+    }
+
+    while (parser->currentToken && parser->currentToken->type != TOK_RBRACK) {
+      token = parser->currentToken;
+      ASTNode* val = andOrParser(parser);
+
+      if (!val) {
+        for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
+        free(objects);
+        return NULL;
+      }
+
+      if (size >= capacity) {
+        capacity *= 2;
+
+        void *tmp = realloc(objects, capacity * sizeof(ASTNode*));
+
+        if (!tmp) {
+          for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
+          free(objects);
+          freeAST(val);
+          return NULL;
+        }
+
+        objects = tmp;
+      }
+
+      objects[size++] = val;
+
+      if (parser->currentToken && parser->currentToken->type == TOK_COMMA) {
+        advanceParser(parser);
+
+        continue;
+      }
+
+      if (parser->currentToken && parser->currentToken->type != TOK_RBRACK) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken->start, parser->currentToken->end, parser->currentToken->start.filename, "Expected ',' or ']'.");
+
+        for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
+        free(objects);
+
+        return NULL;
+      }
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_RBRACK) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(start->start, token->end, start->start.filename, "Unterminated list: expected ']'.");
+
+      for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
+      free(objects);
+
+      return NULL;
+    }
+
+    Token* end = parser->currentToken;
+
+    advanceParser(parser);
+
+    objects[size] = NULL;
+
+    return (ASTNode*)initListNode(start, end, objects, size, capacity);
+  }
+
   if (*parser->error == NULL) *parser->error = initSyntaxError(token->start, token->end, token->start.filename, "Expression expected");
   return NULL;
 }

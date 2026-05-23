@@ -373,6 +373,14 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
   return NULL;
 }
 
+Object* visitListNode(ASTNode* node) {
+  if (!node) return NULL;
+
+  List* list = initList((ListNode*)node);
+
+  return (Object*)list;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -385,6 +393,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_STRING: return visitStringNode(node);
     case NODE_PROGRAM: return visitProgramNode(node, filename, err, variables);
     case NODE_IF: return visitIfNode(node, filename, err, variables);
+    case NODE_LIST: return visitListNode(node);
     default: return NULL;
   }
 }

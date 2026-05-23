@@ -9,7 +9,8 @@ typedef enum TokType {
   TOK_IDENTIFIER, TOK_KEYWORD, TOK_STRING,
   TOK_IF, TOK_THEN, TOK_ELIF, TOK_ELSE,
   TOK_VAR,
-  TOK_AND, TOK_OR
+  TOK_AND, TOK_OR,
+  TOK_LBRACK, TOK_RBRACK, TOK_COMMA
 } TokType;
 
 extern const char *KEYWORDS[];
