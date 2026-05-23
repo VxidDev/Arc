@@ -29,6 +29,7 @@ typedef struct NumberNode {
 typedef struct StringNode {
   ASTNode base;
   Token* token;
+  uint64_t len;
 } StringNode;
 
 typedef struct ListNode {
@@ -54,6 +55,8 @@ typedef struct IndexNode {
   ASTNode base;
   ASTNode* target;
   ASTNode* index;
+
+  Position start, end;
 } IndexNode;
 
 typedef struct BinOpNode {
@@ -95,7 +98,7 @@ VarAccessNode* initVarAccessNode(Token* token);
 VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr);
 ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity);
-IndexNode* initIndexNode(ASTNode* target, ASTNode* index);
+IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end);
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 
 void freeBinOpNode(BinOpNode* node);

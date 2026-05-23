@@ -4,20 +4,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-String *initString(char *value) {
+String *initString(char *value, uint64_t len) {
   String* str = malloc(sizeof(String));
 
   if (!str) return NULL;
 
   str->value = stringDup(value);
   str->base.type = OBJ_STRING;
+  str->len = len;
 
   return str;
 }
 
 String *copyString(String *str) {
   if (!str) return NULL;
-  return initString(str->value);
+  return initString(str->value, str->len);
 }
 
 String *addString(const String *dest, const String *src) {

@@ -209,12 +209,23 @@ ASTNode* postfixParser(Parser* parser) {
   ASTNode* node = atomParser(parser);
   if (!node) return NULL;
 
-  while (parser->currentToken &&
-        (parser->currentToken->type == TOK_LBRACK)) {
+  while (parser->currentToken && (parser->currentToken->type == TOK_LBRACK)) {
+    Position start = parser->currentToken->start;
+    Position end = parser->currentToken->end;
 
     advanceParser(parser); // skip '['
+    
+    if (!parser->currentToken) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expression expected."); 
+
+      freeAST(node);
+      return NULL;
+    }
+
+    end = parser->currentToken->end;
 
     ASTNode* index = andOrParser(parser);
+
     if (!index) {
       freeAST(node);
       return NULL;
@@ -224,20 +235,15 @@ ASTNode* postfixParser(Parser* parser) {
       freeAST(index);
       freeAST(node);
 
-      if (*parser->error == NULL)
-        *parser->error = initSyntaxError(
-          parser->currentToken->start,
-          parser->currentToken->end,
-          parser->currentToken->start.filename,
-          "Expected ']'"
-        );
-
+      if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expected ']'");
       return NULL;
     }
+    
+    end = parser->currentToken->end;
 
     advanceParser(parser); // skip ']'
-
-    node = (ASTNode*)initIndexNode(node, index);
+  
+    node = (ASTNode*)initIndexNode(node, index, start, end);
   }
 
   return node;

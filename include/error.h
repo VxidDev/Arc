@@ -23,6 +23,7 @@ Error* initLexerError(Position start, Position end, char *filename, char *detail
 Error* initSemanticError(Position start, Position end, char *filename, char *details);
 Error* initNameError(Position start, Position end, char *filename, char *details);
 Error* initTypeError(Position start, Position end, char *filename, char *details);
+Error* initIndexError(Position start, Position end, char *filename, char *details);
 
 char *errorAsString(const Error *error);
 

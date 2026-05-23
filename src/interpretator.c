@@ -312,7 +312,7 @@ Object* visitStringNode(ASTNode* node) {
 
   StringNode* str = (StringNode*)node;
 
-  return (Object*)initString(str->token->val.s);
+  return (Object*)initString(str->token->val.s, str->len);
 }
 
 Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
@@ -395,24 +395,6 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
   if (!node) return NULL;
 
   IndexNode* idx = (IndexNode*)node;
-  
-  Position start = {0};
-
-  switch (idx->target->type) {
-    case NODE_NUMBER: start = ((NumberNode*)idx->target)->token->start; break;
-    case NODE_STRING: start = ((StringNode*)idx->target)->token->start; break;
-    case NODE_LIST: start = ((ListNode*)idx->target)->startBracket->start; break;
-    default: break;
-  }
-
-  Position end = {0};
-
-  switch (idx->index->type) {
-    case NODE_NUMBER: end = ((NumberNode*)idx->index)->token->end; break;
-    case NODE_STRING: end = ((StringNode*)idx->index)->token->end; break;
-    case NODE_LIST: end = ((ListNode*)idx->index)->endBracket->end; break;
-    default: break;
-  }
 
   const char* targetType; 
   const char* idxType; 
@@ -450,7 +432,7 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
 
     snprintf(buff, sizeof(buff), "Object of type \"%s\" is not subscriptable.", targetType);
 
-    if (*err == NULL) *err = initTypeError(start, end, start.filename, buff);
+    if (*err == NULL) *err = initTypeError(idx->start, idx->end, idx->start.filename, buff);
 
     freeObject(target);
     freeObject(index);
@@ -463,7 +445,7 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
 
     snprintf(buff, sizeof(buff), "Cannot use a value of type \"%s\" as an index.", idxType);
 
-    if (*err == NULL) *err = initTypeError(start, end, start.filename, buff);
+    if (*err == NULL) *err = initTypeError(idx->start, idx->end, idx->start.filename, buff);
 
     freeObject(target);
     freeObject(index);
@@ -474,17 +456,35 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
   if (target->type == OBJ_STRING) {
     String* str = (String*)target;
     Number* id = (Number*)index;
+
+    if (id->as.i < 0 || id->as.i >= str->len) {
+      if (*err == NULL) *err = initIndexError(idx->start, idx->end, idx->start.filename, "Index out of range.");
+
+      freeObject(target);
+      freeObject(index);
+
+      return NULL;
+    }
     
     char buff[2] = {str->value[id->as.i], '\0'};
 
     freeObject(target);
     freeObject(index);
 
-    return (Object*)initString(buff);
+    return (Object*)initString(buff, 1);
   }
   
   List* list = (List*)target;
   Number* id = (Number*)index;
+  
+  if (id->as.i < 0 || id->as.i >= list->size) {
+    if (*err == NULL) *err = initIndexError(idx->start, idx->end, idx->start.filename, "Index out of range.");
+
+    freeObject(target);
+    freeObject(index);
+
+    return NULL;
+  } 
 
   Object* obj = copyObject(list->objects[id->as.i]);
 

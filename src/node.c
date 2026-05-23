@@ -3,6 +3,7 @@
 #include "../include/utils.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 NumberNode* initNumberNode(Token* token) {
   if (!token) return NULL;
@@ -56,11 +57,12 @@ StringNode* initStringNode(Token* token) {
 
   node->base.type = NODE_STRING;
   node->token = token;
+  node->len = strlen(token->val.s);
 
   return node;
 }
 
-IndexNode* initIndexNode(ASTNode* target, ASTNode* index) {
+IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end) {
   if (!target || !index) return NULL;
 
   IndexNode* node = malloc(sizeof(IndexNode));
@@ -70,6 +72,9 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index) {
   node->base.type = NODE_INDEX;
   node->target = target;
   node->index = index;
+
+  node->start = start;
+  node->end = end;
 
   return node;
 }

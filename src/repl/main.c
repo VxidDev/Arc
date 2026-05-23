@@ -256,7 +256,7 @@ void parseArguments(int argc, char **argv, SymbolTable* variables) {
         snprintf(buf, sizeof(buf), "arg%d", currentArg);
         currentArg++;
 
-        String* arg = initString(argv[i]);
+        String* arg = initString(argv[i], strlen(argv[i]));
         setTable(variables, buf, (Object*)arg);
 
         free(arg->value);
@@ -307,8 +307,9 @@ int main(int argc, char **argv) {
   SymbolTable *variables = createTable(1024, NULL);
 
   parseArguments(argc, argv, variables);
-
-  String* arg0 = initString(_INPUT_FILE ? _INPUT_FILE : argv[0]);
+  
+  char *arg0raw = _INPUT_FILE ? _INPUT_FILE : argv[0];
+  String* arg0 = initString(arg0raw, strlen(arg0raw));
   setTable(variables, "arg0", (Object*)arg0);
   free(arg0->value);
   free(arg0);

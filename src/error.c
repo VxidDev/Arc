@@ -72,6 +72,10 @@ Error *initTypeError(Position start, Position end, char *filename, char* details
   return initError(start, end, "Type Error", filename, details);
 }
 
+Error *initIndexError(Position start, Position end, char *filename, char* details) {
+  return initError(start, end, "Index Error", filename, details);
+}
+
 char* errorAsString(const Error* error) {
   if (!error || !error->name || !error->details || !error->filename)
     return NULL;

@@ -28,6 +28,7 @@ typedef struct Number {
 typedef struct String {
   Object base;
   char *value;
+  uint64_t len;
 } String;
 
 typedef struct List {
@@ -45,7 +46,7 @@ Number* initInt(long value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
 
-String* initString(char *value);
+String* initString(char *value, uint64_t);
 String* copyString(String *str);
 
 List* initList(Object** list, uint64_t size, uint64_t capacity);

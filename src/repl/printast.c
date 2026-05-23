@@ -123,7 +123,7 @@ void printAST(ASTNode* node) {
       printAST(idx->target);
       printf(" , ");
       printAST(idx->index);
-      printf("]%s\n", COLOR(ANSI_RESET));
+      printf("]%s", COLOR(ANSI_RESET));
 
       break;
     }
