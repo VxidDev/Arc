@@ -32,7 +32,8 @@ typedef struct String {
 
 typedef struct List {
   Object base;
-  ListNode* list;
+  Object** objects;
+  uint64_t size, capacity;
 } List;
 
 typedef struct EvalResultNumber {
@@ -47,7 +48,7 @@ Number* copyNumber(Number *num);
 String* initString(char *value);
 String* copyString(String *str);
 
-List* initList(ListNode* list);
+List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);
 
 Object* copyObject(Object *obj);

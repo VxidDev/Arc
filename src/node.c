@@ -21,9 +21,9 @@ ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects
   if (!startBracket || !endBracket || !objects) return NULL;
 
   ListNode* list = malloc(sizeof(ListNode));
- 
+
   if (!list) return NULL;
-  
+
   list->base.type = NODE_LIST;
 
   list->startBracket = startBracket;

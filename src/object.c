@@ -28,7 +28,12 @@ void freeObject(Object* obj) {
     if (str->value) free(str->value);
     free(str); 
   } else { 
-    free(obj);
+    List* list = (List*)obj;
+
+    for (uint64_t i = 0; i < list->size; i++) freeObject(list->objects[i]);
+
+    free(list->objects);
+    free(list);
   } 
 
   return;

@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-List* initList(ListNode* list) {
+List* initList(Object** list, uint64_t size, uint64_t capacity) {
   if (!list) return NULL;
 
   List* listobj = malloc(sizeof(List));
@@ -10,7 +10,20 @@ List* initList(ListNode* list) {
   if (!listobj) return NULL;
 
   listobj->base.type = OBJ_LIST;
-  listobj->list = list;
+  listobj->size = size;
+  listobj->capacity = capacity;
+  
+  listobj->objects = malloc(sizeof(Object*) * listobj->capacity);
+
+  if (!listobj->objects) {
+    free(listobj);
+    return NULL;
+  }
+
+  for (uint64_t i = 0; i < listobj->size; i++) {
+    listobj->objects[i] = copyObject(list[i]);
+    freeObject(list[i]);
+  }
 
   return listobj;
 }
@@ -21,30 +34,20 @@ List* copyList(List* list) {
   List* newList = malloc(sizeof(List));
 
   if (!newList) return NULL;
-  
-  newList->list = malloc(sizeof(ListNode)); 
-
-  if (!newList->list) {
-    free(newList);
-    return NULL;
-  }
-
-  newList->list->base.type = NODE_LIST;
 
   newList->base.type = OBJ_LIST;
-  newList->list->size = list->list->size;
-  newList->list->capacity = list->list->capacity;
 
-  newList->list->objects = malloc(sizeof(ASTNode*) * newList->list->capacity);
+  newList->size = list->size;
+  newList->capacity = list->capacity;
+  newList->objects = malloc(sizeof(Object*) * newList->capacity);
 
-  if (!newList->list->objects) {
-    free(newList->list);
+  if (!newList->objects) {
     free(newList);
     return NULL;
   }
 
-  for (uint64_t i = 0; i < newList->list->size; i++) {
-    newList->list->objects[i] = (ASTNode*)copyObject((Object*)list->list->objects[i]);
+  for (uint64_t i = 0; i < newList->size; i++) {
+    newList->objects[i] = copyObject(list->objects[i]);
   }
 
   return newList;

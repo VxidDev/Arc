@@ -373,10 +373,18 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
   return NULL;
 }
 
-Object* visitListNode(ASTNode* node) {
+Object* visitListNode(ASTNode* node, char* filename, Error** err, SymbolTable* variables) {
   if (!node) return NULL;
 
-  List* list = initList((ListNode*)node);
+  ListNode* listNode = (ListNode*)node;
+  
+  Object *objs[listNode->capacity];
+
+  for (uint64_t i = 0; i < listNode->size; i++) {
+    objs[i] = visitNode(listNode->objects[i], filename, err, variables);
+  }
+
+  List* list = initList(objs, listNode->size, listNode->capacity);
 
   return (Object*)list;
 }
@@ -393,7 +401,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_STRING: return visitStringNode(node);
     case NODE_PROGRAM: return visitProgramNode(node, filename, err, variables);
     case NODE_IF: return visitIfNode(node, filename, err, variables);
-    case NODE_LIST: return visitListNode(node);
+    case NODE_LIST: return visitListNode(node, filename, err, variables);
     default: return NULL;
   }
 }
