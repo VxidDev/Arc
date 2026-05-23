@@ -77,25 +77,23 @@ Arc > x > 10 OR x == 5
 Arc provides access to command-line arguments through built-in variables:
 
 * `argc`: The number of positional arguments (including the script file).
-* `arg0`: The path to the file (e.g test.arc) or path to Arc interpreter.
-* `arg1`, `arg2`, ..., `argN`: The positional arguments passed to the script.
-* The argument list is terminated by a variable `argN` (where `N` is the value of `argc`) which is set to `0`.
+* `argv`: List of positional arguments. (including the script file).
 
 Example usage in a script:
 ```text
 VAR i = 1
+
 IF argc > 1 THEN
-    arg1
+    argv[0]
 ELSE
     "No arguments provided"
 ```
 
 If you run `arc script.arc hello world`:
 * `argc` will be `3`
-* `arg0` will be `"arc"` (or the path to the executable)
-* `arg1` will be `"hello"`
-* `arg2` will be `"world"`
-* `arg3` will be `0`
+* `argv[0]` will be `"script.arc"` (or the path to the executable)
+* `argv[1]` will be `"hello"`
+* `argv[2]` will be `"world"`
 
 ---
 
