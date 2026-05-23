@@ -13,8 +13,13 @@ Arc is a small programming language project written in C. It focuses on building
 * Expression evaluation (interpreter)
 * Integer and floating-point number support
 * String literal support
+* List literal support
 * Support for operations on strings:
   * `+` (concatenation), `*` (repetition)
+* Support for operations on lists:
+  * Indexing
+  * Slicing (TODO)
+
 * Variables and identifiers (using `VAR` keyword)
 * **Conditional statements**: `IF`, `THEN`, `ELIF`, `ELSE`
 * Basic arithmetic operators:
@@ -188,6 +193,7 @@ Arc is intentionally designed to stay simple and easy to reason about. The main 
     ├── node.c
     ├── object.c
     ├── objects
+    │   ├── list.c
     │   ├── number.c
     │   └── string.c
     ├── parser.c
