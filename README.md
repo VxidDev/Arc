@@ -19,6 +19,10 @@ Arc is a small programming language project written in C. It focuses on building
 * Support for operations on lists:
   * Indexing
   * Slicing (TODO)
+* Functions:
+  * Define functions using the `FN` keyword.
+  * Supports parameters.
+  * Call functions using `function_name(arg1, arg2)`.
 
 * Variables and identifiers (using `VAR` keyword)
 * **Conditional statements**: `IF`, `THEN`, `ELIF`, `ELSE`, `END`
@@ -104,6 +108,7 @@ IF argc > 1 THEN
     argv[0]
 ELSE
     "No arguments provided"
+END
 ```
 
 If you run `arc script.arc hello world`:
@@ -111,6 +116,25 @@ If you run `arc script.arc hello world`:
 * `argv[0]` will be `"script.arc"` (or the path to the executable)
 * `argv[1]` will be `"hello"`
 * `argv[2]` will be `"world"`
+
+---
+
+### Functions
+
+```text
+FN add(a, b) THEN
+    a + b
+END
+
+VAR result = add(5, 3)
+result
+```
+
+Running this code will output:
+
+```text
+8
+```
 
 ---
 
@@ -343,7 +367,7 @@ valgrind --leak-check=full --show-leak-kinds=all arc
 * [x] `WHILE` loop
 * [ ] Logical `NOT` operator
 * [ ] Scoped environments
-* [ ] Functions
+* [x] Functions
 * [ ] Basic runtime system
 * [ ] Bytecode virtual machine (long-term goal)
 

@@ -138,6 +138,36 @@ void printAST(ASTNode* node) {
 
       break;
     }
+
+    case NODE_FUNCTION: {
+      FunctionNode* func = (FunctionNode*)node;
+
+      printf("%sFunc%s(", COLOR(ANSI_DIM), COLOR(ANSI_RESET));
+
+      for (size_t i = 0; i < func->paramCount;) {
+        printf("%s", func->params[i]);
+
+        printf("%s", ++i < func->paramCount ? " , " : "");
+      }
+
+      putchar(')');
+      break;
+    }
+
+    case NODE_FUNCTION_CALL: {
+      FunctionCallNode* fncall = (FunctionCallNode*)node;
+      FunctionNode* func = (FunctionNode*)fncall->callee;
+
+      printf("%s%sFnCall:%s%s(", COLOR(ANSI_DIM), COLOR(ANSI_ITALIC), func->name, COLOR(ANSI_RESET));
+
+      for (size_t i = 0; i < fncall->argCount;) {
+        printAST(fncall->args[i]);
+        printf("%s", ++i < fncall->argCount ? " , " : "");
+      }
+
+      putchar(')');
+      break;
+    }
   }
 }
 

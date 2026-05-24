@@ -531,6 +531,39 @@ Object* visitWhileNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
   return lastResult;
 }
 
+Object* visitFunctionNode(ASTNode* node, SymbolTable* variables) {
+  if (!node) return NULL;
+
+  FunctionNode* func = (FunctionNode*)node;
+  Object* funcObj = (Object*)initFunction(func);
+
+  if (!funcObj) {
+    freeAST((ASTNode*)func);
+    return NULL;
+  }
+
+  setTable(variables, func->name, funcObj);
+  freeObject(funcObj);
+
+  return (Object*)initInt(1); // true
+}
+
+Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, SymbolTable* variables) {
+  if (!node) return NULL;
+  
+  FunctionCallNode* fncallnode = (FunctionCallNode*)node;
+  FunctionCall* call = initFunctionCall(fncallnode, variables, filename, err);
+
+  if (!call) {
+    return NULL;
+  }
+
+  Object* res = visitNode(call->function->body, filename, err, call->env);
+
+  freeObject((Object*)call);
+  return res;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -546,6 +579,8 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_LIST: return visitListNode(node, filename, err, variables);
     case NODE_INDEX: return visitIndexNode(node, err, filename, variables);
     case NODE_WHILE: return visitWhileNode(node, err, filename, variables);
+    case NODE_FUNCTION: return visitFunctionNode(node, variables);
+    case NODE_FUNCTION_CALL: return visitFunctionCallNode(node, filename, err, variables);
     default: return NULL;
   }
 }

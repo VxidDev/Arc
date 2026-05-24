@@ -55,6 +55,8 @@ char* tokToString(const TokType type) {
     case TOK_VAR: return "VAR";
     case TOK_WHILE: return "WHILE";
 
+    case TOK_FN: return "FN";
+
     default: return "UNKNOWN";
   }
 }

@@ -1,5 +1,6 @@
 #include "../include/parser.h"
 #include "../include/token.h"
+#include "../include/utils.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -260,6 +261,67 @@ ASTNode* postfixParser(Parser* parser) {
   ASTNode* node = atomParser(parser);
   if (!node) return NULL;
 
+  while (parser->currentToken && (parser->currentToken->type == TOK_LPAREN)) {
+    Position start = parser->currentToken->start;
+    Position end = parser->currentToken->end;
+
+    advanceParser(parser); // skip '('
+
+    size_t size = 0;
+    size_t capacity = 16;
+
+    ASTNode** args = malloc(sizeof(ASTNode*) * capacity);
+
+    if (!args) return NULL;
+
+    if (parser->currentToken && parser->currentToken->type == TOK_RPAREN) {
+      advanceParser(parser);
+      return (ASTNode*)initFunctionCallNode(node, args, 0);
+    }
+
+    while (parser->currentToken && parser->currentToken->type != TOK_RPAREN) {
+      end = parser->currentToken->end;
+      ASTNode* arg = andOrParser(parser);
+
+      if (!arg) {
+        for (size_t i = 0; i < size; i++) 
+          freeAST(args[i]);
+
+        free(args);
+        freeAST(node);
+        return NULL;
+      }
+
+      if (size >= capacity) {
+        capacity *= 2;
+        args = realloc(args, sizeof(ASTNode*) * capacity);
+      }
+
+      args[size++] = arg;
+
+      if (parser->currentToken && parser->currentToken->type == TOK_COMMA) {
+        end = parser->currentToken->end;
+        advanceParser(parser);
+      }
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_RPAREN) {
+      freeAST(node);
+      for (size_t i = 0; i < size; i++) 
+        freeAST(args[i]);
+
+      free(args);
+
+      if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expected ')'.");
+
+      return NULL;
+    }
+
+    advanceParser(parser);
+
+    return (ASTNode*)initFunctionCallNode(node, args, size);
+  }
+
   while (parser->currentToken && (parser->currentToken->type == TOK_LBRACK)) {
     Position start = parser->currentToken->start;
     Position end = parser->currentToken->end;
@@ -411,6 +473,192 @@ ASTNode* exprParser(Parser* parser) {
 
     advanceParser(parser); // skip END token.
     return (ASTNode*)initWhileNode(cond, body, whileTok->start, whileTok->end);
+  }
+
+  if (parser->currentToken->type == TOK_FN) {
+    Token* fnTok = parser->currentToken; // safe copy for error reporting
+    
+    advanceParser(parser); // skip FN token 
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnTok->start, fnTok->end, fnTok->start.filename, "Expected function name after 'FN' keyword.");
+      return NULL;
+    }
+    
+    char* funcName = stringDup(parser->currentToken->val.s);
+    Token* fnNameTok = parser->currentToken;
+
+    if (!funcName) {
+      return NULL;
+    }
+
+    advanceParser(parser); // skip function name 
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_LPAREN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected '(' after function name.");
+      free(funcName);
+      return NULL;
+    }
+
+    advanceParser(parser); // skip '('
+    
+    size_t paramCount = 0;
+    size_t paramCapacity = 16;
+
+    char **params = malloc(sizeof(char*) * paramCapacity);
+
+    if (!params) {
+      free(funcName);
+      return NULL;
+    }
+
+    while (parser->currentToken && parser->currentToken->type != TOK_RPAREN) {
+      Token* param = parser->currentToken;
+
+      if (param->type != TOK_IDENTIFIER) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(param->start, param->end, param->start.filename, "Expected parameter name.");
+
+        for (size_t i = 0; i < paramCount; i++) {
+          free(params[i]);
+        }
+
+        free(params);
+        free(funcName);
+
+        return NULL;
+      }
+
+      char* paramName = stringDup(param->val.s);
+
+      if (!paramName) {
+        for (size_t i = 0; i < paramCount; i++) {
+          free(params[i]);
+        }
+
+        free(params);
+        free(funcName);
+
+        return NULL;
+      }
+
+      if (paramCount >= paramCapacity) {
+        paramCapacity *= 2;
+
+        void* tmp = realloc(params, sizeof(char*) * paramCapacity);
+
+        if (!tmp) {
+          for (size_t i = 0; i < paramCount; i++) {
+            free(params[i]);
+          }
+
+          free(params);
+          free(paramName);
+          free(funcName);
+
+          return NULL;
+        }
+
+        params = tmp;
+      }
+
+      params[paramCount++] = paramName;
+
+      advanceParser(parser); // skip parameter name
+
+      if (parser->currentToken && parser->currentToken->type == TOK_COMMA) {
+        advanceParser(parser); // skip comma
+        continue;
+      }
+
+      if (parser->currentToken && parser->currentToken->type == TOK_RPAREN) {
+        break;
+      }
+
+      if (*parser->error == NULL)
+        *parser->error = initSyntaxError(param->start, param->end, param->start.filename, "Expected ',' or ')' after parameter name.");
+      
+      for (size_t i = 0; i < paramCount; i++) {
+        free(params[i]);
+      }
+
+      free(params);
+      free(funcName);
+
+      return NULL;
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_RPAREN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected ')'.");
+
+      for (size_t i = 0; i < paramCount; i++) {
+        free(params[i]);
+      }
+
+      free(params);
+      free(funcName);
+
+      return NULL;
+    }
+
+    advanceParser(parser); // skip ')'
+    
+    if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected 'THEN'.");
+
+      free(funcName);
+
+      for (size_t i = 0; i < paramCount; i++) {
+        free(params[i]);
+      }
+
+      free(params);
+      return NULL;
+    }
+
+    advanceParser(parser); // skip THEN.
+    
+    ASTNode* body = blockParser(parser);
+
+    if (!body) {
+      for (size_t i = 0; i < paramCount; i++) {
+        free(params[i]);
+      }
+
+      free(params);
+      free(funcName);
+
+      return NULL;
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_END) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected 'END'.");
+
+      for (size_t i = 0; i < paramCount; i++) {
+        free(params[i]);
+      }
+
+      free(params);
+      free(funcName);
+
+      return NULL;
+    }
+
+    advanceParser(parser); // skip END.
+  
+    FunctionNode* node = initFunctionNode(body, funcName, params, paramCount);
+    free(funcName);
+    
+    if (!node) {
+      for (size_t i = 0; i < paramCount; i++) {
+        free(params[i]);
+      }
+
+      free(params);
+      // free(funcName); // Already freed above
+      return NULL;
+    }
+
+    return (ASTNode*)node;
   }
 
   if (parser->currentToken->type == TOK_IF) {

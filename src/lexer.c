@@ -106,6 +106,11 @@ static TokType keywordType(const char *s) {
       if (s[1] == 'H' && s[2] == 'I' && s[3] == 'L' && s[4] == 'E' && s[5] == '\0')
         return TOK_WHILE;
       break;
+
+    case 'F':
+      if (s[1] == 'N' && s[2] == '\0')
+        return TOK_FN;
+      break;
   }
 
   return TOK_IDENTIFIER;

@@ -18,6 +18,44 @@ NumberNode* initNumberNode(Token* token) {
   return node;
 }
 
+FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t argCount) {
+  if (!callee || !args) return NULL;
+
+  FunctionCallNode* fncallNode = malloc(sizeof(FunctionCallNode));
+
+  if (!fncallNode) return NULL;
+  
+  fncallNode->base.type = NODE_FUNCTION_CALL;
+
+  fncallNode->callee = callee;
+  fncallNode->args = args;
+  fncallNode->argCount = argCount;
+
+  return fncallNode;
+}
+
+FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount) {
+  if (!body) return NULL;
+
+  FunctionNode* node = malloc(sizeof(FunctionNode));
+
+  if (!node) return NULL;
+  
+  node->base.type = NODE_FUNCTION;
+  node->body = body;
+  node->name = stringDup(name);
+
+  if (!node->name) {
+    free(node);
+    return NULL;
+  }
+
+  node->params = params;
+  node->paramCount = paramCount;
+
+  return node;
+}
+
 ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity) {
   if (!startBracket || !endBracket || !objects) return NULL;
 
@@ -164,6 +202,36 @@ void freeVarAssignNode(VarAssignNode* node) {
   if (node->identifier) free(node->identifier);
   if (node->value) freeAST(node->value);
 
+  free(node);
+}
+
+void freeFunctionNode(FunctionNode* node) {
+  if (!node) return;
+
+  if (node->name) free(node->name);
+  if (node->params) {
+    for (size_t i = 0; i < node->paramCount; i++) {
+      free(node->params[i]);
+    }
+    free(node->params);
+  }
+  if (node->body) freeAST(node->body);
+
+  free(node);
+}
+
+void freeFunctionCallNode(FunctionCallNode* node) {
+  if (!node) return;
+
+  if (node->args) {
+    for (size_t i = 0; i < node->argCount; i++) {
+      freeAST(node->args[i]);
+    }
+
+    free(node->args);
+  }
+
+  if (node->callee) freeAST(node->callee);
   free(node);
 }
 
@@ -330,6 +398,14 @@ void freeAST(ASTNode *node) {
 
     case NODE_WHILE:
       freeWhileNode((WhileNode*)node);
+      break;
+
+    case NODE_FUNCTION:
+      freeFunctionNode((FunctionNode*)node);
+      break;
+
+    case NODE_FUNCTION_CALL:
+      freeFunctionCallNode((FunctionCallNode*)node);
       break;
   }
 }

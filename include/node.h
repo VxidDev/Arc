@@ -15,7 +15,9 @@ typedef enum {
   NODE_IF,
   NODE_LIST,
   NODE_INDEX,
-  NODE_WHILE
+  NODE_WHILE,
+  NODE_FUNCTION,
+  NODE_FUNCTION_CALL
 } NodeType;
 
 typedef struct ASTNode {
@@ -92,6 +94,21 @@ typedef struct WhileNode {
   Position start, end;
 } WhileNode;
 
+typedef struct FunctionNode {
+  ASTNode base;
+  char *name;
+  char **params;
+  size_t paramCount;
+  ASTNode* body;
+} FunctionNode;
+
+typedef struct FunctionCallNode {
+  ASTNode base;
+  ASTNode* callee;
+  ASTNode** args;
+  size_t argCount;
+} FunctionCallNode;
+
 typedef struct {
   ASTNode base;
   ASTNode **statements;
@@ -108,6 +125,8 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
 ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity);
 IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end);
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
+FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount);
+FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 
 void freeBinOpNode(BinOpNode* node);

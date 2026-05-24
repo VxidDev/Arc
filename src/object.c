@@ -1,17 +1,23 @@
 #include "../include/object.h"
+#include "../include/symbol-table.h"
 
 #include <stddef.h>
 #include <stdlib.h>
 
 Object* copyObject(Object* obj) {
   if (!obj) return NULL;
-
-  if (obj->type == OBJ_NUMBER_INT || obj->type == OBJ_NUMBER_FLOAT) {
-    return (Object*)copyNumber((Number*)obj);
-  } else if (obj->type == OBJ_STRING) {
-    return (Object*)copyString((String*)obj); 
-  } else {
-    return (Object*)copyList((List*)obj);
+  
+  switch (obj->type) {
+    case OBJ_NUMBER_INT:
+      return (Object*)copyNumber((Number*)obj);
+    case OBJ_NUMBER_FLOAT:
+      return (Object*)copyNumber((Number*)obj);
+    case OBJ_LIST:
+      return (Object*)copyList((List*)obj);
+    case OBJ_FUNCTION:
+      return (Object*)copyFunction((Function*)obj);
+    case OBJ_STRING:
+      return (Object*)copyString((String*)obj);
   }
 
   return NULL;
@@ -27,14 +33,38 @@ void freeObject(Object* obj) {
 
     if (str->value) free(str->value);
     free(str); 
-  } else { 
+  } else if (obj->type == OBJ_LIST) { 
     List* list = (List*)obj;
 
     for (uint64_t i = 0; i < list->size; i++) freeObject(list->objects[i]);
 
     free(list->objects);
     free(list);
-  } 
+  } else if (obj->type == OBJ_FUNCTION) {
+    Function* func = (Function*)obj;
+
+    for (size_t i = 0; i < func->paramCount; i++) {
+      free(func->params[i]);
+    }
+
+    free(func->params);
+    free(func->name);
+
+    free(func);
+  } else {
+    FunctionCall* fncall = (FunctionCall*)obj;
+
+    for (size_t i = 0; i < fncall->argCount; i++) {
+      freeObject(fncall->args[i]);
+    }
+
+    free(fncall->args);
+
+    freeObject((Object*)fncall->function);
+    freeTable(fncall->env);
+
+    free(fncall);
+  }
 
   return;
 }

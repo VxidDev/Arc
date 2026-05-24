@@ -4,11 +4,15 @@
 #include "error.h"
 #include "node.h"
 
+typedef struct SymbolTable SymbolTable;
+
 typedef enum ObjType {
   OBJ_NUMBER_INT,
   OBJ_NUMBER_FLOAT,
   OBJ_STRING,
-  OBJ_LIST
+  OBJ_LIST,
+  OBJ_FUNCTION,
+  OBJ_FUNCTION_CALL
 } ObjType;
 
 typedef struct Object {
@@ -37,6 +41,30 @@ typedef struct List {
   uint64_t size, capacity;
 } List;
 
+typedef struct Function {
+  Object base;
+
+  char *name;
+
+  char **params;
+  size_t paramCount;
+
+  ASTNode* body;
+} Function;
+
+typedef struct FunctionCall {
+  Object base;
+
+  Function *function;
+  Object **args;
+  size_t argCount;
+
+  SymbolTable *env;
+  Object *returnValue;
+
+  int finished;
+} FunctionCall;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -51,6 +79,11 @@ String* copyString(String *str);
 
 List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);
+
+Function* initFunction(FunctionNode* node);
+Function* copyFunction(Function* func);
+
+FunctionCall* initFunctionCall(FunctionCallNode* node, SymbolTable* parentEnv, char *filename, Error** err);
 
 Object* copyObject(Object *obj);
 
