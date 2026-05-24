@@ -6,7 +6,7 @@
 
 const char *KEYWORDS[] = {
   "VAR", "AND", "OR", "NOT",
-  "IF", "THEN", "ELIF", "ELSE", NULL
+  "IF", "THEN", "ELIF", "ELSE", "WHILE", NULL
 };
 
 Token* initToken(TokType type, void* value, bool needsToBeFreed, Position start, Position end) {

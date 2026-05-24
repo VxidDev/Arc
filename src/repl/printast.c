@@ -127,6 +127,17 @@ void printAST(ASTNode* node) {
 
       break;
     }
+
+    case NODE_WHILE: {
+      WhileNode* w = (WhileNode*)node;
+
+      printf("%sWHILE:%s", COLOR(ANSI_BRIGHT_GREEN_FG), COLOR(ANSI_RESET));
+      printAST(w->condition);
+      printf("%sTHEN:%s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_RESET));
+      printAST(w->body);
+
+      break;
+    }
   }
 }
 

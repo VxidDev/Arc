@@ -79,6 +79,23 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
   return node;
 }
 
+WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end) {
+  if (!condition || !body) return NULL;
+
+  WhileNode* node = malloc(sizeof(WhileNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_WHILE;
+  node->condition = condition;
+  node->body = body;
+
+  node->start = start;
+  node->end = end;
+
+  return node;
+}
+
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode) {
   if (!leftNode || !operTok || !rightNode) return NULL;
 
@@ -178,6 +195,15 @@ void freeIndexNode(IndexNode* node) {
 
   freeAST(node->target);
   freeAST(node->index);
+
+  free(node);
+}
+
+void freeWhileNode(WhileNode* node) {
+  if (!node) return;
+
+  freeAST(node->condition);
+  freeAST(node->body);
 
   free(node);
 }
@@ -300,6 +326,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_INDEX:
       freeIndexNode((IndexNode*)node);
+      break;
+
+    case NODE_WHILE:
+      freeWhileNode((WhileNode*)node);
       break;
   }
 }

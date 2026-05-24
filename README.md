@@ -21,7 +21,9 @@ Arc is a small programming language project written in C. It focuses on building
   * Slicing (TODO)
 
 * Variables and identifiers (using `VAR` keyword)
-* **Conditional statements**: `IF`, `THEN`, `ELIF`, `ELSE`
+* **Conditional statements**: `IF`, `THEN`, `ELIF`, `ELSE`, `END`
+* **Looping**: `WHILE`, `THEN`, `END`
+* **Multi-line support**: Bodies of `IF`, `ELIF`, `ELSE`, and `WHILE` can contain multiple statements.
 * Basic arithmetic operators:
   * `+`, `-`, `*`, `/`, `^`
   * Parentheses `(` `)`
@@ -48,15 +50,30 @@ Arc is a small programming language project written in C. It focuses on building
 ### Normal Mode
 
 ```text
-Arc > VAR x = 5
-5
-Arc > x * 10
-50
-Arc > VAR name = "Arc Language"
-Arc Language
-Arc > IF x == 5 THEN "Matched" ELIF x == 6 THEN "Almost" ELSE "No Match"
-Matched
-Arc > "Arc " * 3
+### File Execution Example
+
+Create a file named `script.arc`:
+
+```text
+VAR x = 0
+
+WHILE x < 5 THEN
+    x = x + 1
+END
+
+IF x == 5 THEN
+    "Five"
+ELSE
+    "Not Five"
+END
+```
+
+Running this file (`./arc script.arc`) will output:
+
+```text
+Five
+```
+
 Arc Arc Arc 
 Arc > "Hello " + "World"
 Hello World
@@ -323,6 +340,7 @@ valgrind --leak-check=full --show-leak-kinds=all arc
 * [x] String literals
 * [x] Comparison and Logical operators
 * [x] `IF`, `THEN`, `ELIF`, `ELSE` statements
+* [x] `WHILE` loop
 * [ ] Logical `NOT` operator
 * [ ] Scoped environments
 * [ ] Functions

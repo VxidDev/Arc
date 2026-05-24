@@ -53,6 +53,7 @@ char* tokToString(const TokType type) {
     case TOK_OR: return "OR";
 
     case TOK_VAR: return "VAR";
+    case TOK_WHILE: return "WHILE";
 
     default: return "UNKNOWN";
   }

@@ -494,6 +494,43 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
   return obj;
 }
 
+Object* visitWhileNode(ASTNode* node, Error** err, char* filename, SymbolTable* variables) {
+  if (!node) return NULL;
+
+  WhileNode* whileNode = (WhileNode*)node;
+  Object* lastResult = NULL;
+  while (true) {  
+    Object* cond = visitNode(whileNode->condition, filename, err, variables);
+
+    if (!cond) {
+      return NULL;
+    }
+
+    if (cond->type != OBJ_NUMBER_INT) {
+      if (*err == NULL) *err = initTypeError(whileNode->start, whileNode->end, whileNode->start.filename, "Condition must be evaluated to integer type object.");
+      freeObject(cond);
+
+      return NULL;
+    }
+
+    if (((Number*)cond)->as.i != 0) {
+      if (lastResult) {
+        freeObject(lastResult);
+        lastResult = NULL;
+      }
+
+      lastResult = visitNode(whileNode->body, filename, err, variables);
+    } else {
+      freeObject(cond);
+      break;
+    }
+
+    freeObject(cond);
+  }
+
+  return lastResult;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -508,6 +545,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_IF: return visitIfNode(node, filename, err, variables);
     case NODE_LIST: return visitListNode(node, filename, err, variables);
     case NODE_INDEX: return visitIndexNode(node, err, filename, variables);
+    case NODE_WHILE: return visitWhileNode(node, err, filename, variables);
     default: return NULL;
   }
 }

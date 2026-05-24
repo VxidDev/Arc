@@ -372,6 +372,47 @@ ASTNode* exprParser(Parser* parser) {
     return NULL;
   }
 
+  if (parser->currentToken->type == TOK_WHILE) {
+    Token* whileTok = parser->currentToken;
+    advanceParser(parser); // skip WHILE token.
+
+    ASTNode* cond = andOrParser(parser);
+
+    if (!cond) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok->start, whileTok->end, whileTok->start.filename, "Expected expression after 'WHILE'.");
+      return NULL;
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok->start, whileTok->end, whileTok->start.filename, "Expected 'THEN'.");
+      freeAST(cond);
+
+      return NULL;
+    }
+    
+    Token* thenTok = parser->currentToken;
+    advanceParser(parser); // skip THEN token.
+    
+    ASTNode* body = blockParser(parser);
+
+    if (!body) {
+      freeAST(cond);
+      return NULL;
+    }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_END) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok->start, thenTok->end, thenTok->start.filename, "Expected 'END'.");
+
+      freeAST(cond);
+      freeAST(body);
+
+      return NULL;
+    }
+
+    advanceParser(parser); // skip END token.
+    return (ASTNode*)initWhileNode(cond, body, whileTok->start, whileTok->end);
+  }
+
   if (parser->currentToken->type == TOK_IF) {
     Token* ifTok = parser->currentToken; // safe copy for error reporting
     advanceParser(parser);
