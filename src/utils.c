@@ -43,6 +43,17 @@ char* tokToString(const TokType type) {
     case TOK_RBRACK: return "RBRACK";
     case TOK_COMMA: return "COMMA";
 
+    case TOK_END: return "END";
+    case TOK_IF: return "IF";
+    case TOK_ELIF: return "ELIF";
+    case TOK_ELSE: return "ELSE";
+    case TOK_THEN: return "THEN";
+    
+    case TOK_AND: return "AND";
+    case TOK_OR: return "OR";
+
+    case TOK_VAR: return "VAR";
+
     default: return "UNKNOWN";
   }
 }

@@ -43,6 +43,7 @@ ASTNode* factorParser(Parser* parser);
 ASTNode* andOrParser(Parser* parser);
 ASTNode* compExprParser(Parser* parser);
 ASTNode* postfixParser(Parser* parser);
+ASTNode* blockParser(Parser* parser);
 
 ASTNode* atomParser(Parser* parser) {
   if (!parser || !parser->currentToken) return NULL;
@@ -205,6 +206,56 @@ ASTNode* powerParser(Parser* parser) {
   return left;
 }
 
+ASTNode* blockParser(Parser* parser) {
+  size_t size = 0;
+  size_t capacity = 64;
+
+  ASTNode** statements = malloc(sizeof(ASTNode*) * capacity);
+
+  if (!statements) return NULL;
+
+  while (
+    parser->currentToken &&
+    parser->currentToken->type != TOK_ELIF &&
+    parser->currentToken->type != TOK_ELSE &&
+    parser->currentToken->type != TOK_END
+  ) {
+    ASTNode* stmt = andOrParser(parser);
+
+    if (!stmt) {
+      for (size_t i = 0; i < size; i++) {
+        freeAST(statements[i]);
+      }
+
+      free(statements);
+      return NULL;
+    }
+
+    if (size >= capacity) {
+      capacity *= 2;
+
+      void* tmp = realloc(statements, sizeof(ASTNode*) * capacity);
+
+      if (!tmp) {
+        for (size_t i = 0; i < size; i++) {
+          freeAST(statements[i]);
+        }
+
+        free(statements);
+        return NULL;
+      }
+
+      statements = tmp;
+    }
+
+    statements[size++] = stmt;
+  }
+
+  statements[size] = NULL;
+
+  return (ASTNode*)initProgramNode(statements, size);
+}
+
 ASTNode* postfixParser(Parser* parser) {
   ASTNode* node = atomParser(parser);
   if (!node) return NULL;
@@ -337,7 +388,7 @@ ASTNode* exprParser(Parser* parser) {
 
     advanceParser(parser);
 
-    ASTNode* thenExpr = andOrParser(parser);
+    ASTNode* thenExpr = blockParser(parser);
 
     if (!thenExpr) {
       freeAST(condition);
@@ -411,7 +462,7 @@ ASTNode* exprParser(Parser* parser) {
 
       advanceParser(parser);
 
-      ASTNode* elifExpr = andOrParser(parser);
+      ASTNode* elifExpr = blockParser(parser);
 
       if (!elifExpr) {
         freeAST(elifCond);
@@ -464,9 +515,10 @@ ASTNode* exprParser(Parser* parser) {
     }
 
     ASTNode* elseExpr = NULL;
+    Token* tok = NULL;
 
     if (parser->currentToken && parser->currentToken->type == TOK_ELSE) {
-      Token* tok = parser->currentToken; // safe copy
+      tok = parser->currentToken; // safe copy
 
       advanceParser(parser);
 
@@ -485,7 +537,7 @@ ASTNode* exprParser(Parser* parser) {
         return NULL;
       }
 
-      elseExpr = andOrParser(parser);
+      elseExpr = blockParser(parser);
 
       if (!elseExpr) {
         for (size_t i = 0; i < size; i++) {
@@ -504,6 +556,31 @@ ASTNode* exprParser(Parser* parser) {
         return NULL;
       }
     }
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_END) {
+      Token* endTok = tok ? tok : ifTok;
+
+      if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok->start, endTok->end, ifTok->start.filename, "Expected 'END' token.");
+      
+      freeAST(condition);
+      freeAST(thenExpr);
+
+      for (size_t i = 0; i < size; i++) {
+        freeAST(elifConds[i]);
+        freeAST(elifExprs[i]);
+      }
+
+      free(elifConds);
+      free(elifExprs);
+
+      if (elseExpr) {
+        freeAST(elseExpr);
+      }
+
+      return NULL;
+    }
+
+    advanceParser(parser); // skip END tok
 
     return (ASTNode*)initIfNode(condition, thenExpr, elifConds, elifExprs, size, elseExpr);
   }
