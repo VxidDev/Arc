@@ -1,17 +1,9 @@
+VAR PI = 3.141592653589793
+VAR E = 2.718281828459045
+VAR TAU = 6.283185307179586
+
 FN exp(x) THEN 
-  VAR sum = 1.0
-  VAR term = 1.0
-
-  VAR n = 1
-
-  WHILE n < 30 THEN
-    VAR term = term * (x / n)
-    VAR sum = sum + term 
-
-    VAR n = n + 1
-  END 
-
-  sum
+  E ^ x
 END 
 
 FN logn(x) THEN
@@ -44,3 +36,38 @@ END
 FN sqrt(x) THEN
  x ^ 0.5
 END
+
+FN abs(x) THEN
+  IF x < 0 THEN
+    -x
+  ELSE 
+    x
+  END
+END 
+
+FN sign(x) THEN 
+  IF x < 0 THEN 
+    -1 
+  ELIF x == 0 THEN 
+    0
+  ELSE 
+    1
+  END
+END 
+
+FN sin(x) THEN
+  VAR term = x 
+  VAR sum = x 
+
+  VAR n = 1 
+
+  WHILE n < 10 THEN
+    VAR term = term * (-x * x / ((2 * n) * (2 * n + 1)))
+    VAR sum = sum + term 
+    VAR n = n + 1
+  END 
+
+  sum
+END 
+
+
