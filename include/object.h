@@ -12,12 +12,16 @@ typedef enum ObjType {
   OBJ_STRING,
   OBJ_LIST,
   OBJ_FUNCTION,
+  OBJ_NATIVE_FUNCTION,
   OBJ_FUNCTION_CALL
 } ObjType;
+
 
 typedef struct Object {
   ObjType type;
 } Object;
+
+typedef Object* (*NativeFunc)(Object** argc, size_t argCount);
 
 typedef struct Number {
   Object base;
@@ -65,6 +69,15 @@ typedef struct FunctionCall {
   int finished;
 } FunctionCall;
 
+typedef struct NativeFunction {
+  Object base;
+
+  char *name;
+  NativeFunc function;
+
+  size_t paramCount;
+} NativeFunction;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -81,9 +94,11 @@ List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);
 
 Function* initFunction(FunctionNode* node);
+NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t paramCount);
 Function* copyFunction(Function* func);
+NativeFunction* copyNativeFunction(NativeFunction* func);
 
-FunctionCall* initFunctionCall(FunctionCallNode* node, SymbolTable* parentEnv, char *filename, Error** err);
+FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, Error** err);
 
 Object* copyObject(Object *obj);
 

@@ -548,20 +548,59 @@ Object* visitFunctionNode(ASTNode* node, SymbolTable* variables) {
   return (Object*)initInt(1); // true
 }
 
+Object** evaluateArgs(ASTNode** args, size_t argCount, char* filename, Error** err, SymbolTable* variables) {
+  Object** evaluatedArgs = malloc(sizeof(Object*) * argCount);
+  if (!evaluatedArgs) return NULL;
+
+  for (size_t i = 0; i < argCount; i++) {
+    evaluatedArgs[i] = visitNode(args[i], filename, err, variables);
+    if (!evaluatedArgs[i]) {
+      for (size_t j = 0; j < i; j++) freeObject(evaluatedArgs[j]);
+      free(evaluatedArgs);
+      return NULL;
+    }
+  }
+  return evaluatedArgs;
+}
+
 Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, SymbolTable* variables) {
   if (!node) return NULL;
   
   FunctionCallNode* fncallnode = (FunctionCallNode*)node;
-  FunctionCall* call = initFunctionCall(fncallnode, variables, filename, err);
+  Object* calleeObj = visitNode(fncallnode->callee, filename, err, variables);
 
-  if (!call) {
-    return NULL;
+  if (!calleeObj) return NULL;
+
+  if (calleeObj->type == OBJ_FUNCTION) {
+    FunctionCall* call = initFunctionCall(fncallnode, calleeObj, variables, filename, err);
+
+    if (!call) {
+      return NULL;
+    }
+
+    Object* res = visitNode(call->function->body, filename, err, call->env);
+
+    freeObject((Object*)call);
+    return res;
+  } else if (calleeObj->type == OBJ_NATIVE_FUNCTION) {
+    NativeFunction* nativeFunc = (NativeFunction*)calleeObj;
+    
+    Object** evaluatedArgs = evaluateArgs(fncallnode->args, fncallnode->argCount, filename, err, variables);
+    if (!evaluatedArgs) {
+      freeObject(calleeObj);
+      return NULL;
+    }
+
+    Object* res = nativeFunc->function(evaluatedArgs, fncallnode->argCount);
+
+    for (size_t i = 0; i < fncallnode->argCount; i++) freeObject(evaluatedArgs[i]);
+    free(evaluatedArgs);
+    freeObject(calleeObj);
+    return res;
   }
 
-  Object* res = visitNode(call->function->body, filename, err, call->env);
-
-  freeObject((Object*)call);
-  return res;
+  freeObject(calleeObj);
+  return NULL;
 }
 
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {

@@ -23,6 +23,7 @@ Arc is a small programming language project written in C. It focuses on building
   * Define functions using the `FN` keyword.
   * Supports parameters.
   * Call functions using `function_name(arg1, arg2)`.
+  * Support for Native Functions implemented in C.
 
 * Variables and identifiers (using `VAR` keyword)
 * **Conditional statements**: `IF`, `THEN`, `ELIF`, `ELSE`, `END`
@@ -368,6 +369,7 @@ valgrind --leak-check=full --show-leak-kinds=all arc
 * [ ] Logical `NOT` operator
 * [ ] Scoped environments
 * [x] Functions
+* [x] Native Functions support
 * [ ] Basic runtime system
 * [ ] Bytecode virtual machine (long-term goal)
 

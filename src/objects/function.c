@@ -37,6 +37,11 @@ Function* copyFunction(Function* func) {
   return newFunc;
 }
 
+NativeFunction* copyNativeFunction(NativeFunction* func) {
+  if (!func) return NULL;
+  return initNativeFunction(func->name, func->function, func->paramCount);
+}
+
 Function* initFunction(FunctionNode* node) {
   if (!node->body || !node->name || !node->params) return NULL;
 
@@ -69,8 +74,8 @@ Function* initFunction(FunctionNode* node) {
   return func;
 }
 
-FunctionCall *initFunctionCall(FunctionCallNode *node, SymbolTable *globalTable, char *filename, Error** err) {
-  if (!node || !globalTable) return NULL;
+FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, SymbolTable *globalTable, char *filename, Error** err) {
+  if (!node || !globalTable || !calleeObj) return NULL;
 
   FunctionCall *call = malloc(sizeof(FunctionCall));
   if (!call) return NULL;
@@ -85,10 +90,8 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, SymbolTable *globalTable,
     return NULL;
   }
 
-  Object *calleeObj = visitNode(node->callee, filename, err, globalTable);
-
-  if (!calleeObj || calleeObj->type != OBJ_FUNCTION) {
-    if (calleeObj) freeObject(calleeObj);
+  if (calleeObj->type != OBJ_FUNCTION) {
+    freeObject(calleeObj);
     free(call->args);
     free(call);
     return NULL;
@@ -130,4 +133,23 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, SymbolTable *globalTable,
   }
 
   return call;
+}
+
+NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t paramCount) {
+  NativeFunction* nativeFunc = malloc(sizeof(NativeFunction));
+
+  if (!nativeFunc) return NULL;
+  
+  nativeFunc->name = stringDup(name);
+
+  if (!nativeFunc->name) {
+    free(nativeFunc);
+    return NULL;
+  }
+
+  nativeFunc->base.type = OBJ_NATIVE_FUNCTION;
+  nativeFunc->function = func;
+  nativeFunc->paramCount = paramCount;
+
+  return nativeFunc;
 }

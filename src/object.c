@@ -16,11 +16,13 @@ Object* copyObject(Object* obj) {
       return (Object*)copyList((List*)obj);
     case OBJ_FUNCTION:
       return (Object*)copyFunction((Function*)obj);
+    case OBJ_NATIVE_FUNCTION:
+      return (Object*)copyNativeFunction((NativeFunction*)obj);
     case OBJ_STRING:
       return (Object*)copyString((String*)obj);
+    default:
+      return NULL;
   }
-
-  return NULL;
 }
 
 void freeObject(Object* obj) {
@@ -51,6 +53,10 @@ void freeObject(Object* obj) {
     free(func->name);
 
     free(func);
+  } else if (obj->type == OBJ_NATIVE_FUNCTION) {
+    NativeFunction* nativeFunc = (NativeFunction*)obj;
+    free(nativeFunc->name);
+    free(nativeFunc);
   } else {
     FunctionCall* fncall = (FunctionCall*)obj;
 

@@ -339,6 +339,8 @@ int main(int argc, char **argv) {
   setTable(variables, "argv", (Object*)list);
   freeObject((Object*)list);
 
+  registerBuiltins(variables);
+
   char *code = NULL;
 
   if (_CODE) {
