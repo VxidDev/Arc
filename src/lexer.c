@@ -85,6 +85,9 @@ static TokType keywordType(const char *s) {
     case 'I':
       if (s[1] == 'F' && s[2] == '\0')
         return TOK_IF;
+
+      if (s[1] == 'M' && s[2] == 'P' && s[3] == 'O' && s[4] == 'R' && s[5] == 'T')
+        return TOK_IMPORT;
       break;
 
     case 'O':

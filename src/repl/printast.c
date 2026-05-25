@@ -168,6 +168,12 @@ void printAST(ASTNode* node) {
       putchar(')');
       break;
     }
+
+    case NODE_IMPORT: {
+      ImportNode* import = (ImportNode*)node;
+
+      printf("%s%sIMPORT:%s%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), import->filePath->val.s, COLOR(ANSI_RESET));
+    }
   }
 }
 

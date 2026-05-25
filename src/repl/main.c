@@ -14,6 +14,7 @@
 #include "../../include/repl/repl.h"
 #include "../../include/repl/printast.h"
 #include "../../include/repl/help.h"
+#include "../../include/repl/readfile.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,67 +89,6 @@ void printObj(Object* obj) {
   putchar('\n');
 }
 
-bool isValidExtension(const char *filename) {
-  if (!filename) return false;
-
-  const char *dot = strrchr(filename, '.');
-
-  // no dot or dot is first character
-  if (!dot || dot == filename) return false;
-
-  return strcmp(dot, ".arc") == 0;
-}
-
-char *readFile(char *filename) {
-  if (!isValidExtension(filename)) {
-    printf("%sArc: %sInvalid file extension: expected \".arc\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-    return NULL;
-  }
-
-  FILE* file = fopen(filename, "rb");
-
-  if (!file) {
-    printf("%sArc: %sFailed to open file: \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), filename, COLOR(ANSI_RESET));
-    return NULL;
-  }
-
-  size_t size = 0;
-  size_t capacity = 128;
-
-  char *buf = calloc(capacity, 1);
-
-  if (!buf) {
-    fclose(file);
-    printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-    return NULL;
-  }
-
-  int c = 0;
-
-  while ((c = getc(file)) != EOF) {
-    if (size >= capacity - 1) {
-      capacity *= 2;
-      void *tmp = realloc(buf, sizeof(char) * capacity);
-
-      if (!tmp) {
-        free(buf);
-        printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        return NULL;
-      }
-
-      buf = tmp;
-    }
-
-    buf[size++] = c;
-  }
-
-  buf[size] = '\0';
-
-  fclose(file);
-
-  return buf;
-}
-
 void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
   Lexer *lexer = initLexer(filename, text);
 
@@ -187,7 +127,9 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
   Parser* parser = initParser(tokens, *size, error);
 
   if (!parser) {
+    freeTokens(tokens, *size);
     freeLexer(lexer);
+
     return;
   }
 

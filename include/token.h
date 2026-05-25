@@ -12,7 +12,8 @@ typedef enum TokType {
   TOK_AND, TOK_OR,
   TOK_LBRACK, TOK_RBRACK, TOK_COMMA,
   TOK_WHILE, 
-  TOK_FN
+  TOK_FN,
+  TOK_IMPORT
 } TokType;
 
 extern const char *KEYWORDS[];

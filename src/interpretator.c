@@ -2,6 +2,11 @@
 #include "../include/interpretator.h"
 #include "../include/object.h"
 #include "../include/symbol-table.h"
+#include "../include/lexer.h"
+#include "../include/parser.h"
+
+#include "../include/repl/readfile.h"
+#include "../include/repl/repl.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -603,6 +608,85 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, Symbol
   return NULL;
 }
 
+Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
+  if (!node) return NULL;
+  
+  ImportNode* import = (ImportNode*)node;
+
+  char* fileContent = readFile(import->filePath->val.s);
+
+  if (!fileContent) {
+    return NULL;
+  }
+
+  Lexer* lexer = initLexer(import->filePath->val.s, fileContent);
+
+  if (!lexer) {
+    free(fileContent);
+    return NULL;
+  }
+
+  size_t tokenAmount = 0;
+
+  Token** tokens = makeTokensLexer(lexer, err, &tokenAmount);
+
+  if (!tokens) {
+    freeLexer(lexer);
+    free(fileContent);
+
+    return NULL;
+  }
+
+  Parser* parser = initParser(tokens, tokenAmount, err);
+  
+  if (!parser) {
+    freeTokens(tokens, tokenAmount);
+    freeLexer(lexer);
+    free(fileContent);
+
+    return NULL;
+  }
+
+  ASTNode* ast = parseProgram(parser);
+
+  if (!ast) {
+    freeTokens(tokens, tokenAmount);
+    free(parser);
+    freeLexer(lexer);
+    free(fileContent);
+
+    return NULL;
+  }
+
+  Object* result = visitNode(ast, import->filePath->val.s, err, variables);
+
+  if (!result) {
+    freeAST(ast);
+    freeTokens(tokens, tokenAmount);
+    free(parser);
+    freeLexer(lexer);
+    free(fileContent);
+
+    return NULL;
+  }
+
+  Module* module = initModule(ast, lexer, parser, fileContent, tokens, tokenAmount);
+
+  if (!module) {
+    freeAST(ast);
+    freeTokens(tokens, tokenAmount);
+    free(parser);
+    freeLexer(lexer);
+    free(fileContent);
+
+    return NULL;
+  }
+
+  setTable(variables, import->filePath->val.s, (Object*)module);
+
+  return result;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   if (!node || !filename || !err) return NULL;
 
@@ -620,6 +704,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_WHILE: return visitWhileNode(node, err, filename, variables);
     case NODE_FUNCTION: return visitFunctionNode(node, variables);
     case NODE_FUNCTION_CALL: return visitFunctionCallNode(node, filename, err, variables);
+    case NODE_IMPORT: return visitImportNode(node, err, variables);
     default: return NULL;
   }
 }

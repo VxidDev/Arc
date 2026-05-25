@@ -235,6 +235,25 @@ void freeFunctionCallNode(FunctionCallNode* node) {
   free(node);
 }
 
+ImportNode* initImportNode(Token* filePath) {
+  if (!filePath) return NULL;
+
+  ImportNode* node = malloc(sizeof(ImportNode));
+  
+  if (!node) return NULL;
+
+  node->base.type = NODE_IMPORT;
+  node->filePath = filePath;
+
+  return node;
+} 
+
+void freeImportNode(ImportNode* node) {
+  if (!node) return;
+
+  free(node);
+}
+
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr) {
   if (!condition || !thenExpr) return NULL;
 
@@ -406,6 +425,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_FUNCTION_CALL:
       freeFunctionCallNode((FunctionCallNode*)node);
+      break;
+
+    case NODE_IMPORT:
+      freeImportNode((ImportNode*)node);
       break;
   }
 }

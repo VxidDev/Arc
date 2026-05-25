@@ -1,6 +1,8 @@
 #include "../include/object.h"
 #include "../include/symbol-table.h"
 
+#include "../include/token.h"
+
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -20,6 +22,8 @@ Object* copyObject(Object* obj) {
       return (Object*)copyNativeFunction((NativeFunction*)obj);
     case OBJ_STRING:
       return (Object*)copyString((String*)obj);
+    case OBJ_MODULE:
+      return obj;
     default:
       return NULL;
   }
@@ -57,6 +61,16 @@ void freeObject(Object* obj) {
     NativeFunction* nativeFunc = (NativeFunction*)obj;
     free(nativeFunc->name);
     free(nativeFunc);
+  } else if (obj->type == OBJ_MODULE) {
+    Module* module = (Module*)obj;
+
+    if (module->astTree) freeAST(module->astTree);
+    if (module->tokens) freeTokens(module->tokens, module->tokenAmount);
+    if (module->parser) free(module->parser);
+    if (module->lexer) freeLexer(module->lexer);
+    if (module->fileContent) free(module->fileContent);
+
+    free(module);
   } else {
     FunctionCall* fncall = (FunctionCall*)obj;
 

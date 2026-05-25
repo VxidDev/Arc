@@ -8,6 +8,7 @@ Arc is a small programming language project written in C. It focuses on building
 
 * Interactive REPL (`src/repl`) with `clear` and `exit` commands
 * File execution (supports `.arc` files)
+* File importing (using `IMPORT` keyword)
 * Lexer for arithmetic expressions, identifiers, and **string literals**
 * Parser with AST generation, supporting multiple statements
 * Expression evaluation (interpreter)
@@ -136,6 +137,17 @@ Running this code will output:
 ```text
 8
 ```
+
+### Importing files
+
+You can import other `.arc` files using the `IMPORT` keyword.
+
+```text
+IMPORT "math.arc"
+```
+
+This will execute the code in `math.arc` and make its defined variables and functions available in the current scope.
+
 
 ---
 

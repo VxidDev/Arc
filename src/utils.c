@@ -57,6 +57,8 @@ char* tokToString(const TokType type) {
 
     case TOK_FN: return "FN";
 
+    case TOK_IMPORT: return "IMPORT";
+
     default: return "UNKNOWN";
   }
 }

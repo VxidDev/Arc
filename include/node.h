@@ -17,7 +17,8 @@ typedef enum {
   NODE_INDEX,
   NODE_WHILE,
   NODE_FUNCTION,
-  NODE_FUNCTION_CALL
+  NODE_FUNCTION_CALL,
+  NODE_IMPORT
 } NodeType;
 
 typedef struct ASTNode {
@@ -109,6 +110,11 @@ typedef struct FunctionCallNode {
   size_t argCount;
 } FunctionCallNode;
 
+typedef struct ImportNode {
+  ASTNode base;
+  Token* filePath;
+} ImportNode; 
+
 typedef struct {
   ASTNode base;
   ASTNode **statements;
@@ -127,6 +133,7 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount);
 FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount);
+ImportNode* initImportNode(Token* filePath);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 
 void freeBinOpNode(BinOpNode* node);

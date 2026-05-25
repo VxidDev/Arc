@@ -873,6 +873,24 @@ ASTNode* exprParser(Parser* parser) {
 
     return (ASTNode*)initIfNode(condition, thenExpr, elifConds, elifExprs, size, elseExpr);
   }
+  
+  if (parser->currentToken->type == TOK_IMPORT) {
+    Token* tok = parser->currentToken; // safe copy 
+    
+    advanceParser(parser); // skip IMPORT 
+
+    if (!parser->currentToken || parser->currentToken->type != TOK_STRING) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected file path after 'IMPORT' keyword.");
+
+      return NULL;
+    }
+
+    Token* filePathToken = parser->currentToken;
+
+    advanceParser(parser); // skip file path token 
+
+    return (ASTNode*)initImportNode(filePathToken);
+  }
 
   if (parser->currentToken->type == TOK_VAR) {
     Token* tok = parser->currentToken; // safe copy

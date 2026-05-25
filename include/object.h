@@ -4,6 +4,10 @@
 #include "error.h"
 #include "node.h"
 
+#include "lexer.h"
+#include "parser.h"
+#include "token.h"
+
 typedef struct SymbolTable SymbolTable;
 
 typedef enum ObjType {
@@ -13,7 +17,8 @@ typedef enum ObjType {
   OBJ_LIST,
   OBJ_FUNCTION,
   OBJ_NATIVE_FUNCTION,
-  OBJ_FUNCTION_CALL
+  OBJ_FUNCTION_CALL,
+  OBJ_MODULE
 } ObjType;
 
 
@@ -64,9 +69,6 @@ typedef struct FunctionCall {
   size_t argCount;
 
   SymbolTable *env;
-  Object *returnValue;
-
-  int finished;
 } FunctionCall;
 
 typedef struct NativeFunction {
@@ -77,6 +79,17 @@ typedef struct NativeFunction {
 
   size_t paramCount;
 } NativeFunction;
+
+typedef struct Module {
+  Object base;
+
+  ASTNode* astTree;
+  Lexer* lexer;
+  Parser* parser;
+  Token** tokens;
+  size_t tokenAmount;
+  char *fileContent;
+} Module;
 
 typedef struct EvalResultNumber {
   Number* num;
@@ -92,6 +105,8 @@ String* copyString(String *str);
 
 List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);
+
+Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileContent, Token** tokens, size_t tokenAmount);
 
 Function* initFunction(FunctionNode* node);
 NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t paramCount);
