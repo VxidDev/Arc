@@ -66,6 +66,7 @@ ErrType addNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.f = toDouble(src) + toDouble(dest);
+    dest->base.type = OBJ_NUMBER_FLOAT;
     return ERR_NONE;
   }
 
@@ -82,6 +83,7 @@ ErrType subNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.f = toDouble(src) - toDouble(dest);
+    dest->base.type = OBJ_NUMBER_FLOAT;
     return ERR_NONE;
   }
 
@@ -115,6 +117,7 @@ ErrType mulNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.f = toDouble(src) * toDouble(dest);
+    dest->base.type = OBJ_NUMBER_FLOAT;
     return ERR_NONE;
   }
 
@@ -142,6 +145,7 @@ ErrType isEqualNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(dest) == toDouble(src);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -156,6 +160,7 @@ ErrType isNotEqualNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) != toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -170,6 +175,7 @@ ErrType isLessThanEqualNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) <= toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -184,6 +190,7 @@ ErrType isGreaterThanEqualNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) >= toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -193,11 +200,12 @@ ErrType isGreaterThanEqualNumber(Number* dest, const Number* src) {
 
 ErrType isLessThanNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-
+  
   ObjType type = promote(dest, src);
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) < toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -212,6 +220,7 @@ ErrType isGreaterThanNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) > toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -226,6 +235,7 @@ ErrType andNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) && toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 
@@ -240,6 +250,7 @@ ErrType orNumber(Number* dest, const Number* src) {
 
   if (type == OBJ_NUMBER_FLOAT) {
     dest->as.i = toDouble(src) || toDouble(dest);
+    dest->base.type = OBJ_NUMBER_INT;
     return ERR_NONE;
   }
 

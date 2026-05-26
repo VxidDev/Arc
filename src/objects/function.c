@@ -39,7 +39,7 @@ Function* copyFunction(Function* func) {
 
 NativeFunction* copyNativeFunction(NativeFunction* func) {
   if (!func) return NULL;
-  return initNativeFunction(func->name, func->function, func->paramCount);
+  return initNativeFunction(func->name, func->function, func->requiredArgCount, func->isVariadic);
 }
 
 Function* initFunction(FunctionNode* node) {
@@ -135,7 +135,7 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
   return call;
 }
 
-NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t paramCount) {
+NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredArgCount, bool isVariadic) {
   NativeFunction* nativeFunc = malloc(sizeof(NativeFunction));
 
   if (!nativeFunc) return NULL;
@@ -149,7 +149,8 @@ NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t paramCoun
 
   nativeFunc->base.type = OBJ_NATIVE_FUNCTION;
   nativeFunc->function = func;
-  nativeFunc->paramCount = paramCount;
+  nativeFunc->requiredArgCount = requiredArgCount;
+  nativeFunc->isVariadic = isVariadic;
 
   return nativeFunc;
 }

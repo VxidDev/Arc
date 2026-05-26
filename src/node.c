@@ -18,7 +18,7 @@ NumberNode* initNumberNode(Token* token) {
   return node;
 }
 
-FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t argCount) {
+FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t argCount, Position start, Position end) {
   if (!callee || !args) return NULL;
 
   FunctionCallNode* fncallNode = malloc(sizeof(FunctionCallNode));
@@ -30,6 +30,9 @@ FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t a
   fncallNode->callee = callee;
   fncallNode->args = args;
   fncallNode->argCount = argCount;
+
+  fncallNode->start = start;
+  fncallNode->end = end;
 
   return fncallNode;
 }

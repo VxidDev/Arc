@@ -108,6 +108,8 @@ typedef struct FunctionCallNode {
   ASTNode* callee;
   ASTNode** args;
   size_t argCount;
+
+  Position start, end;
 } FunctionCallNode;
 
 typedef struct ImportNode {
@@ -132,7 +134,7 @@ ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects
 IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end);
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount);
-FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount);
+FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount, Position start, Position end);
 ImportNode* initImportNode(Token* filePath);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 

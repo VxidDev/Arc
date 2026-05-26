@@ -55,19 +55,38 @@ FN sign(x) THEN
   END
 END 
 
+FN fmod(x, y) THEN
+  IF y == 0 THEN
+    0.0
+  ELSE 
+    x - truncate(x / y) * y
+  END 
+END 
+
 FN sin(x) THEN
-  VAR term = x 
-  VAR sum = x 
+  VAR TWO_PI = PI * 2.0
 
-  VAR n = 1 
+  VAR x = fmod(x, TWO_PI)
+  
+  IF x > PI THEN
+    VAR x = x - TWO_PI 
+  END
 
-  WHILE n < 10 THEN
-    VAR term = term * (-x * x / ((2 * n) * (2 * n + 1)))
-    VAR sum = sum + term 
-    VAR n = n + 1
+  IF x < -PI THEN
+    VAR x = x + TWO_PI 
   END 
 
-  sum
+  VAR x2 = x * x
+  
+  x * (1 - x2 * (1.0 / 6 - x2 * (1.0 / 120 - x2 * (1.0 / 5040))))
+END 
+
+FN cos(x) THEN 
+  sin(x + PI / 2.0)
+END 
+
+FN tan(x) THEN
+  sin(x) / cos(x)
 END 
 
 

@@ -377,7 +377,7 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
     return visitNode(node->elseExpr, filename, err, variables);
   }
 
-  return NULL;
+  return (Object*)initInt(0);
 }
 
 Object* visitListNode(ASTNode* node, char* filename, Error** err, SymbolTable* variables) {
@@ -525,6 +525,8 @@ Object* visitWhileNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
       }
 
       lastResult = visitNode(whileNode->body, filename, err, variables);
+
+      if (!lastResult) break;
     } else {
       freeObject(cond);
       break;
@@ -576,6 +578,8 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, Symbol
 
   if (!calleeObj) return NULL;
 
+  Object* res = NULL;
+
   if (calleeObj->type == OBJ_FUNCTION) {
     FunctionCall* call = initFunctionCall(fncallnode, calleeObj, variables, filename, err);
 
@@ -583,29 +587,55 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, Symbol
       return NULL;
     }
 
-    Object* res = visitNode(call->function->body, filename, err, call->env);
+    Function* func = (Function*)call->function;
+
+    if (call->argCount != func->paramCount) {
+      char buf[256];
+
+      snprintf(buf, sizeof(buf), "Function '%s' expected %zu arguments, got %zu.", func->name, func->paramCount, call->argCount);
+      if (*err == NULL) *err = initRuntimeError(fncallnode->start, fncallnode->end, filename, buf);
+
+      freeObject((Object*)call);
+      freeObject(calleeObj);
+      return NULL;
+    }
+
+    res = visitNode(call->function->body, filename, err, call->env);
 
     freeObject((Object*)call);
-    return res;
   } else if (calleeObj->type == OBJ_NATIVE_FUNCTION) {
     NativeFunction* nativeFunc = (NativeFunction*)calleeObj;
     
+    if (fncallnode->argCount < nativeFunc->requiredArgCount || (!nativeFunc->isVariadic && fncallnode->argCount != nativeFunc->requiredArgCount)) {
+      char buf[256];
+
+      snprintf(buf, sizeof(buf), "Function '%s' expected atleast %zu argument%s, got %zu.", nativeFunc->name, nativeFunc->requiredArgCount, nativeFunc->requiredArgCount == 1 ? "" : "s", fncallnode->argCount);
+      if (*err == NULL) *err = initRuntimeError(fncallnode->start, fncallnode->end, filename, buf);
+      
+      freeObject(calleeObj);
+
+      return NULL;
+    }
+
     Object** evaluatedArgs = evaluateArgs(fncallnode->args, fncallnode->argCount, filename, err, variables);
+
     if (!evaluatedArgs) {
       freeObject(calleeObj);
       return NULL;
     }
 
-    Object* res = nativeFunc->function(evaluatedArgs, fncallnode->argCount);
+    res = nativeFunc->function(evaluatedArgs, fncallnode->argCount);
 
     for (size_t i = 0; i < fncallnode->argCount; i++) freeObject(evaluatedArgs[i]);
     free(evaluatedArgs);
-    freeObject(calleeObj);
-    return res;
+  }
+
+  if (res && res->type == OBJ_ERROR) {
+    if (*err == NULL) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, ((ProgramError*)res)->details);
   }
 
   freeObject(calleeObj);
-  return NULL;
+  return res;
 }
 
 Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {

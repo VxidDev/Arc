@@ -18,7 +18,8 @@ typedef enum ObjType {
   OBJ_FUNCTION,
   OBJ_NATIVE_FUNCTION,
   OBJ_FUNCTION_CALL,
-  OBJ_MODULE
+  OBJ_MODULE,
+  OBJ_ERROR
 } ObjType;
 
 
@@ -77,7 +78,9 @@ typedef struct NativeFunction {
   char *name;
   NativeFunc function;
 
-  size_t paramCount;
+  bool isVariadic;
+
+  size_t requiredArgCount;
 } NativeFunction;
 
 typedef struct Module {
@@ -91,6 +94,12 @@ typedef struct Module {
   char *fileContent;
 } Module;
 
+typedef struct ProgramError {
+  Object base;
+
+  char* details;
+} ProgramError;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -100,7 +109,7 @@ Number* initInt(long value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
 
-String* initString(char *value, uint64_t);
+String* initString(char *value, uint64_t len);
 String* copyString(String *str);
 
 List* initList(Object** list, uint64_t size, uint64_t capacity);
@@ -109,9 +118,10 @@ List* copyList(List* list);
 Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileContent, Token** tokens, size_t tokenAmount);
 
 Function* initFunction(FunctionNode* node);
-NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t paramCount);
+NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredArgCount, bool isVariadic);
 Function* copyFunction(Function* func);
 NativeFunction* copyNativeFunction(NativeFunction* func);
+ProgramError* initProgramError(char *details);
 
 FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, Error** err);
 

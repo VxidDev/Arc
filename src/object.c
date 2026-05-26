@@ -24,6 +24,8 @@ Object* copyObject(Object* obj) {
       return (Object*)copyString((String*)obj);
     case OBJ_MODULE:
       return obj;
+    case OBJ_ERROR:
+      return obj;
     default:
       return NULL;
   }
@@ -48,13 +50,16 @@ void freeObject(Object* obj) {
     free(list);
   } else if (obj->type == OBJ_FUNCTION) {
     Function* func = (Function*)obj;
+    
+    if (func->params) {
+      for (size_t i = 0; i < func->paramCount && func->params[i] ; i++) {
+        free(func->params[i]);
+      }
 
-    for (size_t i = 0; i < func->paramCount; i++) {
-      free(func->params[i]);
+      free(func->params);
     }
 
-    free(func->params);
-    free(func->name);
+    if (func->name) free(func->name);
 
     free(func);
   } else if (obj->type == OBJ_NATIVE_FUNCTION) {
@@ -71,17 +76,24 @@ void freeObject(Object* obj) {
     if (module->fileContent) free(module->fileContent);
 
     free(module);
+  } else if (obj->type == OBJ_ERROR) {
+    ProgramError* err = (ProgramError*)obj;
+
+    if (err->details) free(err->details);
+    free(obj);
   } else {
     FunctionCall* fncall = (FunctionCall*)obj;
+    
+    if (fncall->args) {
+      for (size_t i = 0; i < fncall->argCount; i++) {
+        freeObject(fncall->args[i]);
+      }
 
-    for (size_t i = 0; i < fncall->argCount; i++) {
-      freeObject(fncall->args[i]);
+      free(fncall->args);
     }
 
-    free(fncall->args);
-
-    freeObject((Object*)fncall->function);
-    freeTable(fncall->env);
+    // if (fncall->function) freeObject((Object*)fncall->function);
+    if (fncall->env) freeTable(fncall->env);
 
     free(fncall);
   }

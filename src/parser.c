@@ -266,6 +266,8 @@ ASTNode* postfixParser(Parser* parser) {
     Position end = parser->currentToken->end;
 
     advanceParser(parser); // skip '('
+    
+    end = parser->currentToken->end; 
 
     size_t size = 0;
     size_t capacity = 16;
@@ -276,7 +278,7 @@ ASTNode* postfixParser(Parser* parser) {
 
     if (parser->currentToken && parser->currentToken->type == TOK_RPAREN) {
       advanceParser(parser);
-      return (ASTNode*)initFunctionCallNode(node, args, 0);
+      return (ASTNode*)initFunctionCallNode(node, args, 0, start, end);
     }
 
     while (parser->currentToken && parser->currentToken->type != TOK_RPAREN) {
@@ -319,7 +321,7 @@ ASTNode* postfixParser(Parser* parser) {
 
     advanceParser(parser);
 
-    return (ASTNode*)initFunctionCallNode(node, args, size);
+    return (ASTNode*)initFunctionCallNode(node, args, size, start, end);
   }
 
   while (parser->currentToken && (parser->currentToken->type == TOK_LBRACK)) {
