@@ -16,6 +16,8 @@ typedef enum TokType {
   TOK_IMPORT
 } TokType;
 
+extern const char* binOpStr[];
+
 extern const char *KEYWORDS[];
 
 #include "position.h"

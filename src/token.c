@@ -8,7 +8,24 @@ const char *KEYWORDS[] = {
   "VAR", "AND", "OR", "NOT",
   "IF", "THEN", "ELIF", "ELSE",
   "WHILE",
-  "FN", "TOKEN", NULL
+  "FN", "END", NULL
+};
+
+const char* binOpStr[] = {
+  [TOK_PLUS] = "+",
+  [TOK_MINUS] = "-",
+  [TOK_MUL] = "*",
+  [TOK_DIV] = "/",
+  [TOK_POW] = "^",
+  [TOK_EQ] = "=",
+  [TOK_EE] = "==",
+  [TOK_NE] = "!=",
+  [TOK_LT] = "<",
+  [TOK_GT] = ">",
+  [TOK_LTE] = "<=",
+  [TOK_GTE] = ">=",
+  [TOK_AND] = "AND",
+  [TOK_OR] = "OR",
 };
 
 Token* initToken(TokType type, void* value, bool needsToBeFreed, Position start, Position end) {
