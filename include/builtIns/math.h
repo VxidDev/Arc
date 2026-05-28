@@ -5,4 +5,6 @@
 
 Object* builtIn_truncate(Object** args, size_t argCount);
 
+Object* builtIn_floor(Object** args, size_t argCount);
+
 #endif // MATH_H 

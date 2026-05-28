@@ -1,22 +1,35 @@
 #include "../../include/builtIns/typing.h"
 #include "../../include/object.h"
+#include "../../include/utils.h"
 
 #include <string.h>
+#include <stdio.h>
 
 Object* builtIn_typeof(Object** args, size_t argCount) {
+  (void)argCount;
+
+  const char* objName = typeofobj(args[0]);
+  return (Object*)initString(objName, strlen(objName));
+}
+
+Object* builtIn_to_int(Object** args, size_t argCount) {
+  (void)argCount;
+
   Object* obj = args[0];
 
-  char* objName = NULL;
+  if (obj->type != OBJ_NUMBER_FLOAT && obj->type != OBJ_NUMBER_INT) {
+    char buf[256];
 
-  switch (obj->type) {
-    case OBJ_NUMBER_INT: objName = "int"; break;
-    case OBJ_NUMBER_FLOAT: objName = "float"; break;
-    case OBJ_STRING: objName = "string"; break;
-    case OBJ_ERROR: objName = "error"; break;
-    case OBJ_LIST: objName = "list"; break;
-    case OBJ_FUNCTION: objName = "function"; break;
-    default: objName = "object"; break;
+    snprintf(buf, sizeof(buf), "Expected 'float' or 'int' type, received '%s'.", typeofobj(obj));
+
+    return (Object*)initProgramError(buf);
   }
 
-  return (Object*)initString(objName, strlen(objName));
+  Number* num = (Number*)obj;
+  
+  if (num->base.type == OBJ_NUMBER_INT) {
+    return (Object*)initInt(num->as.i);
+  }
+
+  return (Object*)initInt(num->as.f);
 }

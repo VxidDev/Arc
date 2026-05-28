@@ -5,22 +5,14 @@
 #include "../include/lexer.h"
 #include "../include/parser.h"
 
+#include "../include/utils.h"
+
 #include "../include/repl/readfile.h"
 #include "../include/repl/repl.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-static inline const char* typeName(ObjType t) {
-  switch (t) {
-    case OBJ_NUMBER_INT: return "int";
-    case OBJ_NUMBER_FLOAT: return "float";
-    case OBJ_STRING: return "string";
-    case OBJ_LIST: return "list";
-    default: return "unknown";
-  }
-}
 
 static inline Object* visitNumberNode(ASTNode* node, char *filename, Error **err) {
   if (!node || !filename || !err) return NULL;
@@ -146,8 +138,8 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     return NULL;
   }
 
-  const char* leftType = typeName(srcObj->type);
-  const char* rightType = typeName(destObj->type);
+  const char* leftType = typeofobj(srcObj);
+  const char* rightType = typeofobj(destObj);
 
   bool isSrcNum = ((srcObj->type == OBJ_NUMBER_INT) || (srcObj->type == OBJ_NUMBER_FLOAT));
   bool isDestNum = ((destObj->type == OBJ_NUMBER_INT) || (destObj->type == OBJ_NUMBER_FLOAT));
@@ -240,7 +232,7 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
     return NULL;
   }
 
-  const char* type = typeName(numberObj->type);
+  const char* type = typeofobj(numberObj);
 
   if (numberObj->type != OBJ_NUMBER_INT && numberObj->type != OBJ_NUMBER_FLOAT) {
     char buffer[256];
@@ -403,7 +395,7 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
     return NULL;
   }
 
-  targetType = typeName(target->type);
+  targetType = typeofobj(target);
 
   Object* index = visitNode(idx->index, filename, err, variables);
 
@@ -411,7 +403,7 @@ Object* visitIndexNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
     return NULL;
   }
 
-  idxType = typeName(index->type);
+  idxType = typeofobj(index);
 
   if (target->type == OBJ_NUMBER_INT || target->type == OBJ_NUMBER_FLOAT) {
     char buff[256];

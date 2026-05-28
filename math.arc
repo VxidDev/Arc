@@ -55,31 +55,62 @@ FN sign(x) THEN
   END
 END 
 
+FN floor(x) THEN
+  VAR int = to_int(x)
+
+  IF (x < 0) AND (x != int) THEN 
+    int - 1
+  ELSE
+    int
+  END 
+END 
+
 FN fmod(x, y) THEN
   IF y == 0 THEN
     0.0
   ELSE 
-    x - truncate(x / y) * y
+    x - floor(x / y + 0.5) * y
   END 
 END 
 
 FN sin(x) THEN
+  VAR PI_2 = PI / 2.0
   VAR TWO_PI = PI * 2.0
 
   VAR x = fmod(x, TWO_PI)
-  
+
   IF x > PI THEN
-    VAR x = x - TWO_PI 
+    VAR x = x - TWO_PI
   END
 
   IF x < -PI THEN
-    VAR x = x + TWO_PI 
-  END 
+    VAR x = x + TWO_PI
+  END
+
+  IF x > PI_2 THEN
+    VAR x = PI - x
+  END
+
+  IF x < -PI_2 THEN
+    VAR x = -PI - x
+  END
 
   VAR x2 = x * x
-  
-  x * (1 - x2 * (1.0 / 6 - x2 * (1.0 / 120 - x2 * (1.0 / 5040))))
-END 
+
+  x * (
+    1
+    - x2 * (
+      1.0 / 6
+      - x2 * (
+        1.0 / 120
+        - x2 * (
+          1.0 / 5040
+          - x2 * (1.0 / 362880)
+        )
+      )
+    )
+  )
+END
 
 FN cos(x) THEN 
   sin(x + PI / 2.0)
@@ -89,4 +120,50 @@ FN tan(x) THEN
   sin(x) / cos(x)
 END 
 
+FN max(x) THEN 
+  VAR type = typeof(x)
+  VAR prev_max = 0
+  VAR is_set = 0
 
+  IF type == "list" THEN
+    VAR len = len_of(x)
+    VAR i = 0
+
+    WHILE i < len THEN
+      IF (x[i] > prev_max) OR (is_set == 0) THEN
+        VAR prev_max = x[i]
+        VAR is_set = 1
+      END 
+
+      VAR i = i + 1
+    END 
+
+    prev_max
+  ELSE 
+  RuntimeError("Expected argument of type 'list', received '" + type + "'.")
+  END
+END 
+
+FN min(x) THEN 
+  VAR type = typeof(x)
+  VAR prev_min = 0
+  VAR is_set = 0
+
+  IF type == "list" THEN
+    VAR len = len_of(x)
+    VAR i = 0
+
+    WHILE i < len THEN
+      IF (x[i] < prev_min) OR (is_set == 0) THEN
+        VAR prev_min = x[i]
+        VAR is_set = 1
+      END 
+
+      VAR i = i + 1
+    END 
+
+    prev_min
+  ELSE 
+  RuntimeError("Expected argument of type 'list', received '" + type + "'.")
+  END
+END 

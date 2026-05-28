@@ -13,6 +13,18 @@ char *stringDup(const char *s) {
   return sDup;
 }
 
+char* typeofobj(const Object* obj) {
+  switch (obj->type) {
+    case OBJ_NUMBER_INT: return "int";
+    case OBJ_NUMBER_FLOAT: return "float"; 
+    case OBJ_STRING: return "string"; 
+    case OBJ_ERROR: return "error"; 
+    case OBJ_LIST: return "list";
+    case OBJ_FUNCTION: return "function"; 
+    default: return "object"; 
+  }
+}
+
 char* tokToString(const TokType type) {
   switch (type) {
     case TOK_INT: return "INT";
