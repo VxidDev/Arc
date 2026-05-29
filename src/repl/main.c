@@ -90,7 +90,7 @@ void printObj(Object* obj) {
 }
 
 void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
-  Lexer *lexer = initLexer(filename, text);
+  Lexer *lexer = initLexer(stringDup(filename), text);
 
   if (!lexer) {
     printf("%sArc: %sFailed to initialize lexer.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
@@ -128,6 +128,8 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
 
   if (!parser) {
     freeTokens(tokens, *size);
+
+    free(lexer->filename);
     freeLexer(lexer);
 
     return;
@@ -156,6 +158,8 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
 
     freeTokens(tokens, *size);
     free(parser);
+
+    free(lexer->filename);
     freeLexer(lexer);
 
     return;
@@ -167,6 +171,8 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     freeAST(ast);
     freeTokens(tokens, *size);
     free(parser);
+
+    free(lexer->filename);
     freeLexer(lexer);
 
     return;
@@ -179,6 +185,8 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
   freeAST(ast);
   freeTokens(tokens, *size);
   free(parser);
+
+  free(lexer->filename);
   freeLexer(lexer);
 }
 

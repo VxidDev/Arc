@@ -530,5 +530,6 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
 void freeLexer(Lexer *lexer) {
   if (!lexer) return;
+
   free(lexer);
 }

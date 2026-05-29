@@ -133,8 +133,8 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   Object *destObj = visitNode(binOper->rightNode, filename, err, variables);
 
   if (!srcObj || !destObj) {
-    if (srcObj) freeObject(srcObj);
-    if (destObj) freeObject(destObj);
+    freeObject(srcObj);
+    freeObject(destObj);
     return NULL;
   }
 
@@ -206,7 +206,10 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 
   free(src);
 
-  if (output != ERR_NONE) return NULL;
+  if (output != ERR_NONE) {
+    free(dest);
+    return NULL;
+  }
 
   return (Object*)dest;
 }
@@ -618,7 +621,7 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
     return NULL;
   }
 
-  Lexer* lexer = initLexer(import->filePath->val.s, fileContent);
+  Lexer* lexer = initLexer(stringDup(import->filePath->val.s), fileContent);
 
   if (!lexer) {
     free(fileContent);
@@ -630,6 +633,7 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
   Token** tokens = makeTokensLexer(lexer, err, &tokenAmount);
 
   if (!tokens) {
+    free(lexer->filename);
     freeLexer(lexer);
     free(fileContent);
 
@@ -651,19 +655,23 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
   if (!ast) {
     freeTokens(tokens, tokenAmount);
     free(parser);
+    free(lexer->filename);
     freeLexer(lexer);
     free(fileContent);
 
     return NULL;
   }
 
-  Object* result = visitNode(ast, import->filePath->val.s, err, variables);
+  Object* result = visitNode(ast, lexer->filename, err, variables);
 
   if (!result) {
     freeAST(ast);
     freeTokens(tokens, tokenAmount);
     free(parser);
+
+    free(lexer->filename);
     freeLexer(lexer);
+
     free(fileContent);
 
     return NULL;
@@ -675,13 +683,17 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
     freeAST(ast);
     freeTokens(tokens, tokenAmount);
     free(parser);
+    
+    free(lexer->filename);
     freeLexer(lexer);
+
     free(fileContent);
 
     return NULL;
   }
 
-  setTable(variables, import->filePath->val.s, (Object*)module);
+  setTable(variables, lexer->filename, (Object*)module);
+  free(fileContent);
 
   return result;
 }

@@ -72,9 +72,9 @@ void freeObject(Object* obj) {
     if (module->astTree) freeAST(module->astTree);
     if (module->tokens) freeTokens(module->tokens, module->tokenAmount);
     if (module->parser) free(module->parser);
+    if (module->lexer->filename) free(module->lexer->filename);
     if (module->lexer) freeLexer(module->lexer);
-    if (module->fileContent) free(module->fileContent);
-
+    
     free(module);
   } else if (obj->type == OBJ_ERROR) {
     ProgramError* err = (ProgramError*)obj;

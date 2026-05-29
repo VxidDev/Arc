@@ -2,7 +2,7 @@
 #include "../../include/symbol-table.h"
 #include <stdio.h>
 
-#include "../../include/builtIns/print.h"
+#include "../../include/builtIns/io.h"
 #include "../../include/builtIns/errors.h"
 #include "../../include/builtIns/typing.h"
 #include "../../include/builtIns/math.h"
@@ -15,6 +15,11 @@ void registerBuiltins(SymbolTable* table) {
   setTable(table, "print", (Object*)printFn);
   
   freeObject((Object*)printFn);
+
+  NativeFunction* get_inputFn = initNativeFunction("get_input", builtIn_get_input, 1, true);
+  setTable(table, "get_input", (Object*)get_inputFn);
+
+  freeObject((Object*)get_inputFn);
 
   // Errors
 

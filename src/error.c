@@ -10,7 +10,10 @@ void freeError(Error* err) {
 
   if (err->name) free(err->name);
   if (err->details) free(err->details); 
-  
+  if (err->filename) free(err->filename);
+
+  if (err->start.filetext) free(err->start.filetext);
+
   free(err);
 }
 
@@ -36,10 +39,15 @@ Error* initError(Position start, Position end, char *name, char *filename, char 
     return NULL;
   }
   
-  error->filename = filename;
- 
+  error->filename = stringDup(filename);
+
   error->start = start;
+  
+  char* content = stringDup(start.filetext);
+  error->start.filetext = content;
+
   error->end = end;
+  error->end.filetext = content;
 
   return error;
 }
