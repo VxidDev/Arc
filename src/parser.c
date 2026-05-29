@@ -436,6 +436,25 @@ ASTNode* exprParser(Parser* parser) {
     return NULL;
   }
 
+  if (parser->currentToken->type == TOK_RETURN) {
+    Token* tok = parser->currentToken;
+
+    advanceParser(parser);
+
+    if (!parser->currentToken) {
+      if (*parser->error = NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after 'RETURN'.");
+      return NULL;
+    }
+
+    ASTNode* expr = andOrParser(parser);
+
+    if (!expr) { // err already set 
+      return NULL;
+    }
+
+    return (ASTNode*)initReturnNode(tok->start, tok->end, expr);
+  }
+
   if (parser->currentToken->type == TOK_WHILE) {
     Token* whileTok = parser->currentToken;
     advanceParser(parser); // skip WHILE token.

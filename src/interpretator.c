@@ -322,6 +322,10 @@ Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable
     last = visitNode(prog->statements[i], filename, err, variables);
 
     if (!last) return NULL; // error already set
+    
+    if (last->type == OBJ_RETURN) {
+      return last;
+    }
   }
 
   return last;
@@ -341,7 +345,9 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
 
   if (cond->as.i != 0) {
     free(cond);
-    return visitNode(node->thenExpr, filename, err, variables);
+    Object* obj = visitNode(node->thenExpr, filename, err, variables);
+
+    return obj;
   }
 
   free(cond);
@@ -354,7 +360,9 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
 
     if (((Number*)elifVal)->as.i != 0) {
       free(elifVal);
-      return visitNode(node->elifExprs[i], filename, err, variables);
+      Object* obj = visitNode(node->elifExprs[i], filename, err, variables);
+
+      return obj;
     }
 
     free(elifVal);
@@ -362,7 +370,9 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
 
   // Fall through to ELSE if present
   if (node->elseExpr) {
-    return visitNode(node->elseExpr, filename, err, variables);
+    Object* obj = visitNode(node->elseExpr, filename, err, variables);
+
+    return obj;
   }
 
   return (Object*)initInt(0);
@@ -503,6 +513,10 @@ Object* visitWhileNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
 
     Object* tmp = visitNode(bodyNode, filename, err, variables);
     if (!tmp) return NULL;
+    
+    if (tmp && tmp->type == OBJ_RETURN) {
+      return tmp;
+    }
 
     freeObject(tmp);
   }
@@ -604,6 +618,14 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, Symbol
 
   if (res && res->type == OBJ_ERROR) {
     if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, ((ProgramError*)res)->details);
+  }
+  
+  if (res && res->type == OBJ_RETURN) {
+    freeObject(calleeObj);
+    Object* val = ((Return*)res)->value;
+
+    free(res);
+    return val;
   }
 
   freeObject(calleeObj);
@@ -707,6 +729,19 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
   return result;
 }
 
+Object* visitReturnNode(ASTNode* node, char* filename, Error** err, SymbolTable* variables) {
+  if (!node) return NULL;
+
+  ReturnNode* ret = (ReturnNode*)node;
+
+  Object* val = visitNode(ret->expr, filename, err, variables);
+  if (!val) return NULL;
+
+  Return* retVal = initReturn(val);
+
+  return (Object*)retVal;
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   switch (node->type) {
     case NODE_NUMBER: return visitNumberNode(node, filename, err);
@@ -723,6 +758,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_FUNCTION: return visitFunctionNode(node, variables);
     case NODE_FUNCTION_CALL: return visitFunctionCallNode(node, filename, err, variables);
     case NODE_IMPORT: return visitImportNode(node, err, variables);
+    case NODE_RETURN: return visitReturnNode(node, filename, err, variables);
     default: return NULL;
   }
 }

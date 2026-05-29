@@ -257,6 +257,28 @@ void freeImportNode(ImportNode* node) {
   free(node);
 }
 
+ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr) {
+  if (!expr) return NULL;
+  
+  ReturnNode* node = malloc(sizeof(ReturnNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_RETURN;
+  node->expr = expr;
+  node->start = start;
+  node->end = end;
+
+  return node;
+}
+
+void freeReturnNode(ReturnNode* node) {
+  if (!node) return;
+  
+  freeAST(node->expr);
+  free(node);
+}
+
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr) {
   if (!condition || !thenExpr) return NULL;
 
@@ -432,6 +454,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_IMPORT:
       freeImportNode((ImportNode*)node);
+      break;
+
+    case NODE_RETURN:
+      freeReturnNode((ReturnNode*)node);
       break;
   }
 }

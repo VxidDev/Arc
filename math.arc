@@ -10,29 +10,28 @@ END
 
 FN logn(x) THEN
   IF x <= 0 THEN
-    0
-  ELSE
-    VAR y = 0.0
-    VAR i = 0
+    RETURN 0
+  END 
 
-    WHILE i < 20 THEN
-      VAR ey = exp(y)
-      VAR y = y + (x - ey) / ey
+  VAR y = 0.0
+  VAR i = 0
 
-      VAR i = i + 1
-    END
+  WHILE i < 20 THEN
+    VAR ey = exp(y)
+    VAR y = y + (x - ey) / ey
 
-    y
+    VAR i = i + 1
   END
+
+  y
 END
 
 FN log(base, x) THEN
   IF x <= 0 OR base <= 0 THEN 
-    0
-  ELSE 
-    logn(x) / logn(base)
+    RETURN 0
   END 
 
+  logn(x) / logn(base)
 END 
 
 FN sqrt(x) THEN
@@ -41,10 +40,10 @@ END
 
 FN abs(x) THEN
   IF x < 0 THEN
-    -x
-  ELSE 
-    x
+    RETURN -x
   END
+
+  x
 END 
 
 FN sign(x) THEN 
@@ -61,18 +60,18 @@ FN floor(x) THEN
   VAR int = to_int(x)
 
   IF (x < 0) AND (x != int) THEN 
-    int - 1
-  ELSE
-    int
+    RETURN int - 1
   END 
+  
+  int
 END 
 
 FN fmod(x, y) THEN
   IF y == 0 THEN
-    0.0
-  ELSE 
-    x - floor(x / y + 0.5) * y
+    RETURN 0.0
   END 
+
+  x - floor(x / y + 0.5) * y 
 END 
 
 FN sin(x) THEN
@@ -140,10 +139,10 @@ FN max(x) THEN
       VAR i = i + 1
     END 
 
-    prev_max
-  ELSE 
+    RETURN prev_max
+  END 
+
   RuntimeError("Expected argument of type 'list', received '" + type + "'.")
-  END
 END 
 
 FN min(x) THEN 
@@ -164,8 +163,8 @@ FN min(x) THEN
       VAR i = i + 1
     END 
 
-    prev_min
-  ELSE 
+    RETURN prev_min
+  END 
+
   RuntimeError("Expected argument of type 'list', received '" + type + "'.")
-  END
 END 

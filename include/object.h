@@ -19,7 +19,8 @@ typedef enum ObjType {
   OBJ_NATIVE_FUNCTION,
   OBJ_FUNCTION_CALL,
   OBJ_MODULE,
-  OBJ_ERROR
+  OBJ_ERROR,
+  OBJ_RETURN
 } ObjType;
 
 
@@ -108,6 +109,11 @@ typedef struct ProgramError {
   char* details;
 } ProgramError;
 
+typedef struct Return {
+  Object base;
+  Object* value;
+} Return;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -130,6 +136,7 @@ NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredA
 Function* copyFunction(Function* func);
 NativeFunction* copyNativeFunction(NativeFunction* func);
 ProgramError* initProgramError(char *details);
+Return* initReturn(Object* value);
 
 FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, Error** err);
 

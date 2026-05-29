@@ -81,6 +81,10 @@ static void printObjInternal(Object* obj) {
     }
 
     putchar(']');
+  } else if (obj->type == OBJ_RETURN) {
+    Return* ret = (Return*)obj;
+
+    printObjInternal(ret->value);
   }
 }
 

@@ -40,7 +40,7 @@ Object* copyObject(Object* obj) {
 void freeObject(Object* obj) {
   if (!obj) return;
 
-  if (obj->type == OBJ_NUMBER_INT || obj->type == OBJ_NUMBER_FLOAT) {
+  if (obj->type == OBJ_NUMBER_INT || obj->type == OBJ_NUMBER_FLOAT || obj->type == OBJ_RETURN) {
     free(obj);
   } else if (obj->type == OBJ_STRING) {
     String* str = (String*)obj;

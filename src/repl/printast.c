@@ -173,6 +173,16 @@ void printAST(ASTNode* node) {
       ImportNode* import = (ImportNode*)node;
 
       printf("%s%sIMPORT:%s%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), import->filePath->val.s, COLOR(ANSI_RESET));
+      break;
+    }
+
+    case NODE_RETURN: {
+      ReturnNode* ret = (ReturnNode*)node;
+
+      printf("%s%sRETURN:", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG));
+
+      printAST(ret->expr);
+      break;
     }
   }
 }

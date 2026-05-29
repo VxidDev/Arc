@@ -13,7 +13,8 @@ typedef enum TokType {
   TOK_LBRACK, TOK_RBRACK, TOK_COMMA,
   TOK_WHILE, 
   TOK_FN,
-  TOK_IMPORT
+  TOK_IMPORT,
+  TOK_RETURN
 } TokType;
 
 extern const char* binOpStr[];
