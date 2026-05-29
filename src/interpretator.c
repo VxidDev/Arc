@@ -615,13 +615,22 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
   
   ImportNode* import = (ImportNode*)node;
 
-  char* fileContent = readFile(import->filePath->val.s);
+  const char* name = import->filePath->val.s;
+
+  for (size_t i = 0; stdlibModules[i]; i++) {
+    if (strcmp(stdlibModules[i]->name, name) == 0) {
+        stdlibModules[i]->init(variables);
+        return (Object*)initInt(1);
+    }
+  }
+
+  char* fileContent = readFile(name);
 
   if (!fileContent) {
     return NULL;
   }
 
-  Lexer* lexer = initLexer(stringDup(import->filePath->val.s), fileContent);
+  Lexer* lexer = initLexer(stringDup(name), fileContent);
 
   if (!lexer) {
     free(fileContent);

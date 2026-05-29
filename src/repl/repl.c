@@ -45,12 +45,5 @@ void registerBuiltins(SymbolTable* table) {
   NativeFunction* len_ofFn = initNativeFunction("len_of", builtIn_len_of, 1, false);
   setTable(table, "len_of", (Object*)len_ofFn);
 
-  freeObject((Object*)len_ofFn);
-  
-  // Math
-
-  NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false);
-  setTable(table, "truncate", (Object*)truncateFn);
-
-  freeObject((Object*)truncateFn);
+  freeObject((Object*)len_ofFn); 
 }

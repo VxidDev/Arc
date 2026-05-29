@@ -6,6 +6,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "../include/builtIns.h"
+
+const NativeModuleEntry* stdlibModules[] = {
+  &(NativeModuleEntry){ "__mathlib", initMathModule }, NULL
+};
+
 Object* copyObject(Object* obj) {
   if (!obj) return NULL;
   

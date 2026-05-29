@@ -510,6 +510,11 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       continue;
     }
 
+    if (lexer->currChar == '#') {
+      while (lexer->currChar != '\n' && lexer->currChar != '\0') advanceLexer(lexer);
+      continue;
+    }
+
     char details[4] = {'\'', lexer->currChar, '\'', '\0'};
     Position start = lexer->pos;
     advanceLexer(lexer);

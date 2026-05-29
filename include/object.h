@@ -28,6 +28,14 @@ typedef struct Object {
 } Object;
 
 typedef Object* (*NativeFunc)(Object** argc, size_t argCount);
+typedef void (*NativeModuleInit)(SymbolTable* globals);
+
+typedef struct {
+  const char* name;
+  NativeModuleInit init;
+} NativeModuleEntry;
+
+extern const NativeModuleEntry* stdlibModules[];
 
 typedef struct Number {
   Object base;
