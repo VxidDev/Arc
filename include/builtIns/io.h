@@ -10,5 +10,6 @@ Object* builtIn_get_input(Object** args, size_t argCount);
 Object* builtIn_open_file(Object** args, size_t argCount);
 Object* builtIn_close_file(Object** args, size_t argCount);
 Object* builtIn_read_file(Object** args, size_t argCount);
+Object* builtIn_write_file(Object** args, size_t argCount);
 
 #endif // !IO_H 

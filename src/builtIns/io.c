@@ -218,3 +218,43 @@ Object* builtIn_read_file(Object** args, size_t argCount) {
 
   return obj;
 }
+
+Object* builtIn_write_file(Object** args, size_t argCount) {
+  (void)argCount;
+  Object* arg0 = args[0];
+
+  if (arg0->type != OBJ_FILE) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'file', received '%s'.", typeofobj(arg0));
+
+    return (Object*)initProgramError(buf);
+  }
+
+  Object* arg1 = args[1];
+
+  if (arg1->type != OBJ_STRING) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected argument 2 to be object of type 'string', received '%s'.", typeofobj(arg1));
+
+    return (Object*)initProgramError(buf);
+  }
+
+  File* file = (File*)arg0;
+  String* string = (String*)arg1;
+
+  if (!file->file) {
+    return (Object*)initProgramError("File is already closed.");
+  }
+
+  size_t written = fwrite(string->value, 1, string->len, file->file);
+
+  if (written != string->len) {
+    if (ferror(file->file)) {
+      return (Object*)initProgramError("Could not write content to file.");
+    }
+  }
+
+  return (Object*)initInt(1);
+}

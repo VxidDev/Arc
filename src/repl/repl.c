@@ -37,6 +37,11 @@ void registerBuiltins(SymbolTable* table) {
 
   freeObject((Object*)read_fileFn);
 
+  NativeFunction* write_fileFn = initNativeFunction("write_file", builtIn_write_file, 2, false);
+  setTable(table, "write_file", (Object*)write_fileFn);
+
+  freeObject((Object*)write_fileFn);
+
   // Errors
 
   NativeFunction* runtimeErrorFn = initNativeFunction("RuntimeError", builtIn_RuntimeError, 1, false);
