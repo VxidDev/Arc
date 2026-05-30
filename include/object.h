@@ -8,6 +8,8 @@
 #include "parser.h"
 #include "token.h"
 
+#include <stdio.h>
+
 typedef struct SymbolTable SymbolTable;
 
 typedef enum ObjType {
@@ -20,7 +22,8 @@ typedef enum ObjType {
   OBJ_FUNCTION_CALL,
   OBJ_MODULE,
   OBJ_ERROR,
-  OBJ_RETURN
+  OBJ_RETURN,
+  OBJ_FILE
 } ObjType;
 
 
@@ -119,9 +122,20 @@ typedef struct EvalResultNumber {
   ErrType err;
 } EvalResultNumber;
 
+typedef struct File {
+  Object base;
+
+  FILE* file;
+  char* fname;
+  char* fmod;
+} File;
+
 Number* initInt(long value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
+
+File* initFile(FILE* file, char* fname, char* fmod);
+File* copyFile(File* file);
 
 String* initString(char *value, uint64_t len);
 String* copyString(String *str);

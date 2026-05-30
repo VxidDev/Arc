@@ -28,6 +28,7 @@ bool _IS_COLORED = true;
 int _FLOAT_PRECISION = 6;
 char *_CODE = NULL;
 char *_INPUT_FILE = NULL;
+bool _PRINT_LAST_RESULT = false;
 
 String** argVect;
 uint64_t argVectSize = 1;
@@ -85,7 +86,10 @@ static void printObjInternal(Object* obj) {
     Return* ret = (Return*)obj;
 
     printObjInternal(ret->value);
-  }
+  } else if (obj->type == OBJ_FILE) {
+    File* file = (File*)obj;
+    printf("FILE:%s|%s", file->fname, file->fmod);
+  } 
 }
 
 void printObj(Object* obj) {
@@ -182,7 +186,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     return;
   }
 
-  printObj(result); 
+  if (_PRINT_LAST_RESULT) printObj(result); 
 
   freeObject(result);
 
@@ -255,6 +259,9 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       printHelp();
       exit(0);
+    } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--last-result") == 0) {
+      _PRINT_LAST_RESULT = true;
+      continue;
     } else {
       printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
       exit(1);

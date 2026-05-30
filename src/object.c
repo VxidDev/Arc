@@ -32,6 +32,8 @@ Object* copyObject(Object* obj) {
       return obj;
     case OBJ_ERROR:
       return obj;
+    case OBJ_FILE:
+      return (Object*)copyFile((File*)obj);
     default:
       return NULL;
   }
@@ -86,8 +88,8 @@ void freeObject(Object* obj) {
     ProgramError* err = (ProgramError*)obj;
 
     if (err->details) free(err->details);
-    free(obj);
-  } else {
+    free(err);
+  } else if (obj->type == OBJ_FUNCTION_CALL) {
     FunctionCall* fncall = (FunctionCall*)obj;
     
     if (fncall->args) {
@@ -102,6 +104,12 @@ void freeObject(Object* obj) {
     if (fncall->env) freeTable(fncall->env);
 
     free(fncall);
+  } else {
+    File* file = (File*)obj;
+
+    free(file->fname);
+    free(file->fmod);
+    free(file);
   }
 
   return;

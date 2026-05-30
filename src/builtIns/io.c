@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 Object* builtIn_print(Object** args, size_t argCount) {
   for (size_t i = 0; i < argCount; i++) {
@@ -90,4 +92,116 @@ Object* builtIn_get_input(Object** args, size_t argCount) {
   free(buf);
 
   return s;
+}
+
+Object* builtIn_open_file(Object** args, size_t argCount) {
+  Object* fnameObj = args[0];
+  Object* fmodeObj = args[1];
+
+  if (fnameObj->type != OBJ_STRING) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected object of type 'string' for file name, received object of type '%s'.", typeofobj(fnameObj));
+
+    return (Object*)initProgramError(buf);
+  }
+
+  if (fmodeObj->type != OBJ_STRING) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected object of type 'string' for file mode, received object of type '%s'.", typeofobj(fmodeObj));
+
+    return (Object*)initProgramError(buf);
+  }
+
+  String* fname = (String*)fnameObj;
+  String* fmode = (String*)fmodeObj;
+
+  FILE* file = fopen(fname->value, fmode->value);
+
+  if (!file) {
+    char buf[1024];
+
+    snprintf(buf, sizeof(buf), "Failed to open file: '%s'.", fname->value);
+
+    return (Object*)initProgramError(buf);
+  }
+
+  return (Object*)initFile(file, fname->value, fmode->value);
+}
+
+Object* builtIn_close_file(Object** args, size_t argCount) {
+  Object* arg = args[0];
+
+  if (arg->type != OBJ_FILE) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected argument of type 'file', received '%s'.", typeofobj(arg));
+
+    return (Object*)initProgramError(buf);
+  }
+  
+  File* file = (File*)arg;
+
+  if (file->file) {
+    fclose(file->file);
+    file->file = NULL;
+  }
+
+  return (Object*)initInt(1);
+}
+
+Object* builtIn_read_file(Object** args, size_t argCount) {
+  Object* arg = args[0];
+
+  if (arg->type != OBJ_FILE) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected argument of type 'file', received '%s'.", typeofobj(arg));
+
+    return (Object*)initProgramError(buf);
+  }
+
+  File* file = (File*)arg;
+
+  if (!file->file) {
+    return (Object*)initProgramError("File stream is closed.");
+  }
+
+  fseek(file->file, 0, SEEK_END);
+  long size = ftell(file->file);
+  fseek(file->file, 0, SEEK_SET);
+
+  char* fcontent = malloc(size + 1);
+
+  if (!fcontent) {
+    return (Object*)initProgramError("Failed to read file's content.");
+  }
+
+  size_t read = fread(fcontent, 1, size, file->file);
+
+  if (read < size) {
+    free(fcontent);
+    
+    if (ferror(file->file)) {
+      char buffer[256];
+
+      snprintf(buffer, sizeof(buffer), "Failed to read file's content: %s", strerror(errno));
+
+      return (Object*)initProgramError(buffer);
+    }
+
+    if (feof(file->file)) {
+      return (Object*)initProgramError("Encountered EOF before reading full file.");
+    }
+
+    return (Object*)initProgramError("Failed to read file's content.");
+  }
+
+  fcontent[size] = '\0';
+
+  Object* obj = (Object*)initString(fcontent, size);
+  free(fcontent);
+
+  return obj;
 }

@@ -21,6 +21,21 @@ void registerBuiltins(SymbolTable* table) {
 
   freeObject((Object*)get_inputFn);
 
+  NativeFunction* open_fileFn = initNativeFunction("open_file", builtIn_open_file, 2, false);
+  setTable(table, "open_file", (Object*)open_fileFn);
+
+  freeObject((Object*)open_fileFn);
+
+  NativeFunction* close_fileFn = initNativeFunction("close_file", builtIn_close_file, 1, false);
+  setTable(table, "close_file", (Object*)close_fileFn);
+
+  freeObject((Object*)close_fileFn);
+
+  NativeFunction* read_fileFn = initNativeFunction("read_file", builtIn_read_file, 1, false);
+  setTable(table, "read_file", (Object*)read_fileFn);
+
+  freeObject((Object*)read_fileFn);
+
   // Errors
 
   NativeFunction* runtimeErrorFn = initNativeFunction("RuntimeError", builtIn_RuntimeError, 1, false);
