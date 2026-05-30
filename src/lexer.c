@@ -169,7 +169,7 @@ Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
     char *end;
     errno = 0;
 
-    long value = strtol(numStr, &end, 10);
+    int64_t value = (int64_t)strtoll(numStr, &end, 10);
 
     // No digits found
     if (end == numStr) {
@@ -179,7 +179,7 @@ Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
     }
 
     // overflow / underflow
-    if (errno == ERANGE || value > INT_MAX || value < INT_MIN) {
+    if (errno == ERANGE || value > INT64_MAX || value < INT64_MIN) {
       free(numStr);
       *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
       return (Token){.type = TOK_INVALID};
@@ -297,6 +297,7 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
 
   if (!lexer->currChar) {
     if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Unterminated string");
+    free(buffer);
     return (Token){.type = TOK_INVALID};
   }
 

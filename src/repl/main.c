@@ -116,7 +116,8 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
       freeError(*error);
       *error = NULL;
     }
-
+    
+    free(lexer->filename);
     freeLexer(lexer);
     return;
   }
