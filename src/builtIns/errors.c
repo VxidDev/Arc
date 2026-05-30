@@ -3,6 +3,8 @@
 #include <stdio.h>
 
 Object* builtIn_RuntimeError(Object** args, size_t argCount) {
+  (void)argCount;
+
   Object* detailsObj = args[0];
 
   if (detailsObj->type != OBJ_STRING) {

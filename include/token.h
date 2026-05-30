@@ -14,7 +14,10 @@ typedef enum TokType {
   TOK_WHILE, 
   TOK_FN,
   TOK_IMPORT,
-  TOK_RETURN
+  TOK_RETURN,
+
+  TOK_EOF,
+  TOK_INVALID
 } TokType;
 
 extern const char* binOpStr[];
@@ -40,10 +43,9 @@ typedef struct Token {
   bool needsToBeFreed;
 } Token;
 
-Token* initToken(TokType type, void *value, bool needsToBeFreed, Position start, Position end);
-char *tokenRepr(const Token* t);
+Token initToken(TokType type, void *value, bool needsToBeFreed, Position start, Position end);
 
 void freeToken(Token* t);
-void freeTokens(Token** t, unsigned long s);
+void freeTokens(Token* t, unsigned long s);
 
 #endif // TOKEN_H

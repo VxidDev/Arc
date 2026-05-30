@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-NumberNode* initNumberNode(Token* token) {
-  if (!token) return NULL;
+NumberNode* initNumberNode(Token token) {
+  if (token.type == TOK_EOF) return NULL;
 
   NumberNode* node = malloc(sizeof(NumberNode));
 
@@ -59,8 +59,8 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
   return node;
 }
 
-ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity) {
-  if (!startBracket || !endBracket || !objects) return NULL;
+ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, uint64_t size, uint64_t capacity) {
+  if (startBracket.type == TOK_EOF || endBracket.type == TOK_EOF || !objects) return NULL;
 
   ListNode* list = malloc(sizeof(ListNode));
 
@@ -89,8 +89,8 @@ ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
   return node;
 }
 
-StringNode* initStringNode(Token* token) {
-  if (!token) return NULL;
+StringNode* initStringNode(Token token) {
+  if (token.type == TOK_EOF) return NULL;
 
   StringNode* node = malloc(sizeof(StringNode));
 
@@ -98,7 +98,7 @@ StringNode* initStringNode(Token* token) {
 
   node->base.type = NODE_STRING;
   node->token = token;
-  node->len = strlen(token->val.s);
+  node->len = strlen(token.val.s);
 
   return node;
 }
@@ -137,8 +137,8 @@ WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Posi
   return node;
 }
 
-BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode) {
-  if (!leftNode || !operTok || !rightNode) return NULL;
+BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode) {
+  if (!leftNode || operTok.type == TOK_EOF || !rightNode) return NULL;
 
   BinOpNode* node = malloc(sizeof(BinOpNode));
 
@@ -153,8 +153,8 @@ BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode) 
   return node;
 }
 
-UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node) {
-  if (!operTok || !node) return NULL;
+UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
+  if (operTok.type == TOK_EOF || !node) return NULL;
 
   UnaryOpNode* unaryNode = malloc(sizeof(UnaryOpNode));
 
@@ -187,8 +187,8 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
   return varAssignNode;
 }
 
-VarAccessNode* initVarAccessNode(Token* token) {
-  if (!token) return NULL;
+VarAccessNode* initVarAccessNode(Token token) {
+  if (token.type == TOK_EOF) return NULL;
 
   VarAccessNode* node = malloc(sizeof(VarAccessNode));
 
@@ -238,8 +238,8 @@ void freeFunctionCallNode(FunctionCallNode* node) {
   free(node);
 }
 
-ImportNode* initImportNode(Token* filePath) {
-  if (!filePath) return NULL;
+ImportNode* initImportNode(Token filePath) {
+  if (filePath.type == TOK_EOF) return NULL;
 
   ImportNode* node = malloc(sizeof(ImportNode));
   

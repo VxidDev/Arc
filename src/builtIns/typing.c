@@ -8,7 +8,7 @@
 Object* builtIn_typeof(Object** args, size_t argCount) {
   (void)argCount;
 
-  const char* objName = typeofobj(args[0]);
+  char* objName = typeofobj(args[0]);
   return (Object*)initString(objName, strlen(objName));
 }
 

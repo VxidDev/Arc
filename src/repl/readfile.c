@@ -19,7 +19,7 @@ bool isValidExtension(const char *filename) {
   return strcmp(dot, ".arc") == 0;
 }
 
-char *readFile(char *filename) {
+char *readFile(const char *filename) {
   if (!isValidExtension(filename)) {
     printf("%sArc: %sInvalid file extension: expected \".arc\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return NULL;

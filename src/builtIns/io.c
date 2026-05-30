@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 Object* builtIn_print(Object** args, size_t argCount) {
   for (size_t i = 0; i < argCount; i++) {
@@ -95,6 +94,8 @@ Object* builtIn_get_input(Object** args, size_t argCount) {
 }
 
 Object* builtIn_open_file(Object** args, size_t argCount) {
+  (void)argCount;
+
   Object* fnameObj = args[0];
   Object* fmodeObj = args[1];
 
@@ -131,6 +132,8 @@ Object* builtIn_open_file(Object** args, size_t argCount) {
 }
 
 Object* builtIn_close_file(Object** args, size_t argCount) {
+  (void)argCount;
+
   Object* arg = args[0];
 
   if (arg->type != OBJ_FILE) {
@@ -152,6 +155,8 @@ Object* builtIn_close_file(Object** args, size_t argCount) {
 }
 
 Object* builtIn_read_file(Object** args, size_t argCount) {
+  (void)argCount;
+
   Object* arg = args[0];
 
   if (arg->type != OBJ_FILE) {
@@ -168,9 +173,21 @@ Object* builtIn_read_file(Object** args, size_t argCount) {
     return (Object*)initProgramError("File stream is closed.");
   }
 
-  fseek(file->file, 0, SEEK_END);
-  long size = ftell(file->file);
-  fseek(file->file, 0, SEEK_SET);
+  if (fseek(file->file, 0, SEEK_END) != 0) {
+    return (Object*)initProgramError("Failed to get file's size.");
+  }
+
+  long size_long = ftell(file->file);
+
+  if (fseek(file->file, 0, SEEK_SET) != 0) {
+    return (Object*)initProgramError("Failed to reset file's position.");
+  }
+
+  if (size_long < 0) {
+    return (Object*)initProgramError("Failed to get file's size.");
+  }
+
+  size_t size = (size_t)size_long;
 
   char* fcontent = malloc(size + 1);
 
@@ -180,15 +197,11 @@ Object* builtIn_read_file(Object** args, size_t argCount) {
 
   size_t read = fread(fcontent, 1, size, file->file);
 
-  if (read < size) {
+  if (read != size) {
     free(fcontent);
     
     if (ferror(file->file)) {
-      char buffer[256];
-
-      snprintf(buffer, sizeof(buffer), "Failed to read file's content: %s", strerror(errno));
-
-      return (Object*)initProgramError(buffer);
+      return (Object*)initProgramError("Failed to read file's content (I/O error).");
     }
 
     if (feof(file->file)) {

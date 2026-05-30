@@ -15,10 +15,10 @@ void printAST(ASTNode* node) {
     case NODE_NUMBER: {
       NumberNode* n = (NumberNode*)node;
 
-      if (n->token->type == TOK_INT) {
-        printf("%s%" PRId64 "%s", COLOR(ANSI_BRIGHT_YELLOW_FG), n->token->val.i, COLOR(ANSI_RESET));
-      } else if (n->token->type == TOK_FLOAT) {
-        printf("%s%s%.*f%s", COLOR(ANSI_DIM), COLOR(ANSI_YELLOW_FG), _FLOAT_PRECISION, n->token->val.f, COLOR(ANSI_RESET));
+      if (n->token.type == TOK_INT) {
+        printf("%s%" PRId64 "%s", COLOR(ANSI_BRIGHT_YELLOW_FG), n->token.val.i, COLOR(ANSI_RESET));
+      } else if (n->token.type == TOK_FLOAT) {
+        printf("%s%s%.*f%s", COLOR(ANSI_DIM), COLOR(ANSI_YELLOW_FG), _FLOAT_PRECISION, n->token.val.f, COLOR(ANSI_RESET));
       }
 
       break;
@@ -60,13 +60,13 @@ void printAST(ASTNode* node) {
 
     case NODE_VARACCESS: {
       VarAccessNode* va = (VarAccessNode*)node;
-      printf("%s[VAR-ACCESS:%s]%s", COLOR(ANSI_BRIGHT_MAGENTA_FG), va->token->val.s, COLOR(ANSI_RESET));
+      printf("%s[VAR-ACCESS:%s]%s", COLOR(ANSI_BRIGHT_MAGENTA_FG), va->token.val.s, COLOR(ANSI_RESET));
       break;
     }
 
     case NODE_STRING: {
       StringNode* str = (StringNode*)node;
-      printf("%sSTRING:\"%s\"%s", COLOR(ANSI_BRIGHT_GREEN_FG), str->token->val.s, COLOR(ANSI_RESET));
+      printf("%sSTRING:\"%s\"%s", COLOR(ANSI_BRIGHT_GREEN_FG), str->token.val.s, COLOR(ANSI_RESET));
       break;
     }
 
@@ -156,9 +156,13 @@ void printAST(ASTNode* node) {
 
     case NODE_FUNCTION_CALL: {
       FunctionCallNode* fncall = (FunctionCallNode*)node;
-      FunctionNode* func = (FunctionNode*)fncall->callee;
-
-      printf("%s%sFnCall:%s%s(", COLOR(ANSI_DIM), COLOR(ANSI_ITALIC), func->name, COLOR(ANSI_RESET));
+      
+      printf("%s%sFnCall:%s%s(", COLOR(ANSI_DIM), COLOR(ANSI_ITALIC), 
+             (!fncall->callee) ? "(null)" : 
+             (fncall->callee->type == NODE_FUNCTION) ? (((FunctionNode*)fncall->callee)->name ? ((FunctionNode*)fncall->callee)->name : "(null)") :
+             (fncall->callee->type == NODE_VARACCESS) ? (((VarAccessNode*)fncall->callee)->token.val.s ? ((VarAccessNode*)fncall->callee)->token.val.s : "(null)") :
+             "(unknown)",
+             COLOR(ANSI_RESET));
 
       for (size_t i = 0; i < fncall->argCount;) {
         printAST(fncall->args[i]);
@@ -172,7 +176,7 @@ void printAST(ASTNode* node) {
     case NODE_IMPORT: {
       ImportNode* import = (ImportNode*)node;
 
-      printf("%s%sIMPORT:%s%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), import->filePath->val.s, COLOR(ANSI_RESET));
+      printf("%s%sIMPORT:%s%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), import->filePath.val.s, COLOR(ANSI_RESET));
       break;
     }
 

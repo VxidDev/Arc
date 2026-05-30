@@ -101,7 +101,7 @@ typedef struct Module {
   ASTNode* astTree;
   Lexer* lexer;
   Parser* parser;
-  Token** tokens;
+  Token* tokens;
   size_t tokenAmount;
   char *fileContent;
 } Module;
@@ -143,7 +143,7 @@ String* copyString(String *str);
 List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);
 
-Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileContent, Token** tokens, size_t tokenAmount);
+Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileContent, Token* tokens, size_t tokenAmount);
 
 Function* initFunction(FunctionNode* node);
 NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredArgCount, bool isVariadic);

@@ -8,8 +8,8 @@
 #include "error.h"
 
 typedef struct Parser {
-  Token **tokens;
-  Token *currentToken;
+  Token *tokens;
+  Token currentToken;
 
   int64_t tokenIndex;
   uint64_t tokenAmount;
@@ -17,8 +17,8 @@ typedef struct Parser {
   Error **error;
 } Parser;
 
-Parser* initParser(Token **tokens, const unsigned long tokenAmount, Error **error);
-Token* advanceParser(Parser* parser);
+Parser* initParser(Token *tokens, const unsigned long tokenAmount, Error **error);
+Token advanceParser(Parser* parser);
 
 ASTNode* parseParser(Parser* parser);
 ASTNode* parseProgram(Parser* parser);

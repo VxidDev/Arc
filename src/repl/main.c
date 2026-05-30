@@ -105,7 +105,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     return;
   }
 
-  Token **tokens = makeTokensLexer(lexer, error, size);
+  Token *tokens = makeTokensLexer(lexer, error, size);
 
   if (!tokens) {
     if (*error) {
@@ -125,7 +125,7 @@ void run(char *text, Error **error, unsigned long *size, SymbolTable* variables,
     printf("\n%sTokens: %s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG));
 
     for (size_t i = 0; i < *size; i++) {
-      printf("%s ", tokToString(tokens[i]->type));
+      printf("%s ", tokToString(tokens[i].type));
     }
 
     if (_IS_COLORED) printf("%s\n", ANSI_RESET);

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Parser* initParser(Token** tokens, const unsigned long tokenAmount, Error **error) {
+Parser* initParser(Token* tokens, const unsigned long tokenAmount, Error **error) {
   if (!tokens || !error) return NULL;
 
   Parser* parser = malloc(sizeof(Parser));
@@ -15,7 +15,7 @@ Parser* initParser(Token** tokens, const unsigned long tokenAmount, Error **erro
   parser->tokens = tokens;
   parser->tokenAmount = tokenAmount;
   parser->tokenIndex = -1;
-  parser->currentToken = NULL;
+  parser->currentToken = (Token){.type = TOK_EOF};
 
   parser->error = error;
 
@@ -24,15 +24,15 @@ Parser* initParser(Token** tokens, const unsigned long tokenAmount, Error **erro
   return parser;
 }
 
-Token* advanceParser(Parser* parser) {
-  if (!parser) return NULL;
+Token advanceParser(Parser* parser) {
+  if (!parser) return (Token){.type = TOK_EOF};
 
   parser->tokenIndex++;
 
-  if (parser->tokenIndex < parser->tokenAmount) {
+  if ((size_t)parser->tokenIndex < parser->tokenAmount) {
     parser->currentToken = parser->tokens[parser->tokenIndex];
   } else {
-    parser->currentToken = NULL;
+    parser->currentToken = (Token){.type = TOK_EOF};
   }
 
   return parser->currentToken;
@@ -47,65 +47,65 @@ ASTNode* postfixParser(Parser* parser);
 ASTNode* blockParser(Parser* parser);
 
 ASTNode* atomParser(Parser* parser) {
-  if (!parser || !parser->currentToken) return NULL;
+  if (!parser || parser->currentToken.type == TOK_EOF) return NULL;
 
-  Token* token = parser->currentToken;
+  Token token = parser->currentToken;
 
-  if ((token->type == TOK_PLUS) || (token->type == TOK_MINUS)) {
-    Token* tok = token; // safe copy
+  if ((token.type == TOK_PLUS) || (token.type == TOK_MINUS)) {
+    Token tok = token; // safe copy
 
     advanceParser(parser);
 
     ASTNode* expr = atomParser(parser);
 
     if (!expr) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expression expected");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expression expected");
       return NULL;
     }
 
     return (ASTNode*)initUnaryOpNode(token, expr);
   }
 
-  if (token->type == TOK_STRING) {
+  if (token.type == TOK_STRING) {
     advanceParser(parser);
     return (ASTNode*)initStringNode(token);
   }
 
-  if ((token->type == TOK_INT) || (token->type == TOK_FLOAT)) {
+  if ((token.type == TOK_INT) || (token.type == TOK_FLOAT)) {
     advanceParser(parser);
     return (ASTNode*)initNumberNode(token);
-  } else if (token->type == TOK_IDENTIFIER) {
+  } else if (token.type == TOK_IDENTIFIER) {
     advanceParser(parser);
     return (ASTNode*)initVarAccessNode(token);
-  } else if (token->type == TOK_LPAREN) {
+  } else if (token.type == TOK_LPAREN) {
     advanceParser(parser);
 
-    Token* tok = token; // safe copy
+    Token tok = token; // safe copy
 
     ASTNode* expr = andOrParser(parser);
 
     if (!expr) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expression expected");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expression expected");
       return NULL;
     }
 
-    if (parser->currentToken && (parser->currentToken->type == TOK_RPAREN)) {
+    if (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_RPAREN)) {
       advanceParser(parser);
       return expr;
     } else {
       freeAST(expr);
-      if (*parser->error == NULL) *parser->error = initSyntaxError(token->start, token->end, token->start.filename, "Expression expected");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(token.start, token.end, token.start.filename, "Expression expected");
       return NULL;
     }
   }
 
-  if (token->type == TOK_LBRACK) {
-    Token* start = token;
+  if (token.type == TOK_LBRACK) {
+    Token start = token;
 
     advanceParser(parser);
     
-    if (!parser->currentToken) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(token->start, token->end, token->start.filename, "Unexpected EOF.");
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(token.start, token.end, token.start.filename, "Unexpected EOF.");
       return NULL;
     }
 
@@ -118,7 +118,7 @@ ASTNode* atomParser(Parser* parser) {
       return NULL;
     }
 
-    while (parser->currentToken && parser->currentToken->type != TOK_RBRACK) {
+    while (parser->currentToken.type != TOK_EOF && parser->currentToken.type != TOK_RBRACK) {
       token = parser->currentToken;
       ASTNode* val = andOrParser(parser);
 
@@ -145,14 +145,14 @@ ASTNode* atomParser(Parser* parser) {
 
       objects[size++] = val;
 
-      if (parser->currentToken && parser->currentToken->type == TOK_COMMA) {
+      if (parser->currentToken.type == TOK_COMMA) {
         advanceParser(parser);
 
         continue;
       }
 
-      if (parser->currentToken && parser->currentToken->type != TOK_RBRACK) {
-        if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken->start, parser->currentToken->end, parser->currentToken->start.filename, "Expected ',' or ']'.");
+      if (parser->currentToken.type != TOK_EOF && parser->currentToken.type != TOK_RBRACK) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Expected ',' or ']'.");
 
         for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
         free(objects);
@@ -161,8 +161,8 @@ ASTNode* atomParser(Parser* parser) {
       }
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_RBRACK) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(start->start, token->end, start->start.filename, "Unterminated list: expected ']'.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RBRACK) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(start.start, token.end, start.start.filename, "Unterminated list: expected ']'.");
 
       for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
       free(objects);
@@ -170,7 +170,7 @@ ASTNode* atomParser(Parser* parser) {
       return NULL;
     }
 
-    Token* end = parser->currentToken;
+    Token end = parser->currentToken;
 
     advanceParser(parser);
 
@@ -179,7 +179,7 @@ ASTNode* atomParser(Parser* parser) {
     return (ASTNode*)initListNode(start, end, objects, size, capacity);
   }
 
-  if (*parser->error == NULL) *parser->error = initSyntaxError(token->start, token->end, token->start.filename, "Expression expected");
+  if (*parser->error == NULL) *parser->error = initSyntaxError(token.start, token.end, token.start.filename, "Expression expected");
   return NULL;
 }
 
@@ -189,15 +189,15 @@ ASTNode* powerParser(Parser* parser) {
   ASTNode* left = postfixParser(parser);
   if (!left) return NULL; // error is already set
 
-  if (parser->currentToken && (parser->currentToken->type == TOK_POW)) {
-    Token* opTok = parser->currentToken;
+  if (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_POW)) {
+    Token opTok = parser->currentToken;
     advanceParser(parser);
 
     ASTNode* right = powerParser(parser);
 
     if (!right) {
       freeAST(left);
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected after '^'");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected after '^'");
       return NULL;
     }
 
@@ -216,10 +216,10 @@ ASTNode* blockParser(Parser* parser) {
   if (!statements) return NULL;
 
   while (
-    parser->currentToken &&
-    parser->currentToken->type != TOK_ELIF &&
-    parser->currentToken->type != TOK_ELSE &&
-    parser->currentToken->type != TOK_END
+    parser->currentToken.type != TOK_EOF &&
+    parser->currentToken.type != TOK_ELIF &&
+    parser->currentToken.type != TOK_ELSE &&
+    parser->currentToken.type != TOK_END
   ) {
     ASTNode* stmt = andOrParser(parser);
 
@@ -261,13 +261,13 @@ ASTNode* postfixParser(Parser* parser) {
   ASTNode* node = atomParser(parser);
   if (!node) return NULL;
 
-  while (parser->currentToken && (parser->currentToken->type == TOK_LPAREN)) {
-    Position start = parser->currentToken->start;
-    Position end = parser->currentToken->end;
+  while (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_LPAREN)) {
+    Position start = parser->currentToken.start;
+    Position end = parser->currentToken.end;
 
     advanceParser(parser); // skip '('
     
-    end = parser->currentToken->end; 
+    end = parser->currentToken.end; 
 
     size_t size = 0;
     size_t capacity = 16;
@@ -276,13 +276,13 @@ ASTNode* postfixParser(Parser* parser) {
 
     if (!args) return NULL;
 
-    if (parser->currentToken && parser->currentToken->type == TOK_RPAREN) {
+    if (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_RPAREN) {
       advanceParser(parser);
       return (ASTNode*)initFunctionCallNode(node, args, 0, start, end);
     }
 
-    while (parser->currentToken && parser->currentToken->type != TOK_RPAREN) {
-      end = parser->currentToken->end;
+    while (parser->currentToken.type != TOK_EOF && parser->currentToken.type != TOK_RPAREN) {
+      end = parser->currentToken.end;
       ASTNode* arg = andOrParser(parser);
 
       if (!arg) {
@@ -301,13 +301,13 @@ ASTNode* postfixParser(Parser* parser) {
 
       args[size++] = arg;
 
-      if (parser->currentToken && parser->currentToken->type == TOK_COMMA) {
-        end = parser->currentToken->end;
+      if (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_COMMA) {
+        end = parser->currentToken.end;
         advanceParser(parser);
       }
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_RPAREN) {
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RPAREN) {
       freeAST(node);
       for (size_t i = 0; i < size; i++) 
         freeAST(args[i]);
@@ -324,20 +324,20 @@ ASTNode* postfixParser(Parser* parser) {
     return (ASTNode*)initFunctionCallNode(node, args, size, start, end);
   }
 
-  while (parser->currentToken && (parser->currentToken->type == TOK_LBRACK)) {
-    Position start = parser->currentToken->start;
-    Position end = parser->currentToken->end;
+  while (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_LBRACK)) {
+    Position start = parser->currentToken.start;
+    Position end = parser->currentToken.end;
 
     advanceParser(parser); // skip '['
     
-    if (!parser->currentToken) {
+    if (parser->currentToken.type == TOK_EOF) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expression expected."); 
 
       freeAST(node);
       return NULL;
     }
 
-    end = parser->currentToken->end;
+    end = parser->currentToken.end;
 
     ASTNode* index = andOrParser(parser);
 
@@ -346,7 +346,7 @@ ASTNode* postfixParser(Parser* parser) {
       return NULL;
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_RBRACK) {
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RBRACK) {
       freeAST(index);
       freeAST(node);
 
@@ -354,7 +354,7 @@ ASTNode* postfixParser(Parser* parser) {
       return NULL;
     }
     
-    end = parser->currentToken->end;
+    end = parser->currentToken.end;
 
     advanceParser(parser); // skip ']'
   
@@ -365,20 +365,20 @@ ASTNode* postfixParser(Parser* parser) {
 }
 
 ASTNode* factorParser(Parser* parser) {
-  if (!parser || !parser->currentToken) return NULL;
+  if (!parser || parser->currentToken.type == TOK_EOF) return NULL;
 
-  Token* token = parser->currentToken;
+  Token token = parser->currentToken;
 
-  if (!token) return NULL;
+  if (token.type == TOK_EOF) return NULL;
 
-  if ((token->type == TOK_PLUS) || (token->type == TOK_MINUS)) {
-    Token* opTok = token;
+  if ((token.type == TOK_PLUS) || (token.type == TOK_MINUS)) {
+    Token opTok = token;
 
     advanceParser(parser);
     ASTNode* factor = factorParser(parser);
 
     if (!factor) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected");
       return NULL;
     }
 
@@ -395,15 +395,15 @@ ASTNode* termParser(Parser* parser) {
   ASTNode* left = factorParser(parser);
   if (!left) return NULL; // error is already set
 
-  while (parser->currentToken && ((parser->currentToken->type == TOK_MUL) || (parser->currentToken->type == TOK_DIV))) {
+  while (parser->currentToken.type != TOK_EOF && ((parser->currentToken.type == TOK_MUL) || (parser->currentToken.type == TOK_DIV))) {
 
-    Token* opTok = parser->currentToken;
+    Token opTok = parser->currentToken;
     advanceParser(parser);
 
     ASTNode* right = factorParser(parser);
 
     if (!right) { // error is already set
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected");
       freeAST(left);
       return NULL;
     }
@@ -422,27 +422,27 @@ ASTNode* termParser(Parser* parser) {
 ASTNode* exprParser(Parser* parser) {
   if (!parser) return NULL;
 
-  if (parser->currentToken && (parser->currentToken->type == TOK_RPAREN)) {
+  if (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_RPAREN)) {
 
     if (*parser->error == NULL) {
-      *parser->error = initSyntaxError(parser->currentToken->start, parser->currentToken->end, parser->currentToken->start.filename, "Unexpected ')'");
+      *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Unexpected ')'");
     }
 
     return NULL;
   }
 
-  if (!parser->currentToken) {
+  if (parser->currentToken.type == TOK_EOF) {
     // if (*parser->error == NULL); Will be implemented after addition of EOF token
     return NULL;
   }
 
-  if (parser->currentToken->type == TOK_RETURN) {
-    Token* tok = parser->currentToken;
+  if (parser->currentToken.type == TOK_RETURN) {
+    Token tok = parser->currentToken;
 
     advanceParser(parser);
 
-    if (!parser->currentToken) {
-      if (*parser->error = NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after 'RETURN'.");
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after 'RETURN'.");
       return NULL;
     }
 
@@ -452,28 +452,28 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    return (ASTNode*)initReturnNode(tok->start, tok->end, expr);
+    return (ASTNode*)initReturnNode(tok.start, tok.end, expr);
   }
 
-  if (parser->currentToken->type == TOK_WHILE) {
-    Token* whileTok = parser->currentToken;
+  if (parser->currentToken.type == TOK_WHILE) {
+    Token whileTok = parser->currentToken;
     advanceParser(parser); // skip WHILE token.
 
     ASTNode* cond = andOrParser(parser);
 
     if (!cond) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok->start, whileTok->end, whileTok->start.filename, "Expected expression after 'WHILE'.");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok.start, whileTok.end, whileTok.start.filename, "Expected expression after 'WHILE'.");
       return NULL;
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok->start, whileTok->end, whileTok->start.filename, "Expected 'THEN'.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok.start, whileTok.end, whileTok.start.filename, "Expected 'THEN'.");
       freeAST(cond);
 
       return NULL;
     }
     
-    Token* thenTok = parser->currentToken;
+    Token thenTok = parser->currentToken;
     advanceParser(parser); // skip THEN token.
     
     ASTNode* body = blockParser(parser);
@@ -483,8 +483,8 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_END) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok->start, thenTok->end, thenTok->start.filename, "Expected 'END'.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_END) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected 'END'.");
 
       freeAST(cond);
       freeAST(body);
@@ -493,21 +493,21 @@ ASTNode* exprParser(Parser* parser) {
     }
 
     advanceParser(parser); // skip END token.
-    return (ASTNode*)initWhileNode(cond, body, whileTok->start, whileTok->end);
+    return (ASTNode*)initWhileNode(cond, body, whileTok.start, whileTok.end);
   }
 
-  if (parser->currentToken->type == TOK_FN) {
-    Token* fnTok = parser->currentToken; // safe copy for error reporting
+  if (parser->currentToken.type == TOK_FN) {
+    Token fnTok = parser->currentToken; // safe copy for error reporting
     
     advanceParser(parser); // skip FN token 
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_IDENTIFIER) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(fnTok->start, fnTok->end, fnTok->start.filename, "Expected function name after 'FN' keyword.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnTok.start, fnTok.end, fnTok.start.filename, "Expected function name after 'FN' keyword.");
       return NULL;
     }
     
-    char* funcName = stringDup(parser->currentToken->val.s);
-    Token* fnNameTok = parser->currentToken;
+    char* funcName = stringDup(parser->currentToken.val.s);
+    Token fnNameTok = parser->currentToken;
 
     if (!funcName) {
       return NULL;
@@ -515,8 +515,8 @@ ASTNode* exprParser(Parser* parser) {
 
     advanceParser(parser); // skip function name 
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_LPAREN) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected '(' after function name.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_LPAREN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected '(' after function name.");
       free(funcName);
       return NULL;
     }
@@ -533,11 +533,11 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    while (parser->currentToken && parser->currentToken->type != TOK_RPAREN) {
-      Token* param = parser->currentToken;
+    while (parser->currentToken.type && parser->currentToken.type != TOK_RPAREN) {
+      Token param = parser->currentToken;
 
-      if (param->type != TOK_IDENTIFIER) {
-        if (*parser->error == NULL) *parser->error = initSyntaxError(param->start, param->end, param->start.filename, "Expected parameter name.");
+      if (param.type != TOK_IDENTIFIER) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(param.start, param.end, param.start.filename, "Expected parameter name.");
 
         for (size_t i = 0; i < paramCount; i++) {
           free(params[i]);
@@ -549,7 +549,7 @@ ASTNode* exprParser(Parser* parser) {
         return NULL;
       }
 
-      char* paramName = stringDup(param->val.s);
+      char* paramName = stringDup(param.val.s);
 
       if (!paramName) {
         for (size_t i = 0; i < paramCount; i++) {
@@ -586,17 +586,17 @@ ASTNode* exprParser(Parser* parser) {
 
       advanceParser(parser); // skip parameter name
 
-      if (parser->currentToken && parser->currentToken->type == TOK_COMMA) {
+      if (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_COMMA) {
         advanceParser(parser); // skip comma
         continue;
       }
 
-      if (parser->currentToken && parser->currentToken->type == TOK_RPAREN) {
+      if (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_RPAREN) {
         break;
       }
 
       if (*parser->error == NULL)
-        *parser->error = initSyntaxError(param->start, param->end, param->start.filename, "Expected ',' or ')' after parameter name.");
+        *parser->error = initSyntaxError(param.start, param.end, param.start.filename, "Expected ',' or ')' after parameter name.");
       
       for (size_t i = 0; i < paramCount; i++) {
         free(params[i]);
@@ -608,8 +608,8 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_RPAREN) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected ')'.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RPAREN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected ')'.");
 
       for (size_t i = 0; i < paramCount; i++) {
         free(params[i]);
@@ -623,8 +623,8 @@ ASTNode* exprParser(Parser* parser) {
 
     advanceParser(parser); // skip ')'
     
-    if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected 'THEN'.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected 'THEN'.");
 
       free(funcName);
 
@@ -651,8 +651,8 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_END) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok->start, fnNameTok->end, fnNameTok->start.filename, "Expected 'END'.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_END) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected 'END'.");
 
       for (size_t i = 0; i < paramCount; i++) {
         free(params[i]);
@@ -682,16 +682,16 @@ ASTNode* exprParser(Parser* parser) {
     return (ASTNode*)node;
   }
 
-  if (parser->currentToken->type == TOK_IF) {
-    Token* ifTok = parser->currentToken; // safe copy for error reporting
+  if (parser->currentToken.type == TOK_IF) {
+    Token ifTok = parser->currentToken; // safe copy for error reporting
     advanceParser(parser);
 
     ASTNode* condition = andOrParser(parser);
 
     if (!condition) return NULL;
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok->start, ifTok->end, ifTok->start.filename, "Expected THEN");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok.start, ifTok.end, ifTok.start.filename, "Expected THEN");
       freeAST(condition);
       return NULL;
     }
@@ -718,12 +718,12 @@ ASTNode* exprParser(Parser* parser) {
       return NULL;
     }
 
-    while (parser->currentToken && parser->currentToken->type == TOK_ELIF) {
-      Token* elifTok = parser->currentToken; // safe copy for error reporting
+    while (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_ELIF) {
+      Token elifTok = parser->currentToken; // safe copy for error reporting
       advanceParser(parser);
 
-      if (!parser->currentToken) {
-        if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok->start, elifTok->end, elifTok->start.filename, "Expected expression after 'ELIF' keyword.");
+      if (parser->currentToken.type == TOK_EOF) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok.start, elifTok.end, elifTok.start.filename, "Expected expression after 'ELIF' keyword.");
         for (size_t i = 0; i < size; i++) {
           freeAST(elifConds[i]);
           freeAST(elifExprs[i]);
@@ -753,8 +753,8 @@ ASTNode* exprParser(Parser* parser) {
         return NULL;
       }
 
-      if (!parser->currentToken || parser->currentToken->type != TOK_THEN) {
-        if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok->start, elifTok->end, elifTok->start.filename, "Expected THEN after ELIF condition");
+      if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok.start, elifTok.end, elifTok.start.filename, "Expected THEN after ELIF condition");
         freeAST(elifCond);
 
         for (size_t i = 0; i < size; i++) {
@@ -825,15 +825,15 @@ ASTNode* exprParser(Parser* parser) {
     }
 
     ASTNode* elseExpr = NULL;
-    Token* tok = NULL;
+    Token tok = {.type = TOK_EOF};
 
-    if (parser->currentToken && parser->currentToken->type == TOK_ELSE) {
+    if (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_ELSE) {
       tok = parser->currentToken; // safe copy
 
       advanceParser(parser);
 
-      if (!parser->currentToken) {
-        if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after 'ELSE' keyword.");
+      if (parser->currentToken.type == TOK_EOF) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after 'ELSE' keyword.");
         for (size_t i = 0; i < size; i++) {
           freeAST(elifConds[i]);
           freeAST(elifExprs[i]);
@@ -861,16 +861,16 @@ ASTNode* exprParser(Parser* parser) {
         freeAST(condition);
         freeAST(thenExpr);
 
-        if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after 'ELSE' keyword.");
+        if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after 'ELSE' keyword.");
 
         return NULL;
       }
     }
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_END) {
-      Token* endTok = tok ? tok : ifTok;
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_END) {
+      Token endTok = tok.type != TOK_EOF ? tok : ifTok;
 
-      if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok->start, endTok->end, ifTok->start.filename, "Expected 'END' token.");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok.start, endTok.end, ifTok.start.filename, "Expected 'END' token.");
       
       freeAST(condition);
       freeAST(thenExpr);
@@ -895,51 +895,51 @@ ASTNode* exprParser(Parser* parser) {
     return (ASTNode*)initIfNode(condition, thenExpr, elifConds, elifExprs, size, elseExpr);
   }
   
-  if (parser->currentToken->type == TOK_IMPORT) {
-    Token* tok = parser->currentToken; // safe copy 
+  if (parser->currentToken.type == TOK_IMPORT) {
+    Token tok = parser->currentToken; // safe copy 
     
     advanceParser(parser); // skip IMPORT 
 
-    if (!parser->currentToken || parser->currentToken->type != TOK_STRING) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected file path after 'IMPORT' keyword.");
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_STRING) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected file path after 'IMPORT' keyword.");
 
       return NULL;
     }
 
-    Token* filePathToken = parser->currentToken;
+    Token filePathToken = parser->currentToken;
 
     advanceParser(parser); // skip file path token 
 
     return (ASTNode*)initImportNode(filePathToken);
   }
 
-  if (parser->currentToken->type == TOK_VAR) {
-    Token* tok = parser->currentToken; // safe copy
+  if (parser->currentToken.type == TOK_VAR) {
+    Token tok = parser->currentToken; // safe copy
     advanceParser(parser);
 
-    if (!parser->currentToken) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expression token after 'VAR' keyword.");
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expression token after 'VAR' keyword.");
       return NULL;
     }
 
-    if (parser->currentToken->type != TOK_IDENTIFIER) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken->start, parser->currentToken->end, parser->currentToken->start.filename, "Expected identifier after 'VAR'");
+    if (parser->currentToken.type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Expected identifier after 'VAR'");
       return NULL;
     }
 
-    char *varName = parser->currentToken->val.s;
+    char *varName = parser->currentToken.val.s;
 
     tok = parser->currentToken; // update safe copy
 
     advanceParser(parser);
 
-    if (!parser->currentToken) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Missing '=' after identifier");
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Missing '=' after identifier");
       return NULL;
     }
 
-    if (parser->currentToken->type != TOK_EQ) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken->start, parser->currentToken->end, parser->currentToken->start.filename, "Expected '=' after identifier");
+    if (parser->currentToken.type != TOK_EQ) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Expected '=' after identifier");
       return NULL;
     }
 
@@ -950,7 +950,7 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* expr = andOrParser(parser);
 
     if (!expr) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok->start, tok->end, tok->start.filename, "Expected expression after '='");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after '='");
       return NULL;
     }
 
@@ -960,14 +960,14 @@ ASTNode* exprParser(Parser* parser) {
   ASTNode* left = termParser(parser);
   if (!left) return NULL; // error is already set
 
-  while (parser->currentToken && ((parser->currentToken->type == TOK_PLUS) || (parser->currentToken->type == TOK_MINUS))) {
-    Token* opTok = parser->currentToken;
+  while (parser->currentToken.type != TOK_EOF && ((parser->currentToken.type == TOK_PLUS) || (parser->currentToken.type == TOK_MINUS))) {
+    Token opTok = parser->currentToken;
     advanceParser(parser);
 
     ASTNode* right = termParser(parser);
 
     if (!right) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected");
       freeAST(left);
       return NULL;
     }
@@ -989,15 +989,15 @@ ASTNode* andOrParser(Parser* parser) {
   ASTNode* left = compExprParser(parser);
   if (!left) return NULL;
 
-  while (parser->currentToken && (parser->currentToken->type == TOK_AND || parser->currentToken->type == TOK_OR)) {
-    Token* opTok = parser->currentToken;
+  while (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_AND || parser->currentToken.type == TOK_OR)) {
+    Token opTok = parser->currentToken;
     advanceParser(parser);
 
     ASTNode* right = compExprParser(parser);
 
     if (!right) {
       freeAST(left);
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected after logical operator");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected after logical operator");
       return NULL;
     }
 
@@ -1018,21 +1018,21 @@ ASTNode* compExprParser(Parser* parser) {
   ASTNode* left = exprParser(parser);
   if (!left) return NULL;
 
-  while (parser->currentToken && ((parser->currentToken->type == TOK_EE) ||
-         (parser->currentToken->type == TOK_NE) ||
-         (parser->currentToken->type == TOK_LT) ||
-         (parser->currentToken->type == TOK_GT) ||
-         (parser->currentToken->type == TOK_LTE) ||
-         (parser->currentToken->type == TOK_GTE))) {
+  while (parser->currentToken.type != TOK_EOF && ((parser->currentToken.type == TOK_EE) ||
+         (parser->currentToken.type == TOK_NE) ||
+         (parser->currentToken.type == TOK_LT) ||
+         (parser->currentToken.type == TOK_GT) ||
+         (parser->currentToken.type == TOK_LTE) ||
+         (parser->currentToken.type == TOK_GTE))) {
 
-    Token* opTok = parser->currentToken;
+    Token opTok = parser->currentToken;
     advanceParser(parser);
 
     ASTNode* right = exprParser(parser);
 
     if (!right) {
       freeAST(left);
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok->start, opTok->end, opTok->start.filename, "Expression expected after comparison operator");
+      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected after comparison operator");
       return NULL;
     }
 
@@ -1054,8 +1054,8 @@ ASTNode* parseParser(Parser* parser) {
 
   if (!res) return NULL; // error is already set
 
-  if (parser->currentToken != NULL) {
-    if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken->start, parser->currentToken->end, parser->currentToken->start.filename, "Unexpected token after expression");
+  if (parser->currentToken.type != TOK_EOF) {
+    if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Unexpected token after expression");
     freeAST(res);
     return NULL;
   }
@@ -1071,7 +1071,7 @@ ASTNode* parseProgram(Parser* parser) {
 
   ASTNode **statements = malloc(capacity * sizeof(ASTNode*));
 
-  while (parser->currentToken != NULL) {
+  while (parser->currentToken.type != TOK_EOF) {
     ASTNode *statement = andOrParser(parser);
 
     if (!statement) {

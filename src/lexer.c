@@ -52,10 +52,10 @@ Lexer* initLexer(char *filename, char *text) {
   return lexer;
 }
 
-bool _resizeTokensList(Token ***tokens, unsigned long *capacity) {
+bool _resizeTokensList(Token **tokens, unsigned long *capacity) {
   unsigned long newCap = (*capacity) * 2;
 
-  Token **tmp = realloc(*tokens, newCap * sizeof(Token*));
+  Token *tmp = realloc(*tokens, newCap * sizeof(Token));
   if (!tmp) return false;
 
   *tokens = tmp;
@@ -125,15 +125,15 @@ static TokType keywordType(const char *s) {
   return TOK_IDENTIFIER;
 }
 
-Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
-  if (!lexer) return NULL;
+Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
+  if (!lexer) return (Token){.type = TOK_INVALID};
 
   unsigned long size = 0;
   unsigned long capacity = 32;
 
   char *numStr = malloc(capacity);
 
-  if (!numStr) return NULL;
+  if (!numStr) return (Token){.type = TOK_INVALID};
 
   unsigned long dotCount = 0;
 
@@ -147,7 +147,7 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
 
       if (!tmp) {
         free(numStr);
-        return NULL;
+        return (Token){.type = TOK_INVALID};
       }
 
       numStr = tmp;
@@ -175,29 +175,24 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
     if (end == numStr) {
       free(numStr);
       if (*error == NULL) *error = initLexerError(start, lexer->pos, lexer->filename, "Invalid numeral literal");
-      return NULL;
+      return (Token){.type = TOK_INVALID};
     }
 
     // overflow / underflow
     if (errno == ERANGE || value > INT_MAX || value < INT_MIN) {
       free(numStr);
       *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
-      return NULL;
+      return (Token){.type = TOK_INVALID};
     }
 
     // trailing garbage
     if (*end != '\0') {
       free(numStr);
       *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
-      return NULL;
+      return (Token){.type = TOK_INVALID};
     }
 
-    Token* token = initToken(TOK_INT, &value, false, start, lexer->pos);
-
-    if (!token) {
-      free(numStr);
-      return NULL;
-    }
+    Token token = initToken(TOK_INT, &value, false, start, lexer->pos);
 
     free(numStr);
     return token;
@@ -212,41 +207,36 @@ Token* makeNumberTokenLexer(Lexer* lexer, Error** error) {
   if (end == numStr) {
     free(numStr);
     *error = initLexerError(start, lexer->pos, lexer->filename, "Invalid numeric literal");
-    return NULL;
+    return (Token){.type = TOK_INVALID};
   }
 
   // overflow / underflow
   if (errno == ERANGE) {
     free(numStr);
     *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
-    return NULL;
+    return (Token){.type = TOK_INVALID};
   }
 
   // trailing garbage
   if (*end != '\0') {
     free(numStr);
     *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
-    return NULL;
+    return (Token){.type = TOK_INVALID};
   }
 
-  Token* token = initToken(TOK_FLOAT, &value, false, start, lexer->pos);
-
-  if (!token) {
-    free(numStr);
-    return NULL;
-  }
+  Token token = initToken(TOK_FLOAT, &value, false, start, lexer->pos);
 
   free(numStr);
   return token;
 }
 
-Token* makeIdentifierLexer(Lexer *lexer) {
+Token makeIdentifierLexer(Lexer *lexer) {
   unsigned long size = 0;
   unsigned long capacity = 32;
 
   char *idStr = malloc(capacity);
 
-  if (!idStr) return NULL;
+  if (!idStr) return (Token){.type = TOK_INVALID};
 
   Position start = lexer->pos;
 
@@ -258,7 +248,7 @@ Token* makeIdentifierLexer(Lexer *lexer) {
 
       if (!tmp) {
         free(idStr);
-        return NULL;
+        return (Token){.type = TOK_INVALID};
       }
 
       idStr = tmp;
@@ -279,7 +269,7 @@ Token* makeIdentifierLexer(Lexer *lexer) {
   return initToken(type, NULL, false, start, lexer->pos);
 }
 
-Token* makeStringLexer(Lexer* lexer, Error** error) {
+Token makeStringLexer(Lexer* lexer, Error** error) {
   Position start = lexer->pos;
 
   advanceLexer(lexer); // Skip opening quote
@@ -307,7 +297,7 @@ Token* makeStringLexer(Lexer* lexer, Error** error) {
 
   if (!lexer->currChar) {
     if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Unterminated string");
-    return NULL;
+    return (Token){.type = TOK_INVALID};
   }
 
   buffer[len] = '\0';
@@ -317,7 +307,7 @@ Token* makeStringLexer(Lexer* lexer, Error** error) {
   return initToken(TOK_STRING, buffer, true, start, lexer->pos);
 }
 
-bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned long *capacity, TokType tokenType) {
+bool _generateToken(Lexer *lexer, Token** tokens, unsigned long *size, unsigned long *capacity, TokType tokenType) {
   if (UNLIKELY(*size >= *capacity)) {
     if (!_resizeTokensList(tokens, capacity)) {
       freeTokens(*tokens, *size);
@@ -329,9 +319,9 @@ bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned
   Position end = lexer->pos;
   advancePosition(&end, lexer->currChar);
 
-  Token *token = initToken(tokenType, NULL, false, start, end);
+  Token token = initToken(tokenType, NULL, false, start, end);
 
-  if (!token) {
+  if (token.type == TOK_INVALID) {
     freeTokens(*tokens, *size);
     return false;
   }
@@ -344,8 +334,8 @@ bool _generateToken(Lexer *lexer, Token*** tokens, unsigned long *size, unsigned
   return true;
 }
 
-bool _appendToken(Token* token, Token*** tokens, unsigned long *size, unsigned long *capacity) {
-  if (!token) {
+bool _appendToken(Token token, Token** tokens, unsigned long *size, unsigned long *capacity) {
+  if (token.type == TOK_INVALID) {
     freeTokens(*tokens, *size);
     return false;
   }
@@ -361,13 +351,13 @@ bool _appendToken(Token* token, Token*** tokens, unsigned long *size, unsigned l
   return true;
 }
 
-Token* makeNotEqualsToken(Lexer* lexer, Error** error) {
+Token makeNotEqualsToken(Lexer* lexer, Error** error) {
   Position start = lexer->pos;
   advanceLexer(lexer);
 
   if (!lexer->currChar) {
     if (*error == NULL) *error = initSyntaxError(start, lexer->pos, start.filename, "Expected '=' symbol after '!'");
-    return NULL;
+    return (Token){.type = TOK_INVALID};
   }
 
   if (lexer->currChar == '=') {
@@ -376,10 +366,10 @@ Token* makeNotEqualsToken(Lexer* lexer, Error** error) {
   }
 
   if (*error == NULL) *error = initSyntaxError(start, lexer->pos, start.filename, "Expected '=' symbol after '!'");
-  return NULL;
+  return (Token){.type = TOK_INVALID};
 }
 
-Token* makeEqualsToken(Lexer* lexer) {
+Token makeEqualsToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -392,7 +382,7 @@ Token* makeEqualsToken(Lexer* lexer) {
   return initToken(TOK_EQ, NULL, false, start, lexer->pos);
 }
 
-Token* makeLessThanToken(Lexer* lexer) {
+Token makeLessThanToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -405,7 +395,7 @@ Token* makeLessThanToken(Lexer* lexer) {
   return initToken(TOK_LT, NULL, false, start, lexer->pos);
 }
 
-Token* makeGreaterThanToken(Lexer* lexer) {
+Token makeGreaterThanToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -418,11 +408,11 @@ Token* makeGreaterThanToken(Lexer* lexer) {
   return initToken(TOK_GT, NULL, false, start, lexer->pos);
 }
 
-Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
+Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   unsigned long size = 0;
   unsigned long capacity = 1024;
 
-  Token** tokens = malloc(sizeof(Token*) * capacity);
+  Token* tokens = malloc(sizeof(Token) * capacity);
   if (!tokens) return NULL;
 
   while (lexer->currChar != 0) {
@@ -533,8 +523,7 @@ Token** makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     freeTokens(tokens, size);
     return NULL;
   }
-
-  tokens[size] = NULL;
+  tokens[size] = (Token){.type = TOK_EOF};
   *outSize = size;
   return tokens;
 }

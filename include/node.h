@@ -28,12 +28,12 @@ typedef struct ASTNode {
 
 typedef struct NumberNode {
   ASTNode base;
-  Token* token;
+  Token token;
 } NumberNode;
 
 typedef struct StringNode {
   ASTNode base;
-  Token* token;
+  Token token;
   uint64_t len;
 } StringNode;
 
@@ -41,13 +41,13 @@ typedef struct ListNode {
   ASTNode base;
   ASTNode** objects;
   uint64_t size, capacity;
-  Token* startBracket;
-  Token* endBracket;
+  Token startBracket;
+  Token endBracket;
 } ListNode;
 
 typedef struct VarAccessNode {
   ASTNode base;
-  Token *token;
+  Token token;
 } VarAccessNode;
 
 typedef struct VarAssignNode {
@@ -68,14 +68,14 @@ typedef struct BinOpNode {
   ASTNode base;
 
   ASTNode *leftNode;
-  Token *operTok;
+  Token operTok;
   ASTNode *rightNode;
 } BinOpNode;
 
 typedef struct UnaryOpNode {
   ASTNode base;
 
-  Token *operTok;
+  Token operTok;
   ASTNode* node;
 } UnaryOpNode;
 
@@ -115,7 +115,7 @@ typedef struct FunctionCallNode {
 
 typedef struct ImportNode {
   ASTNode base;
-  Token* filePath;
+  Token filePath;
 } ImportNode; 
 
 typedef struct {
@@ -130,19 +130,19 @@ typedef struct ReturnNode {
   Position start, end;
 } ReturnNode;
 
-NumberNode* initNumberNode(Token* token);
-StringNode* initStringNode(Token* token);
-BinOpNode* initBinOpNode(ASTNode *leftNode, Token *operTok, ASTNode *rightNode);
-UnaryOpNode* initUnaryOpNode(Token* operTok, ASTNode* node);
-VarAccessNode* initVarAccessNode(Token* token);
+NumberNode* initNumberNode(Token token);
+StringNode* initStringNode(Token token);
+BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode);
+UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node);
+VarAccessNode* initVarAccessNode(Token token);
 VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr);
-ListNode* initListNode(Token* startBracket, Token* endBracket, ASTNode** objects, uint64_t size, uint64_t capacity);
+ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, uint64_t size, uint64_t capacity);
 IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end);
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount);
 FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount, Position start, Position end);
-ImportNode* initImportNode(Token* filePath);
+ImportNode* initImportNode(Token filePath);
 ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 

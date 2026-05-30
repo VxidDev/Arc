@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileContent, Token** tokens, size_t tokenAmount) {
+Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileContent, Token* tokens, size_t tokenAmount) {
   if (!astTree || !lexer || !parser) return NULL;
 
   Module* module = malloc(sizeof(Module));

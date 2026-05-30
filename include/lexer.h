@@ -16,7 +16,7 @@ Lexer* initLexer(char *filename, char *text);
 
 void advanceLexer(Lexer *lexer);
 
-Token** makeTokensLexer(Lexer *lexer, Error** error, unsigned long *outSize);
+Token* makeTokensLexer(Lexer *lexer, Error** error, unsigned long *outSize);
 
 void freeLexer(Lexer* lexer);
 
