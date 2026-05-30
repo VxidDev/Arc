@@ -7,6 +7,7 @@
 #include "../../include/builtIns/typing.h"
 #include "../../include/builtIns/math.h"
 #include "../../include/builtIns/properties.h"
+#include "../../include/builtIns/string.h"
 
 void registerBuiltins(SymbolTable* table) {
   // I/O
@@ -61,4 +62,11 @@ void registerBuiltins(SymbolTable* table) {
   setTable(table, "len_of", (Object*)len_ofFn);
 
   freeObject((Object*)len_ofFn); 
+
+  // String 
+  
+  NativeFunction* split_stringFn = initNativeFunction("split_string", builtIn_split_string, 2, false);
+  setTable(table, "split_string", (Object*)split_stringFn);
+
+  freeObject((Object*)split_stringFn);
 }
