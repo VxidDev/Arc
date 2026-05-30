@@ -310,6 +310,7 @@ int main(int argc, char **argv) {
     code = readFile(_INPUT_FILE);
 
     if (!code) {
+      freeTable(variables);
       return 1;
     }
 
