@@ -7,6 +7,12 @@ Variables are declared using the `VAR` keyword.
 VAR x = 10
 ```
 
+To update a variable, you must re-declare it using the same name:
+
+```arc
+VAR x = x + 1
+```
+
 ## Functions
 Functions are defined using the `FN` keyword. A `RETURN` keyword can be used to return a value from a function.
 
@@ -20,7 +26,7 @@ VAR result = add(5, 3)
 
 ## Built-in Functions
 
-Arc includes several built-in functions for common tasks:
+Arc provides several built-in functions implemented in C for core functionality:
 
 ### I/O
 - `print(value)`: Prints the value to stdout.
@@ -28,10 +34,6 @@ Arc includes several built-in functions for common tasks:
 - `open_file(path)`: Opens a file.
 - `close_file(file)`: Closes an open file.
 - `read_file(file)`: Reads content from a file.
-
-### Math
-- `truncate(value)`: Truncates a number.
-- `floor(value)`: Returns the floor of a number.
 
 ### Type & Properties
 - `len_of(value)`: Returns the length of a string or list.
@@ -41,6 +43,30 @@ Arc includes several built-in functions for common tasks:
 ### Error Handling
 - `RuntimeError(message)`: Raises a runtime error with a message.
 
+## Standard Library (`math.arc`)
+
+`math.arc` provides additional mathematical functions. These can be used by adding `IMPORT "math.arc"` at the top of your script.
+
+### Constants
+- `PI`: 3.141592653589793
+- `E`: 2.718281828459045
+- `TAU`: 6.283185307179586
+
+### Mathematical Functions
+- `exp(x)`: Exponential function ($E^x$).
+- `logn(x)`: Natural logarithm.
+- `log(base, x)`: Logarithm with a specific base.
+- `sqrt(x)`: Square root.
+- `abs(x)`: Absolute value.
+- `sign(x)`: Returns -1 if x < 0, 0 if x == 0, 1 if x > 0.
+- `floor(x)`: Rounds down to the nearest integer.
+- `fmod(x, y)`: Floating-point modulo.
+- `sin(x)`: Sine.
+- `cos(x)`: Cosine.
+- `tan(x)`: Tangent.
+- `max(list)`: Returns the maximum value in a list.
+- `min(list)`: Returns the minimum value in a list.
+
 ## Control Flow
 
 ### IF Statements
@@ -48,9 +74,9 @@ Arc includes several built-in functions for common tasks:
 IF x == 5 THEN
     "Five"
 ELIF x > 5 THEN
-    "Greater than five"
+    print("Greater than five")
 ELSE
-    "Less than five"
+    print("Less than five")
 END
 ```
 
@@ -58,7 +84,7 @@ END
 ```arc
 VAR i = 0
 WHILE i < 5 THEN
-    i = i + 1
+    VAR i = i + 1
 END
 ```
 

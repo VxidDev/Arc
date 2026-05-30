@@ -20,13 +20,13 @@ Create a file named `script.arc`:
 VAR x = 0
 
 WHILE x < 5 THEN
-    x = x + 1
+    VAR x = x + 1
 END
 
 IF x == 5 THEN
-    "Five"
+    print("Five")
 ELSE
-    "Not Five"
+    print("Not Five")
 END
 ```
 
@@ -54,7 +54,7 @@ Five
 - [x] Functions
 - [x] Return statement
 - [x] Native Functions support
-- [ ] Basic runtime system
+- [x] Basic runtime system
 - [ ] Bytecode virtual machine (long-term goal)
 
 ## License
