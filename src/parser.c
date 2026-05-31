@@ -219,7 +219,8 @@ ASTNode* blockParser(Parser* parser) {
     parser->currentToken.type != TOK_EOF &&
     parser->currentToken.type != TOK_ELIF &&
     parser->currentToken.type != TOK_ELSE &&
-    parser->currentToken.type != TOK_END
+    parser->currentToken.type != TOK_END && 
+    parser->currentToken.type != TOK_CATCH
   ) {
     ASTNode* stmt = andOrParser(parser);
 
@@ -432,8 +433,72 @@ ASTNode* exprParser(Parser* parser) {
   }
 
   if (parser->currentToken.type == TOK_EOF) {
-    // if (*parser->error == NULL); Will be implemented after addition of EOF token
+    // if (*parser->error == NULL); Will be implemented after addition of EOF token <- I'm too lazy to add that for now :[
     return NULL;
+  }
+
+  if (parser->currentToken.type == TOK_TRY) {
+    Token tryTok = parser->currentToken;
+
+    advanceParser(parser); // skip TRY 
+    
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tryTok.start, tryTok.end, tryTok.start.filename, "Expected expression.");
+      return NULL;
+    }
+
+    ASTNode* body = blockParser(parser);
+
+    if (!body) { // Error is already set 
+      return NULL;
+    }
+
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_CATCH) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(tryTok.start, tryTok.end, tryTok.start.filename, "Expected 'CATCH'.");
+      return NULL;
+    }
+    
+    Token catchTok = parser->currentToken;
+
+    advanceParser(parser); // Skip CATCH
+    
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(catchTok.start, catchTok.end, catchTok.start.filename, "Expected identifier after 'CATCH'.");
+      return NULL;
+    }
+
+    Token errIdentifier = parser->currentToken;
+
+    advanceParser(parser); // skip IDENTIFIER 
+
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(catchTok.start, catchTok.end, catchTok.start.filename, "Expected 'THEN'.");
+      return NULL;
+    }
+
+    Token thenTok = parser->currentToken;
+
+    advanceParser(parser); // skip THEN
+    
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected expression.");
+      return NULL;
+    }
+
+    ASTNode* errHandler = blockParser(parser);
+
+    if (!errHandler) { // Error is already set 
+      return NULL;
+    }
+
+    if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_END) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected 'END'.");
+      return NULL;
+    }
+
+    advanceParser(parser); // skip END
+
+    return (ASTNode*)initTryCatchNode(tryTok, catchTok, errIdentifier, body, errHandler);
   }
 
   if (parser->currentToken.type == TOK_RETURN) {

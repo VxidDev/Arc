@@ -37,6 +37,31 @@ FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t a
   return fncallNode;
 }
 
+TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier, ASTNode* body, ASTNode* errHandler) {
+  if (!body || !errHandler) return NULL;
+
+  TryCatchNode* node = malloc(sizeof(TryCatchNode));
+
+  if (!node) return NULL;
+    
+  node->base.type = NODE_TRYCATCH;
+
+  node->tryTok = tryTok;
+  node->catchTok = catchTok;
+  node->errIdentifier = errIdentifier;
+
+  node->body = body;
+  node->errHandler = errHandler;
+
+  return node;
+}
+
+void freeTryCatchNode(TryCatchNode* node) {
+  if (!node) return;
+
+  free(node);
+}
+
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount) {
   if (!body) return NULL;
 
@@ -458,6 +483,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_RETURN:
       freeReturnNode((ReturnNode*)node);
+      break;
+
+    case NODE_TRYCATCH:
+      freeTryCatchNode((TryCatchNode*)node);
       break;
   }
 }

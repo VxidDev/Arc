@@ -188,6 +188,17 @@ void printAST(ASTNode* node) {
       printAST(ret->expr);
       break;
     }
+
+    case NODE_TRYCATCH: {
+      TryCatchNode* trycatch = (TryCatchNode*)node;
+
+      printf("%s%sTRY:", COLOR(ANSI_ITALIC), COLOR(ANSI_YELLOW_FG));
+      printAST(trycatch->body);
+      printf("%s%sCATCH-%s%s:", COLOR(ANSI_ITALIC), COLOR(ANSI_YELLOW_FG), COLOR(ANSI_BRIGHT_GREEN_FG), trycatch->errIdentifier.val.s);
+      printAST(trycatch->errHandler);
+
+      break;
+    }
   }
 }
 
