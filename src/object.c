@@ -42,74 +42,125 @@ Object* copyObject(Object* obj) {
 void freeObject(Object* obj) {
   if (!obj) return;
 
-  if (obj->type == OBJ_NUMBER_INT || obj->type == OBJ_NUMBER_FLOAT || obj->type == OBJ_RETURN) {
-    free(obj);
-  } else if (obj->type == OBJ_STRING) {
-    String* str = (String*)obj;
-
-    if (str->value) free(str->value);
-    free(str); 
-  } else if (obj->type == OBJ_LIST) { 
-    List* list = (List*)obj;
-
-    for (uint64_t i = 0; i < list->size; i++) freeObject(list->objects[i]);
-
-    free(list->objects);
-    free(list);
-  } else if (obj->type == OBJ_FUNCTION) {
-    Function* func = (Function*)obj;
+  switch (obj->type) {
+    case OBJ_NUMBER_INT:
+      free(obj); break;
     
-    if (func->params) {
-      for (size_t i = 0; i < func->paramCount && func->params[i] ; i++) {
-        free(func->params[i]);
-      }
+    case OBJ_NUMBER_FLOAT:
+      free(obj); break;
 
-      free(func->params);
+    case OBJ_STRING: {
+      String* str = (String*)obj;
+
+      if (str->value) free(str->value);
+      free(str);
+
+      break;
     }
 
-    if (func->name) free(func->name);
+    case OBJ_LIST: {
+      List* list = (List*)obj;
+      
+      if (list->objects) {
+        for (uint64_t i = 0; i < list->size; i++) 
+          freeObject(list->objects[i]);
 
-    free(func);
-  } else if (obj->type == OBJ_NATIVE_FUNCTION) {
-    NativeFunction* nativeFunc = (NativeFunction*)obj;
-    free(nativeFunc->name);
-    free(nativeFunc);
-  } else if (obj->type == OBJ_MODULE) {
-    Module* module = (Module*)obj;
-
-    if (module->astTree) freeAST(module->astTree);
-    if (module->tokens) freeTokens(module->tokens, module->tokenAmount);
-    if (module->parser) free(module->parser);
-    if (module->lexer->filename) free(module->lexer->filename);
-    if (module->lexer) freeLexer(module->lexer);
-    
-    free(module);
-  } else if (obj->type == OBJ_ERROR) {
-    ProgramError* err = (ProgramError*)obj;
-
-    if (err->details) free(err->details);
-    free(err);
-  } else if (obj->type == OBJ_FUNCTION_CALL) {
-    FunctionCall* fncall = (FunctionCall*)obj;
-    
-    if (fncall->args) {
-      for (size_t i = 0; i < fncall->argCount; i++) {
-        freeObject(fncall->args[i]);
+        free(list->objects);
       }
 
-      free(fncall->args);
+      free(list);
+
+      break;
     }
 
-    // if (fncall->function) freeObject((Object*)fncall->function);
-    if (fncall->env) freeTable(fncall->env);
+    case OBJ_FUNCTION: {
+      Function* func = (Function*)obj;
 
-    free(fncall);
-  } else {
-    File* file = (File*)obj;
+      if (func->params) {
+        for (size_t i = 0; i < func->paramCount && func->params[i]; i++)
+          free(func->params[i]);
 
-    free(file->fname);
-    free(file->fmod);
-    free(file);
+        free(func->params);
+      }
+
+      if (func->name) free(func->name);
+
+      free(func);
+
+      break;
+    }
+
+    case OBJ_NATIVE_FUNCTION: {
+      NativeFunction* nativeFunc = (NativeFunction*)obj;
+
+      if (nativeFunc->name) free(nativeFunc->name);
+      free(nativeFunc);
+
+      break;
+    }
+
+    case OBJ_MODULE: {
+      Module* module = (Module*)obj;
+
+      if (module->astTree) freeAST(module->astTree);
+      if (module->tokens) freeTokens(module->tokens, module->tokenAmount);
+      if (module->parser) free(module->parser);
+      
+      if (module->lexer) {
+        free(module->lexer->filename);
+        freeLexer(module->lexer);
+      }
+      
+      free(module);
+
+      break;
+    }
+
+    case OBJ_RETURN: {
+      Return* ret = (Return*)obj;
+
+      freeObject(ret->value);
+      free(ret);
+
+      break;
+    }
+
+    case OBJ_ERROR: {
+      ProgramError* err = (ProgramError*)obj;
+
+      if (err->details) free(err->details);
+      free(err);
+
+      break;
+    }
+
+    case OBJ_FUNCTION_CALL: {
+      FunctionCall* fncall = (FunctionCall*)obj;
+
+      if (fncall->args) {
+        for (size_t i = 0; i < fncall->argCount; i++) {
+          freeObject(fncall->args[i]);
+        }
+
+        free(fncall->args);
+      }
+
+      if (fncall->env) freeTable(fncall->env);
+      free(fncall);
+
+      break;
+    }
+
+    case OBJ_FILE: {
+      File* file = (File*)obj;
+
+      if (file->fname) free(file->fname);
+      if (file->fmod) free(file->fmod);
+      
+      free(file);
+
+      break;
+    }
   }
 
   return;

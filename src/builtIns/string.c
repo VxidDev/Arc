@@ -53,7 +53,7 @@ Object* builtIn_split_string(Object** args, size_t argCount) {
 
   String* delim = (String*)delimObj;
 
-  if (delim->value) {
+  if (delim->value[0] == '\0') {
     return (Object*)initProgramError("Empty delimiter not allowed.");
   }
 

@@ -180,7 +180,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     case TOK_LT: output = isLessThanNumber(dest, src); break;
     case TOK_GT: output = isGreaterThanNumber(dest, src); break;
     case TOK_LTE: output = isLessThanEqualNumber(dest, src); break;
-    case TOK_GTE: output = isGreaterThanNumber(dest, src); break;
+    case TOK_GTE: output = isGreaterThanEqualNumber(dest, src); break;
     case TOK_NE: output = isNotEqualNumber(dest, src); break;
     case TOK_AND: output = andNumber(dest, src); break;
     case TOK_OR: output = orNumber(dest, src); break;
@@ -618,6 +618,9 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, Symbol
 
   if (res && res->type == OBJ_ERROR) {
     if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, ((ProgramError*)res)->details);
+    freeObject(res);
+    freeObject(calleeObj);
+    return NULL;
   }
   
   if (res && res->type == OBJ_RETURN) {
@@ -742,6 +745,36 @@ Object* visitReturnNode(ASTNode* node, char* filename, Error** err, SymbolTable*
   return (Object*)retVal;
 }
 
+static inline Object* visitTryCatchNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
+  if (!node) return NULL;
+
+  TryCatchNode* tryCatch = (TryCatchNode*)node;
+
+  Error* innerErr = NULL;
+  Object* bodyRes = visitNode(tryCatch->body, filename, &innerErr, variables);
+
+  if (!innerErr) return bodyRes;
+
+  if (bodyRes) freeObject(bodyRes);
+  
+  const char *details = innerErr->details;
+  if (!details || details[0] == '\0') details = "Unknown Error.";
+
+  Object* errObj = (Object*)initString((char*)details, (uint64_t)strlen(details));
+
+  if (tryCatch->errIdentifier.val.s && errObj) {
+    setTable(variables, tryCatch->errIdentifier.val.s, errObj);
+  }
+
+  freeObject(errObj); // Handles NULL
+  
+  freeError(innerErr);
+
+  if (err) *err = NULL; // clear outer error
+
+  return visitNode(tryCatch->errHandler, filename, err, variables);
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   switch (node->type) {
     case NODE_NUMBER: return visitNumberNode(node, filename, err);
@@ -759,6 +792,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_FUNCTION_CALL: return visitFunctionCallNode(node, filename, err, variables);
     case NODE_IMPORT: return visitImportNode(node, err, variables);
     case NODE_RETURN: return visitReturnNode(node, filename, err, variables);
+    case NODE_TRYCATCH: return visitTryCatchNode(node, filename, err, variables);
     default: return NULL;
   }
 }

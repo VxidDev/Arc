@@ -59,6 +59,9 @@ TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier
 void freeTryCatchNode(TryCatchNode* node) {
   if (!node) return;
 
+  freeAST(node->body);
+  freeAST(node->errHandler);
+
   free(node);
 }
 
@@ -417,6 +420,7 @@ void freeIfNode(IfNode* node) {
 
   free(node->elifConds);
   free(node->elifExprs);
+
   freeAST(node->elseExpr);
   free(node);
 }
