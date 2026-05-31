@@ -7,7 +7,7 @@
 const char *KEYWORDS[] = {
   "VAR", "AND", "OR", "NOT",
   "IF", "THEN", "ELIF", "ELSE",
-  "WHILE",
+  "WHILE", "TRY", "CATCH"
   "FN", "END", NULL
 };
 

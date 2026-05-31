@@ -71,6 +71,9 @@ char* tokToString(const TokType type) {
 
     case TOK_IMPORT: return "IMPORT";
     case TOK_RETURN: return "RETURN";
+    
+    case TOK_TRY: return "TRY";
+    case TOK_CATCH: return "CATCH";
 
     default: return "UNKNOWN";
   }

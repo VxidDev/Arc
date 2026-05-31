@@ -15,6 +15,9 @@ typedef enum TokType {
   TOK_FN,
   TOK_IMPORT,
   TOK_RETURN,
+  
+  TOK_TRY,
+  TOK_CATCH,
 
   TOK_EOF,
   TOK_INVALID

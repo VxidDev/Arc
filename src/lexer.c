@@ -98,6 +98,10 @@ static TokType keywordType(const char *s) {
     case 'T':
       if (s[1] == 'H' && s[2] == 'E' && s[3] == 'N' && s[4] == '\0')
         return TOK_THEN;
+
+      if (s[1] == 'R' && s[2] == 'Y' && s[3] == '\0')
+        return TOK_TRY;
+
       break;
 
     case 'V':
@@ -119,6 +123,12 @@ static TokType keywordType(const char *s) {
       if (s[1] == 'E' && s[2] == 'T' && s[3] == 'U' && s[4] == 'R' && s[5] == 'N' && s[6] == '\0')
         return TOK_RETURN;
 
+      break;
+
+    case 'C':
+      if (s[1] == 'A' && s[2] == 'T' && s[3] == 'C' && s[4] == 'H' && s[5] == '\0')
+        return TOK_CATCH;
+      
       break;
   }
 

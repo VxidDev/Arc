@@ -4,6 +4,7 @@ gen_py.py
 test.arc 
 test.py
 test_while.arc
+calc.arc
 
 # Prerequisites
 *.d
