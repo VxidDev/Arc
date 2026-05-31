@@ -34,6 +34,10 @@ Object* copyObject(Object* obj) {
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
+    case OBJ_BREAK:
+      return obj;
+    case OBJ_CONTINUE:
+      return obj;
     default:
       return NULL;
   }
@@ -158,6 +162,18 @@ void freeObject(Object* obj) {
       if (file->fmod) free(file->fmod);
       
       free(file);
+
+      break;
+    }
+
+    case OBJ_BREAK: {
+      free(obj);
+
+      break;
+    }
+
+    case OBJ_CONTINUE: {
+      free(obj);
 
       break;
     }

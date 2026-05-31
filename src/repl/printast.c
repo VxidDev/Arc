@@ -199,6 +199,16 @@ void printAST(ASTNode* node) {
 
       break;
     }
+
+    case NODE_BREAK: {
+      printf("%s%sBREAK%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), COLOR(ANSI_RESET));
+      break;
+    }
+
+    case NODE_CONTINUE: {
+      printf("%s%sCONTINUE%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), COLOR(ANSI_RESET));
+      break;
+    }
   }
 }
 

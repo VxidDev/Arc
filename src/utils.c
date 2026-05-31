@@ -75,6 +75,9 @@ char* tokToString(const TokType type) {
     case TOK_TRY: return "TRY";
     case TOK_CATCH: return "CATCH";
 
+    case TOK_BREAK: return "BREAK";
+    case TOK_CONTINUE: return "CONTINUE";
+
     default: return "UNKNOWN";
   }
 }

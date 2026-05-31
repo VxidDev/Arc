@@ -323,7 +323,7 @@ Object* visitProgramNode(ASTNode* node, char *filename, Error **err, SymbolTable
 
     if (!last) return NULL; // error already set
     
-    if (last->type == OBJ_RETURN) {
+    if (last->type == OBJ_RETURN || last->type == OBJ_BREAK || last->type == OBJ_CONTINUE) {
       return last;
     }
   }
@@ -514,6 +514,16 @@ Object* visitWhileNode(ASTNode* node, Error** err, char* filename, SymbolTable* 
     Object* tmp = visitNode(bodyNode, filename, err, variables);
     if (!tmp) return NULL;
     
+    if (tmp->type == OBJ_BREAK) {
+      freeObject(tmp);
+      break;
+    }
+
+    if (tmp->type == OBJ_CONTINUE) {
+      freeObject(tmp);
+      continue;
+    }
+
     if (tmp && tmp->type == OBJ_RETURN) {
       return tmp;
     }
@@ -618,6 +628,13 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err, Symbol
 
   if (res && res->type == OBJ_ERROR) {
     if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, ((ProgramError*)res)->details);
+    freeObject(res);
+    freeObject(calleeObj);
+    return NULL;
+  }
+
+  if (res && (res->type == OBJ_BREAK || res->type == OBJ_CONTINUE)) {
+    if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, "Break/Continue outside of loop.");
     freeObject(res);
     freeObject(calleeObj);
     return NULL;
@@ -740,6 +757,12 @@ Object* visitReturnNode(ASTNode* node, char* filename, Error** err, SymbolTable*
   Object* val = visitNode(ret->expr, filename, err, variables);
   if (!val) return NULL;
 
+  if (val->type == OBJ_BREAK || val->type == OBJ_CONTINUE) {
+    freeObject(val);
+    if (!*err) *err = initRuntimeError(ret->start, ret->end, filename, "Cannot return a loop signal.");
+    return NULL;
+  }
+
   Return* retVal = initReturn(val);
 
   return (Object*)retVal;
@@ -775,6 +798,18 @@ static inline Object* visitTryCatchNode(ASTNode* node, char *filename, Error **e
   return visitNode(tryCatch->errHandler, filename, err, variables);
 }
 
+Object* visitBreakNode(ASTNode* node) {
+  if (!node) return NULL;
+
+  return (Object*)initBreak();
+}
+
+Object* visitContinueNode(ASTNode* node) {
+  if (!node) return NULL;
+
+  return (Object*)initContinue();
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   switch (node->type) {
     case NODE_NUMBER: return visitNumberNode(node, filename, err);
@@ -793,6 +828,8 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_IMPORT: return visitImportNode(node, err, variables);
     case NODE_RETURN: return visitReturnNode(node, filename, err, variables);
     case NODE_TRYCATCH: return visitTryCatchNode(node, filename, err, variables);
+    case NODE_BREAK: return visitBreakNode(node);
+    case NODE_CONTINUE: return visitContinueNode(node);
     default: return NULL;
   }
 }

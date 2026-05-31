@@ -3,8 +3,8 @@ gen.py
 gen_py.py
 test.arc 
 test.py
-test_while.arc
 calc.arc
+test_*.arc 
 
 # Prerequisites
 *.d

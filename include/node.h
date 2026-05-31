@@ -20,7 +20,9 @@ typedef enum {
   NODE_FUNCTION_CALL,
   NODE_IMPORT,
   NODE_RETURN,
-  NODE_TRYCATCH
+  NODE_TRYCATCH,
+  NODE_BREAK,
+  NODE_CONTINUE
 } NodeType;
 
 typedef struct ASTNode {
@@ -137,6 +139,16 @@ typedef struct TryCatchNode {
   ASTNode *body, *errHandler;
 } TryCatchNode;
 
+typedef struct BreakNode {
+  ASTNode base;
+  Token tok;
+} BreakNode;
+
+typedef struct ContinueNode {
+  ASTNode base;
+  Token tok;
+} ContinueNode;
+
 NumberNode* initNumberNode(Token token);
 StringNode* initStringNode(Token token);
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode);
@@ -152,6 +164,8 @@ FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t a
 ImportNode* initImportNode(Token filePath);
 TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier, ASTNode* body, ASTNode* errHandler);
 ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr);
+BreakNode* initBreakNode(Token tok);
+ContinueNode* initContinueNode(Token tok);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 
 void freeBinOpNode(BinOpNode* node);

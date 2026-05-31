@@ -23,9 +23,10 @@ typedef enum ObjType {
   OBJ_MODULE,
   OBJ_ERROR,
   OBJ_RETURN,
-  OBJ_FILE
+  OBJ_FILE,
+  OBJ_BREAK,
+  OBJ_CONTINUE
 } ObjType;
-
 
 typedef struct Object {
   ObjType type;
@@ -130,6 +131,14 @@ typedef struct File {
   char* fmod;
 } File;
 
+typedef struct Break {
+  Object base;
+} Break;
+
+typedef struct Continue {
+  Object base; 
+} Continue;
+
 Number* initInt(long value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
@@ -151,6 +160,8 @@ Function* copyFunction(Function* func);
 NativeFunction* copyNativeFunction(NativeFunction* func);
 ProgramError* initProgramError(char *details);
 Return* initReturn(Object* value);
+Break* initBreak();
+Continue* initContinue();
 
 FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, Error** err);
 

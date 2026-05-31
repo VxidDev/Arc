@@ -65,6 +65,44 @@ void freeTryCatchNode(TryCatchNode* node) {
   free(node);
 }
 
+ContinueNode* initContinueNode(Token tok) {
+  if (tok.type == TOK_EOF) return NULL;
+
+  ContinueNode* node = malloc(sizeof(ContinueNode));
+
+  if (!node) return NULL;
+  
+  node->base.type = NODE_CONTINUE;
+  node->tok = tok;
+
+  return node;
+}
+
+BreakNode* initBreakNode(Token tok) {
+  if (tok.type == TOK_EOF) return NULL;
+
+  BreakNode* node = malloc(sizeof(BreakNode));
+
+  if (!node) return NULL;
+  
+  node->base.type = NODE_BREAK;
+  node->tok = tok;
+
+  return node;
+}
+
+void freeBreakNode(BreakNode* node) {
+  if (!node) return;
+
+  free(node);
+}
+
+void freeContinueNode(ContinueNode* node) {
+  if (!node) return;
+
+  free(node);
+}
+
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount) {
   if (!body) return NULL;
 
@@ -491,6 +529,14 @@ void freeAST(ASTNode *node) {
 
     case NODE_TRYCATCH:
       freeTryCatchNode((TryCatchNode*)node);
+      break;
+
+    case NODE_CONTINUE:
+      freeContinueNode((ContinueNode*)node);
+      break;
+
+    case NODE_BREAK:
+      freeBreakNode((BreakNode*)node);
       break;
   }
 }

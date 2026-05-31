@@ -437,6 +437,22 @@ ASTNode* exprParser(Parser* parser) {
     return NULL;
   }
 
+  if (parser->currentToken.type == TOK_BREAK) {
+    ASTNode* node = (ASTNode*)initBreakNode(parser->currentToken);
+
+    advanceParser(parser); // Skip BREAK
+    
+    return node;
+  }
+
+  if (parser->currentToken.type == TOK_CONTINUE) {
+    ASTNode* node = (ASTNode*)initContinueNode(parser->currentToken);
+
+    advanceParser(parser); // Skip CONTINUE 
+    
+    return node;
+  }
+
   if (parser->currentToken.type == TOK_TRY) {
     Token tryTok = parser->currentToken;
 
