@@ -1,5 +1,40 @@
 # Language Reference
 
+## Literals
+
+Arc supports various literal values for representing data.
+
+### Numbers
+
+Numbers can be integers or floating-point values.
+
+```arc
+VAR integer_num = 123
+VAR float_num = 3.14159
+```
+
+### Booleans
+
+Arc represents boolean truthiness using numerical values: `0` for false and `1` for true. Expressions that evaluate to true or false will result in these integer values.
+
+```arc
+VAR is_active = 1  # Represents TRUE
+VAR is_done = 0    # Represents FALSE
+
+IF 1 THEN # This condition is true
+    print("This will execute")
+END
+```
+
+### Strings
+
+Strings are sequences of characters enclosed in double quotes.
+
+```arc
+VAR greeting = "Hello, Arc!"
+VAR empty_string = ""
+```
+
 ## Variables
 Variables are declared using the `VAR` keyword.
 
@@ -24,16 +59,35 @@ END
 VAR result = add(5, 3)
 ```
 
+## Lists
+
+Lists are ordered collections of items, enclosed in square brackets `[]`.
+
+```arc
+VAR my_list = [1, 2, "hello", 0]
+VAR empty_list = []
+```
+
+You can access elements by their index (starting from 0).
+
+```arc
+VAR first_element = my_list[0] // 1
+VAR last_element = my_list[3]  // 0
+```
+
+List-related built-in functions like `len_of`, `max`, and `min` (math.arc) can be used to query properties or perform operations on lists.
+
 ## Built-in Functions
 
 Arc provides several built-in functions implemented in C for core functionality:
 
 ### I/O
 - `print(value)`: Prints the value to stdout.
-- `get_input()`: Reads input from stdin.
+- `get_input(prompt)`: Prints prompt and reads input from stdin.
 - `open_file(path)`: Opens a file.
 - `close_file(file)`: Closes an open file.
 - `read_file(file)`: Reads content from a file.
+- `write_file(file, string)`: Writes string to a file
 
 ### Type & Properties
 - `len_of(value)`: Returns the length of a string or list.
@@ -72,7 +126,7 @@ Arc provides several built-in functions implemented in C for core functionality:
 ### IF Statements
 ```arc
 IF x == 5 THEN
-    "Five"
+    print("Five")
 ELIF x > 5 THEN
     print("Greater than five")
 ELSE
@@ -83,10 +137,47 @@ END
 ### WHILE Loops
 ```arc
 VAR i = 0
+
 WHILE i < 5 THEN
     VAR i = i + 1
 END
 ```
+
+### Loop Control Statements
+
+Arc provides `BREAK` and `CONTINUE` keywords to alter the flow of loops.
+
+*   **BREAK**: Terminates the innermost `WHILE` loop immediately.
+    ```arc
+    VAR i = 0
+
+    WHILE i < 10 THEN
+        VAR i = i + 1
+
+        IF i == 5 THEN
+            BREAK # Exit the loop when i is 5
+        END
+    END
+
+    print(i) # Output will be 5
+    ```
+
+*   **CONTINUE**: Skips the rest of the current iteration of the innermost `WHILE` loop and proceeds to the next iteration.
+    ```arc
+    VAR i = 0
+    WHILE i < 5 THEN
+        VAR i = i + 1
+        IF i == 3 THEN
+            CONTINUE # Skip printing when i is 3
+        END
+        print(i)
+    END
+    # Output will be:
+    # 1
+    # 2
+    # 4
+    # 5
+    ```
 
 ## Operators
 * Arithmetic: `+`, `-`, `*`, `/`, `^`
@@ -96,4 +187,31 @@ END
 ## Importing Files
 ```arc
 IMPORT "math.arc"
+```
+
+## Error Handling
+
+Arc provides a `TRY...CATCH` mechanism for handling runtime errors gracefully.
+
+```arc
+TRY
+    # Code that might cause an error
+    # For example, a built-in function that can raise RuntimeError
+    RuntimeError("Something went wrong!")
+CATCH e THEN
+    # This block executes if an error occurs in the TRY block
+    # 'e' will contain the error details string
+    print("Caught an error:", e)
+END
+```
+
+The `TRY` block encloses the code that might throw an error. If an error occurs within the `TRY` block, execution immediately jumps to the `CATCH` block. The error object is then bound to the identifier specified after `CATCH` (e.g., `e` in the example), which can then be used within the `THEN` block. If no error occurs, the `CATCH...THEN` block is skipped.
+
+## Comments
+
+Comments are used to add explanations or prevent execution of code. They are denoted by a hash symbol `#` and extend to the end of the line.
+
+```arc
+# This is a single-line comment
+VAR x = 10 # This is an end-of-line comment
 ```

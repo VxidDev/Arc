@@ -10,6 +10,22 @@ For detailed information, please refer to the documentation in the `docs/` folde
 - [Language Reference](docs/syntax.md)
 - [Architecture](docs/architecture.md)
 
+## Features
+
+Arc is a C-based programming language with a focus on a clean frontend pipeline and a simple interpreter. Key implemented features include:
+
+*   **Variables and Assignment:** Declare and update variables using the `VAR` keyword.
+*   **Functions:** Define custom functions with parameters and return values using the `FN` and `RETURN` keywords.
+*   **Native Functions:** Support for built-in functions implemented in C for core functionalities like I/O, type checking, and error handling.
+*   **Control Flow:**
+    *   **Conditional Statements:** `IF`, `THEN`, `ELIF`, `ELSE` for branching logic.
+    *   **Loops:** `WHILE` loops for repetitive execution.
+           * **Control Flow Statements**: `BREAK` and `CONTINUE` for loop control.
+*   **Operators:** Full support for arithmetic (`+`, `-`, `*`, `/`, `^`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), and logical (`AND`, `OR`) operations.
+*   **Data Types:** Supports numbers, strings, and booleans.
+*   **Error Handling:** Robust error reporting with position tracking.
+*   **Read-Eval-Print Loop (REPL):** An interactive environment for executing Arc code directly.
+
 ## Example
 
 ### File Execution
@@ -38,24 +54,9 @@ Five
 
 ## Roadmap
 
-- [x] Lexer
-- [x] Token system
-- [x] REPL
-- [x] Error reporting with position tracking
-- [x] Parser (AST generation)
-- [x] Expression evaluation
-- [x] Variables and identifiers
-- [x] String literals
-- [x] Comparison and Logical operators
-- [x] `IF`, `THEN`, `ELIF`, `ELSE` statements
-- [x] `WHILE` loop
-- [ ] Logical `NOT` operator
-- [ ] Scoped environments
-- [x] Functions
-- [x] Return statement
-- [x] Native Functions support
-- [x] Basic runtime system
-- [ ] Bytecode virtual machine (long-term goal)
+*   Logical `NOT` operator
+*   Scoped environments
+*   Bytecode virtual machine (long-term goal)
 
 ## License
 
