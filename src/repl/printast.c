@@ -58,6 +58,21 @@ void printAST(ASTNode* node) {
       break;
     }
 
+    case NODE_INDEXASSIGN: {
+      IndexAssignNode* ia = (IndexAssignNode*)node;
+
+      printf("%s[%s[", COLOR(ANSI_BRIGHT_MAGENTA_FG), ia->targetIdent.val.s);
+      
+      printAST(ia->index);
+
+      printf("] = ");
+
+      printAST(ia->value);
+
+      printf("]%s", COLOR(ANSI_RESET));
+      break; 
+    }
+
     case NODE_VARACCESS: {
       VarAccessNode* va = (VarAccessNode*)node;
       printf("%s[VAR-ACCESS:%s]%s", COLOR(ANSI_BRIGHT_MAGENTA_FG), va->token.val.s, COLOR(ANSI_RESET));

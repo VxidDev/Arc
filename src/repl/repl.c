@@ -8,6 +8,7 @@
 #include "../../include/builtIns/math.h"
 #include "../../include/builtIns/properties.h"
 #include "../../include/builtIns/string.h"
+#include "../../include/builtIns/lists.h"
 
 void registerBuiltins(SymbolTable* table) {
   // I/O
@@ -74,4 +75,11 @@ void registerBuiltins(SymbolTable* table) {
   setTable(table, "split_string", (Object*)split_stringFn);
 
   freeObject((Object*)split_stringFn);
+
+  // List 
+  
+  NativeFunction* append_listFn = initNativeFunction("append_list", builtIn_append_list, 2, false);
+  setTable(table, "append_list", (Object*)append_listFn);
+
+  freeObject((Object*)append_listFn);
 }

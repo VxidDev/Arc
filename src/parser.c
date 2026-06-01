@@ -5,6 +5,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+ParserCheckpoint saveParser(Parser* parser) {
+  return (ParserCheckpoint){
+    .tokenIndex = parser->tokenIndex,
+    .currentToken = parser->currentToken
+  };
+}
+
+void rewindParser(Parser* parser, ParserCheckpoint checkpoint) {
+  parser->tokenIndex = checkpoint.tokenIndex;
+  parser->currentToken = checkpoint.currentToken;
+}
+
 Parser* initParser(Token* tokens, const unsigned long tokenAmount, Error **error) {
   if (!tokens || !error) return NULL;
 
@@ -1030,12 +1042,68 @@ ASTNode* exprParser(Parser* parser) {
 
     ASTNode* expr = andOrParser(parser);
 
-    if (!expr) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after '='");
+    if (!expr) { // Error is already set 
       return NULL;
     }
 
     return (ASTNode*)initVarAssignNode(varName, expr);
+  }
+
+  if (parser->currentToken.type == TOK_IDENTIFIER) {
+    ParserCheckpoint checkpoint = saveParser(parser);
+
+    Token identTok = parser->currentToken;
+    advanceParser(parser); // skip identifier 
+
+    if (parser->currentToken.type == TOK_EQ) {
+      Token eq = parser->currentToken;
+
+      advanceParser(parser); // skip '='
+      
+      ASTNode* expr = andOrParser(parser);
+
+      if (!expr) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(eq.start, eq.end, eq.start.filename, "Expected expression after '='.");
+        return NULL;
+      }
+
+      return (ASTNode*)initVarAssignNode(identTok.val.s, expr);
+    } 
+
+    if (parser->currentToken.type == TOK_LBRACK) {
+      Token lbrack = parser->currentToken;
+      advanceParser(parser); // skip '[
+
+      ASTNode* index = andOrParser(parser);
+
+      if (!index) return NULL;
+
+      if (parser->currentToken.type != TOK_RBRACK) {
+        if (*parser->error == NULL) *parser->error = initSyntaxError(lbrack.start, lbrack.end, lbrack.start.filename, "Expected ']'.");
+        return NULL;
+      }
+
+      advanceParser(parser); // skip ']'
+      
+      if (parser->currentToken.type == TOK_EQ) {
+        Token eq = parser->currentToken;
+          
+        advanceParser(parser); // skip '='
+        
+        ASTNode* value = andOrParser(parser);
+
+        if (!value) { 
+          freeAST(index); 
+          return NULL; 
+        } 
+
+        return (ASTNode*)initIndexAssignNode(identTok, index, value, identTok.start, eq.end);
+      }
+
+      rewindParser(parser, checkpoint);
+    } else {
+      rewindParser(parser, checkpoint);
+    }
   }
 
   ASTNode* left = termParser(parser);

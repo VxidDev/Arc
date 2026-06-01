@@ -810,6 +810,129 @@ Object* visitContinueNode(ASTNode* node) {
   return (Object*)initContinue();
 }
 
+Object* visitIndexAssignNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
+  if (!node) return NULL;
+
+  IndexAssignNode* ia = (IndexAssignNode*)node;
+  Token ident = ia->targetIdent;
+
+  Object* obj = (Object*)getTable(variables, ident.val.s);
+
+  if (!obj) {
+    int len = snprintf(NULL, 0, "Undefined variable \"%s\"", ident.val.s);
+    char *buffer = malloc(len + 1);
+
+    snprintf(buffer, len + 1, "Undefined variable \"%s\"", ident.val.s); 
+      
+    if (*err == NULL) *err = initNameError(ident.start, ident.end, ident.start.filename, buffer);
+    free(buffer);
+
+    return NULL;
+  }
+
+  if (obj->type != OBJ_LIST && obj->type != OBJ_STRING) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Object of type '%s' is not indexable.", typeofobj(obj));
+
+    if (*err == NULL) *err = initIndexError(ident.start, ident.end, ident.start.filename, buf);
+    return NULL;
+  }
+
+  Object* val = visitNode(ia->value, filename, err, variables);
+
+  if (!val) { // Err is already set 
+    return NULL;
+  }
+
+  Object* index = visitNode(ia->index, filename, err, variables);
+
+  if (!index) { // Err is already set 
+    freeObject(val);
+    return NULL;
+  }
+
+  if (index->type != OBJ_NUMBER_INT) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Expected object of type 'int', received '%s'.", typeofobj(index));
+
+    if (*err == NULL) *err = initTypeError(ident.start, ident.end, ident.start.filename, buf);
+
+    freeObject(val);
+    freeObject(index);
+
+    return NULL;
+  }
+
+  Number* idx = (Number*)index;
+
+  if (idx->as.i < 0) {
+    if (*err == NULL) *err = initValueError(ident.start, ident.end, ident.start.filename, "Index out of range.");
+
+    freeObject(val);
+    freeObject(index);
+
+    return NULL;
+  }
+  
+  switch (obj->type) {
+    case OBJ_STRING: {
+      if (val->type != OBJ_STRING) {
+        char buf[256];
+
+        snprintf(buf, sizeof(buf), "Expected object of type 'string', received '%s'.", typeofobj(val));
+
+        if (*err == NULL) *err = initValueError(ident.start, ident.end, ident.start.filename, buf);
+        
+        freeObject(val);
+        freeObject(index);
+
+        return NULL;
+      }
+
+      String* valStr = (String*)val;
+
+      if (strlen(valStr->value) != 1) {
+        if (*err == NULL) *err = initValueError(ident.start, ident.end, ident.start.filename, "Expected single-character string.");
+
+        freeObject(val);
+        freeObject(index);
+
+        return NULL;
+      }
+
+      String* str = (String*)obj;
+      uint64_t size = str->len;
+
+      if ((uint64_t)idx->as.i > size) {
+        if (*err == NULL) *err = initValueError(ident.start, ident.end, ident.start.filename, "Index out of range.");
+
+        freeObject(val);
+        freeObject(index);
+
+        return NULL;
+      }
+
+      str->value[idx->as.i] = valStr->value[0];
+
+      break;
+    }
+
+    default: { // technically unreachable, but here to suppress warning
+      freeObject(val); 
+      freeObject(index);
+
+      return NULL;
+    }
+  }
+
+  freeObject(val);
+  freeObject(index);
+  
+  return (Object*)initInt(1);
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
   switch (node->type) {
     case NODE_NUMBER: return visitNumberNode(node, filename, err);
@@ -830,6 +953,7 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_TRYCATCH: return visitTryCatchNode(node, filename, err, variables);
     case NODE_BREAK: return visitBreakNode(node);
     case NODE_CONTINUE: return visitContinueNode(node);
+    case NODE_INDEXASSIGN: return visitIndexAssignNode(node, filename, err, variables);
     default: return NULL;
   }
 }

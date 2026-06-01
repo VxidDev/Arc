@@ -17,6 +17,14 @@ typedef struct Parser {
   Error **error;
 } Parser;
 
+typedef struct ParserCheckpoint {
+  int tokenIndex;
+  Token currentToken;
+} ParserCheckpoint;
+
+ParserCheckpoint saveParser(Parser* parser);
+void rewindParser(Parser* parser, ParserCheckpoint checkpoint);
+
 Parser* initParser(Token *tokens, const unsigned long tokenAmount, Error **error);
 Token advanceParser(Parser* parser);
 

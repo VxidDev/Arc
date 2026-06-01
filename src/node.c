@@ -186,6 +186,23 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
   return node;
 }
 
+IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode* value, Position start, Position end) {
+  if (!index || !value) return NULL;
+
+  IndexAssignNode* node = malloc(sizeof(IndexAssignNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_INDEXASSIGN;
+  node->targetIdent = targetIdent;
+  node->index = index;
+  node->value = value;
+  node->start = start;
+  node->end = end;
+
+  return node;
+}
+
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end) {
   if (!condition || !body) return NULL;
 
@@ -377,6 +394,15 @@ void freeIndexNode(IndexNode* node) {
   free(node);
 }
 
+void freeIndexAssignNode(IndexAssignNode* node) {
+  if (!node) return;
+
+  freeAST(node->index);
+  freeAST(node->value);
+
+  free(node);
+}
+
 void freeWhileNode(WhileNode* node) {
   if (!node) return;
 
@@ -537,6 +563,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_BREAK:
       freeBreakNode((BreakNode*)node);
+      break;
+
+    case NODE_INDEXASSIGN:
+      freeIndexAssignNode((IndexAssignNode*)node);
       break;
   }
 }

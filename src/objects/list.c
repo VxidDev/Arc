@@ -11,7 +11,7 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
 
   listobj->base.type = OBJ_LIST;
   listobj->size = size;
-  listobj->capacity = capacity;
+  listobj->capacity = capacity > 0 ? capacity : 1;
   
   listobj->objects = malloc(sizeof(Object*) * listobj->capacity);
 
