@@ -1099,7 +1099,8 @@ ASTNode* exprParser(Parser* parser) {
 
         return (ASTNode*)initIndexAssignNode(identTok, index, value, identTok.start, eq.end);
       }
-
+      
+      freeAST(index);
       rewindParser(parser, checkpoint);
     } else {
       rewindParser(parser, checkpoint);

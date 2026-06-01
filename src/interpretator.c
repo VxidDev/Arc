@@ -915,6 +915,26 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, Error** err, SymbolT
       }
 
       str->value[idx->as.i] = valStr->value[0];
+      freeObject(val);
+
+      break;
+    }
+
+    case OBJ_LIST: {
+      List* list = (List*)obj;
+      uint64_t size = list->size;
+
+      if ((uint64_t)idx->as.i > size) {
+        if (*err == NULL) *err = initValueError(ident.start, ident.end, ident.start.filename, "Index out of range.");
+
+        freeObject(val);
+        freeObject(index);
+
+        return NULL;
+      }
+      
+      freeObject(list->objects[idx->as.i]);
+      list->objects[idx->as.i] = val;
 
       break;
     }
@@ -927,7 +947,6 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, Error** err, SymbolT
     }
   }
 
-  freeObject(val);
   freeObject(index);
   
   return (Object*)initInt(1);
