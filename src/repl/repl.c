@@ -82,4 +82,9 @@ void registerBuiltins(SymbolTable* table) {
   setTable(table, "append_list", (Object*)append_listFn);
 
   freeObject((Object*)append_listFn);
+
+  NativeFunction* rangeFn = initNativeFunction("range", builtIn_range, 2, false);
+  setTable(table, "range", (Object*)rangeFn);
+
+  freeObject((Object*)rangeFn);
 }

@@ -115,6 +115,7 @@ void freeObject(Object* obj) {
       if (module->parser) free(module->parser);
       
       if (module->lexer) {
+        free(module->fileContent);
         free(module->lexer->filename);
         freeLexer(module->lexer);
       }

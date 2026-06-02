@@ -369,13 +369,13 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
   Number* cond = (Number*)condition;
 
   if (cond->as.i != 0) {
-    free(cond);
+    freeObject(condition);
     Object* obj = visitNode(node->thenExpr, filename, err, variables);
 
     return obj;
   }
 
-  free(cond);
+  freeObject(condition);
 
   for (size_t i = 0; i < node->elifCount; i++) {
     Object* elifVal = visitNode(node->elifConds[i], filename, err, variables);
@@ -384,13 +384,13 @@ Object* visitIfNode(ASTNode* n, char *filename, Error **err, SymbolTable* variab
     if (elifVal->type != OBJ_NUMBER_INT) return NULL;
 
     if (((Number*)elifVal)->as.i != 0) {
-      free(elifVal);
+      freeObject(elifVal);
       Object* obj = visitNode(node->elifExprs[i], filename, err, variables);
 
       return obj;
     }
 
-    free(elifVal);
+    freeObject(elifVal);
   }
 
   // Fall through to ELSE if present
@@ -769,7 +769,6 @@ Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variables) {
   }
 
   setTable(variables, lexer->filename, (Object*)module);
-  free(fileContent);
 
   return result;
 }
@@ -997,12 +996,12 @@ Object* visitForNode(ASTNode* node, char *filename, Error **err, SymbolTable* va
     return NULL;
   }
 
-  SymbolTable* env = createTable(1024, variables);
+  // SymbolTable* env = createTable(1024, variables);
 
-  if (!env) {
-    freeObject(iterable);
-    return NULL;
-  }
+  // if (!env) {
+  //  freeObject(iterable);
+  //  return NULL;
+  // }
 
   
   size_t len = iterable->type == OBJ_STRING ? ((String*)iterable)->len : ((List*)iterable)->size;
@@ -1018,10 +1017,10 @@ Object* visitForNode(ASTNode* node, char *filename, Error **err, SymbolTable* va
       obj = copyObject(((List*)iterable)->objects[i]);
     }
 
-    setTable(env, fornode->ident.val.s, obj);
+    setTable(variables, fornode->ident.val.s, obj);
     freeObject(obj);
 
-    Object* tmp = visitNode(fornode->body, filename, err, env);
+    Object* tmp = visitNode(fornode->body, filename, err, variables);
     if (!tmp) return NULL;
 
     if (tmp->type == OBJ_BREAK) {
@@ -1036,7 +1035,7 @@ Object* visitForNode(ASTNode* node, char *filename, Error **err, SymbolTable* va
 
     if (tmp && tmp->type == OBJ_RETURN) {
       freeObject(iterable);
-      freeTable(env);
+      // freeTable(env);
       return tmp;
     }
 
@@ -1044,7 +1043,7 @@ Object* visitForNode(ASTNode* node, char *filename, Error **err, SymbolTable* va
   }
 
   freeObject(iterable);
-  freeTable(env);
+  // freeTable(env);
 
   return (Object*)initInt(1);
 }
