@@ -216,7 +216,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
   freeObject((Object*)src);
 
   if (output != ERR_NONE) {
-    free(dest);
+    freeObject(dest);
     return NULL;
   }
 
