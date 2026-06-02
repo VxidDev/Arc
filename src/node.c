@@ -18,6 +18,32 @@ NumberNode* initNumberNode(Token token) {
   return node;
 }
 
+ForNode* initForNode(Token forTok, Token identifier, ASTNode* iterable, ASTNode *body) {
+  if (!body || !iterable) return NULL;
+
+  ForNode* node = malloc(sizeof(ForNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_FOR;
+  
+  node->forTok = forTok;
+  node->ident = identifier;
+  node->iterable = iterable;
+  node->body = body;
+
+  return node;
+}
+
+void freeForNode(ForNode* node) {
+  if (!node) return;
+
+  freeAST(node->iterable);
+  freeAST(node->body);
+
+  free(node);
+}
+
 FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t argCount, Position start, Position end) {
   if (!callee || !args) return NULL;
 
@@ -57,8 +83,6 @@ TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier
 }
 
 void freeTryCatchNode(TryCatchNode* node) {
-  if (!node) return;
-
   freeAST(node->body);
   freeAST(node->errHandler);
 
@@ -92,14 +116,10 @@ BreakNode* initBreakNode(Token tok) {
 }
 
 void freeBreakNode(BreakNode* node) {
-  if (!node) return;
-
   free(node);
 }
 
 void freeContinueNode(ContinueNode* node) {
-  if (!node) return;
-
   free(node);
 }
 
@@ -283,32 +303,29 @@ VarAccessNode* initVarAccessNode(Token token) {
 }
 
 void freeVarAssignNode(VarAssignNode* node) {
-  if (!node) return;
-
-  if (node->identifier) free(node->identifier);
-  if (node->value) freeAST(node->value);
+  free(node->identifier);
+  freeAST(node->value);
 
   free(node);
 }
 
 void freeFunctionNode(FunctionNode* node) {
-  if (!node) return;
+  free(node->name);
 
-  if (node->name) free(node->name);
   if (node->params) {
     for (size_t i = 0; i < node->paramCount; i++) {
       free(node->params[i]);
     }
+
     free(node->params);
   }
-  if (node->body) freeAST(node->body);
+
+  freeAST(node->body);
 
   free(node);
 }
 
 void freeFunctionCallNode(FunctionCallNode* node) {
-  if (!node) return;
-
   if (node->args) {
     for (size_t i = 0; i < node->argCount; i++) {
       freeAST(node->args[i]);
@@ -317,7 +334,7 @@ void freeFunctionCallNode(FunctionCallNode* node) {
     free(node->args);
   }
 
-  if (node->callee) freeAST(node->callee);
+  freeAST(node->callee);
   free(node);
 }
 
@@ -335,8 +352,6 @@ ImportNode* initImportNode(Token filePath) {
 } 
 
 void freeImportNode(ImportNode* node) {
-  if (!node) return;
-
   free(node);
 }
 
@@ -355,9 +370,7 @@ ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr) {
   return node;
 }
 
-void freeReturnNode(ReturnNode* node) {
-  if (!node) return;
-  
+void freeReturnNode(ReturnNode* node) { 
   freeAST(node->expr);
   free(node);
 }
@@ -380,14 +393,10 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
 }
 
 void freeVarAccessNode(VarAccessNode* node) {
-  if (!node) return;
-
   free(node);
 }
 
 void freeIndexNode(IndexNode* node) {
-  if (!node) return;
-
   freeAST(node->target);
   freeAST(node->index);
 
@@ -395,8 +404,6 @@ void freeIndexNode(IndexNode* node) {
 }
 
 void freeIndexAssignNode(IndexAssignNode* node) {
-  if (!node) return;
-
   freeAST(node->index);
   freeAST(node->value);
 
@@ -404,8 +411,6 @@ void freeIndexAssignNode(IndexAssignNode* node) {
 }
 
 void freeWhileNode(WhileNode* node) {
-  if (!node) return;
-
   freeAST(node->condition);
   freeAST(node->body);
 
@@ -413,8 +418,6 @@ void freeWhileNode(WhileNode* node) {
 }
 
 void freeListNode(ListNode* node) {
-  if (!node) return;
-
   if (node->objects) {
     for (uint64_t i = 0; i < node->size; i++) {
       freeAST(node->objects[i]);
@@ -427,21 +430,15 @@ void freeListNode(ListNode* node) {
 }
 
 void freeStringNode(StringNode* node) {
-  if (!node) return;
-
   // if (node->token->val.s) free(node->token->val.s);
   free(node);
 }
 
 void freeNumberNode(NumberNode *node) {
-    if (!node) return;
-
     free(node);
 }
 
 void freeBinOpNode(BinOpNode *node) {
-    if (!node) return;
-
     freeAST(node->leftNode);
     freeAST(node->rightNode);
 
@@ -449,15 +446,11 @@ void freeBinOpNode(BinOpNode *node) {
 }
 
 void freeUnaryOpNode(UnaryOpNode *node) {
-    if (!node) return;
-
     freeAST(node->node);
     free(node);
 }
 
 void freeProgramNode(ProgramNode *node) {
-  if (!node) return;
-
   if (node->statements) {
     for (size_t i = 0; i < node->count; i++) {
       if (node->statements[i]) {
@@ -472,8 +465,6 @@ void freeProgramNode(ProgramNode *node) {
 }
 
 void freeIfNode(IfNode* node) {
-  if (!node) return;
-
   freeAST(node->condition);
   freeAST(node->thenExpr);
 
@@ -567,6 +558,10 @@ void freeAST(ASTNode *node) {
 
     case NODE_INDEXASSIGN:
       freeIndexAssignNode((IndexAssignNode*)node);
+      break;
+
+    case NODE_FOR:
+      freeForNode((ForNode*)node);
       break;
   }
 }

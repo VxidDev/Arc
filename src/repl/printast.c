@@ -224,6 +224,17 @@ void printAST(ASTNode* node) {
       printf("%s%sCONTINUE%s", COLOR(ANSI_ITALIC), COLOR(ANSI_MAGENTA_FG), COLOR(ANSI_RESET));
       break;
     }
+
+    case NODE_FOR: {
+      ForNode* forNode = (ForNode*)node;
+      printf("%sFOR:%s%s%s:IN:", COLOR(ANSI_BRIGHT_GREEN_FG), COLOR(ANSI_CYAN_FG), forNode->ident.val.s, COLOR(ANSI_BRIGHT_GREEN_FG));
+
+      printAST(forNode->iterable);
+      printf("%sTHEN:", COLOR(ANSI_CYAN_FG));
+      printAST(forNode->body);
+
+      break;
+    }
   }
 }
 

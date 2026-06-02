@@ -77,6 +77,9 @@ char* tokToString(const TokType type) {
 
     case TOK_BREAK: return "BREAK";
     case TOK_CONTINUE: return "CONTINUE";
+    
+    case TOK_FOR: return "FOR";
+    case TOK_IN: return "IN";
 
     default: return "UNKNOWN";
   }

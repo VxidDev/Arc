@@ -435,8 +435,7 @@ ASTNode* termParser(Parser* parser) {
 ASTNode* exprParser(Parser* parser) {
   if (!parser) return NULL;
 
-  if (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_RPAREN)) {
-
+  if (parser->currentToken.type == TOK_RPAREN) {
     if (*parser->error == NULL) {
       *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Unexpected ')'");
     }
@@ -447,6 +446,71 @@ ASTNode* exprParser(Parser* parser) {
   if (parser->currentToken.type == TOK_EOF) {
     // if (*parser->error == NULL); Will be implemented after addition of EOF token <- I'm too lazy to add that for now :[
     return NULL;
+  }
+
+  if (parser->currentToken.type == TOK_FOR) {
+    Token forTok = parser->currentToken;
+
+    advanceParser(parser);
+
+    if (parser->currentToken.type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(forTok.start, forTok.end, forTok.start.filename, "Expected identifier after keyword 'FOR'.");
+      return NULL;
+    }
+
+    Token identTok = parser->currentToken;
+
+    advanceParser(parser);
+
+    if (parser->currentToken.type != TOK_IN) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(identTok.start, identTok.end, identTok.start.filename, "Expected 'IN' after identifier.");
+      return NULL;
+    }
+
+    Token inTok = parser->currentToken;
+
+    advanceParser(parser);
+
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(inTok.start, inTok.end, inTok.start.filename, "Expected expression after 'IN'.");
+    }
+
+    ASTNode* iterable = andOrParser(parser);
+    if (!iterable) return NULL;
+
+    if (parser->currentToken.type != TOK_THEN) {
+        freeAST(iterable);
+        if (*parser->error == NULL) *parser->error = initSyntaxError(inTok.start, inTok.end, inTok.start.filename, "Expected 'THEN' after iterable.");
+        return NULL;
+    }
+
+    Token thenTok = parser->currentToken;
+
+    advanceParser(parser); // Skip THEN 
+    
+    if (parser->currentToken.type == TOK_EOF) {
+      freeAST(iterable);
+
+      if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected expression after 'THEN'.");
+      return NULL;
+    }
+
+    ASTNode* body = blockParser(parser);
+
+    if (!body) { 
+      freeAST(iterable); 
+      return NULL;
+    }
+
+    if (parser->currentToken.type != TOK_END) {
+        freeAST(iterable); freeAST(body);
+        if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected 'END' after body.");
+        return NULL;
+    }
+
+    advanceParser(parser); // skip END
+
+    return (ASTNode*)initForNode(forTok, identTok, iterable, body);
   }
 
   if (parser->currentToken.type == TOK_BREAK) {

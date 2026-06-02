@@ -23,7 +23,8 @@ typedef enum {
   NODE_TRYCATCH,
   NODE_BREAK,
   NODE_CONTINUE,
-  NODE_INDEXASSIGN
+  NODE_INDEXASSIGN,
+  NODE_FOR
 } NodeType;
 
 typedef struct ASTNode {
@@ -159,6 +160,15 @@ typedef struct IndexAssignNode {
   Position start, end;
 } IndexAssignNode;
 
+typedef struct ForNode {
+  ASTNode base;
+
+  Token forTok;
+  Token ident;
+  ASTNode* iterable;
+  ASTNode* body;
+} ForNode;
+
 NumberNode* initNumberNode(Token token);
 StringNode* initStringNode(Token token);
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode);
@@ -178,6 +188,7 @@ BreakNode* initBreakNode(Token tok);
 ContinueNode* initContinueNode(Token tok);
 IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode* value, Position start, Position end);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
+ForNode* initForNode(Token forTok, Token ident, ASTNode* iterable, ASTNode* body);
 
 void freeBinOpNode(BinOpNode* node);
 void freeNumberNode(NumberNode* node);

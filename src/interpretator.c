@@ -977,7 +977,81 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, Error** err, SymbolT
   return (Object*)initInt(1);
 }
 
+Object* visitForNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
+  ForNode* fornode = (ForNode*)node;
+
+  Object* iterable = visitNode(fornode->iterable, filename, err, variables);
+
+  if (!iterable) { // Error is already set 
+    return NULL;
+  }
+
+  if (iterable->type != OBJ_STRING && iterable->type != OBJ_LIST) {
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "Object of type '%s' is not iterable.", typeofobj(iterable));
+
+    if (!*err) *err = initTypeError(fornode->ident.start, fornode->ident.end, fornode->ident.start.filename, buf);
+    freeObject(iterable);
+
+    return NULL;
+  }
+
+  SymbolTable* env = createTable(1024, variables);
+
+  if (!env) {
+    freeObject(iterable);
+    return NULL;
+  }
+
+  
+  size_t len = iterable->type == OBJ_STRING ? ((String*)iterable)->len : ((List*)iterable)->size;
+
+  for (size_t i = 0; i < len; i++) {
+    Object* obj;
+
+    if (iterable->type == OBJ_STRING) {
+      char buf[] = {((String*)iterable)->value[i], '\0'};
+
+      obj = (Object*)initString(buf, 1);
+    } else {
+      obj = copyObject(((List*)iterable)->objects[i]);
+    }
+
+    setTable(env, fornode->ident.val.s, obj);
+    freeObject(obj);
+
+    Object* tmp = visitNode(fornode->body, filename, err, env);
+    if (!tmp) return NULL;
+
+    if (tmp->type == OBJ_BREAK) {
+      freeObject(tmp);
+      break;
+    }
+
+    if (tmp->type == OBJ_CONTINUE) {
+      freeObject(tmp);
+      continue;
+    }
+
+    if (tmp && tmp->type == OBJ_RETURN) {
+      freeObject(iterable);
+      freeTable(env);
+      return tmp;
+    }
+
+    freeObject(tmp);
+  }
+
+  freeObject(iterable);
+  freeTable(env);
+
+  return (Object*)initInt(1);
+}
+
 Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* variables) {
+  if (!node || !filename || !err || !variables) return NULL;
+
   switch (node->type) {
     case NODE_NUMBER: return visitNumberNode(node, filename, err);
     case NODE_BINOP: return visitBinOpNode(node, filename, err, variables);
@@ -998,6 +1072,8 @@ Object* visitNode(ASTNode* node, char *filename, Error** err, SymbolTable* varia
     case NODE_BREAK: return visitBreakNode(node);
     case NODE_CONTINUE: return visitContinueNode(node);
     case NODE_INDEXASSIGN: return visitIndexAssignNode(node, filename, err, variables);
+    case NODE_FOR: return visitForNode(node, filename, err, variables);
+
     default: return NULL;
   }
 }
