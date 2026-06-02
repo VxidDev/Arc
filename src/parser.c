@@ -63,7 +63,7 @@ ASTNode* atomParser(Parser* parser) {
 
   Token token = parser->currentToken;
 
-  if ((token.type == TOK_PLUS) || (token.type == TOK_MINUS)) {
+  if ((token.type == TOK_PLUS) || (token.type == TOK_MINUS) || (token.type == TOK_NOT)) {
     Token tok = token; // safe copy
 
     advanceParser(parser);

@@ -4,6 +4,21 @@
 #include <math.h>
 #include <stdbool.h>
 
+static Number _intCache[256];
+static bool _intCacheInit = false;
+
+static void _ensureIntCache() {
+  if (_intCacheInit) return;
+
+  for (int i = 0; i < 256; i++) {
+    _intCache[i].base.type = OBJ_NUMBER_INT;
+    _intCache[i].as.i = i - 128;
+    _intCache[i].isStatic = true;
+  }
+
+  _intCacheInit = true;
+}
+
 static inline double toDouble(const Number* n) {
   return (n->base.type == OBJ_NUMBER_FLOAT)
     ? n->as.f
@@ -28,12 +43,18 @@ static inline bool isValid(const Object* a, const Object* b) {
 }
 
 Number *initInt(long value) {
+  _ensureIntCache();
+
+  if (value >= -128 && value < 128)
+    return &_intCache[value + 128];
+
   Number* number = malloc(sizeof(Number));
 
   if (!number) return NULL;
 
   number->as.i = value;
   number->base.type = OBJ_NUMBER_INT;
+  number->isStatic = false;
 
   return number;
 }
@@ -45,6 +66,7 @@ Number *initFloat(double value) {
 
   number->as.f = value;
   number->base.type = OBJ_NUMBER_FLOAT;
+  number->isStatic = false;
 
   return number;
 }
@@ -52,9 +74,12 @@ Number *initFloat(double value) {
 Number *copyNumber(Number *num) {
   if (!num) return NULL;
 
-  if (num->base.type == OBJ_NUMBER_INT) return initInt(num->as.i);
+  Number* n = malloc(sizeof(Number));
+  if (!n) return NULL;
 
-  return initFloat(num->as.f);
+  *n = *num;
+  n->isStatic = false;
+  return n;
 }
 
 ErrType addNumber(Number* dest, const Number* src) {

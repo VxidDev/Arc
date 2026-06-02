@@ -5,7 +5,7 @@ test.arc
 test.py
 calc.arc
 test_*.arc 
-
+*.py
 # Prerequisites
 *.d
 

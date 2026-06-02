@@ -45,6 +45,8 @@ extern const NativeModuleEntry* stdlibModules[];
 typedef struct Number {
   Object base;
 
+  bool isStatic;
+
   union {
     long i;
     double f;

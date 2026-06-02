@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
 
   Number* argumentCount = initInt(argVectSize);
   setTable(variables, "argc", (Object*)argumentCount);
-  free(argumentCount);
+  freeObject((Object*)argumentCount);
 
   List* list = initList((Object**)argVect, argVectSize, argVectCap);
   

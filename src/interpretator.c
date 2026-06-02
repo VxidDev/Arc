@@ -168,6 +168,15 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
     return NULL;
   }
 
+  if (dest->isStatic) {
+    dest = copyNumber(dest);
+
+    if (!dest) {
+        freeObject(srcObj);
+        return NULL;
+    }
+  }
+
   ErrType output;
 
   switch (opType) {
@@ -204,7 +213,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
       break;
   }
 
-  free(src);
+  freeObject((Object*)src);
 
   if (output != ERR_NONE) {
     free(dest);
@@ -217,15 +226,13 @@ Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* 
 Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable* variables) {
   UnaryOpNode* unaryOper = (UnaryOpNode*)node;
 
-  char op;
+  char* op;
 
   switch (unaryOper->operTok.type) {
-    case TOK_PLUS: op = '+'; break;
-    case TOK_MINUS: op = '-'; break;
-    case TOK_MUL: op = '*'; break;
-    case TOK_DIV: op = '/'; break;
-    case TOK_POW: op = '^'; break;
-    default: op = '?'; break;
+    case TOK_PLUS: op = "+"; break;
+    case TOK_MINUS: op = "-"; break;
+    case TOK_NOT: op = "NOT"; break;
+    default: op = "?"; break;
   }
 
   Object* numberObj = (Object*)visitNode(unaryOper->node, filename, err, variables);
@@ -240,26 +247,44 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, SymbolTable
   if (numberObj->type != OBJ_NUMBER_INT && numberObj->type != OBJ_NUMBER_FLOAT) {
     char buffer[256];
 
-    snprintf(buffer, sizeof(buffer), "Can't apply unary operation '%c' to %s", op, type);
+    snprintf(buffer, sizeof(buffer), "Can't apply unary operation '%s' to %s", op, type);
 
-    free(numberObj);
+    freeObject(numberObj);
 
     if (!*err) *err = initTypeError(unaryOper->operTok.start, unaryOper->operTok.end, filename, buffer);
     return NULL;
   }
 
-  if (op == '-') {
-    if (numberObj->type == OBJ_NUMBER_INT) {
-      ((Number*)numberObj)->as.i *= -1;
+  Number* num = (Number*)numberObj;
+
+  switch (op[0]) {
+    case '-': {
+      if (numberObj->type == OBJ_NUMBER_INT) {
+        num->as.i *= -1;
+        return numberObj;
+      }
+
+      num->as.f *= -1.0;
       return numberObj;
     }
 
-    ((Number*)numberObj)->as.f *= -1.0;
-    return numberObj;
-  } else {
-    if (!*err) *err = initValueError(unaryOper->operTok.start, unaryOper->operTok.end, filename, "Unknown unary operator");
-    free(numberObj);
-    return NULL;
+    case '+': {
+      return numberObj;
+    }
+
+    case 'N': {
+      if (numberObj->type == OBJ_NUMBER_INT) {
+        num->as.i = !num->as.i;
+        return numberObj;
+      }
+
+      num->as.f = !num->as.f;
+      return numberObj;
+    }
+
+    default: 
+      if (!*err) *err = initSyntaxError(unaryOper->operTok.start, unaryOper->operTok.end, filename, "Unknown unary operator.");
+      return NULL;
   }
 
   return NULL;

@@ -48,6 +48,10 @@ void freeObject(Object* obj) {
 
   switch (obj->type) {
     case OBJ_NUMBER_INT:
+      Number* n = (Number*)obj;
+
+      if (n->isStatic) return;
+
       free(obj); break;
     
     case OBJ_NUMBER_FLOAT:
