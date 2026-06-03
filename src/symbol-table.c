@@ -31,7 +31,7 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   return table;
 }
 
-void setTable(SymbolTable *table, const char *name, Object *value) {
+void setTable(SymbolTable *table, const char *name, Object *value, bool copyObj) {
   unsigned long index = hash(name) % table->capacity;
 
   Symbol *sym = table->buckets[index];
@@ -39,7 +39,7 @@ void setTable(SymbolTable *table, const char *name, Object *value) {
   while (sym) {
     if (strcmp(sym->name, name) == 0) {
       freeObject(sym->value);
-      sym->value = copyObject(value);
+      sym->value = copyObj ? copyObject(value) : value;
       return;
     }
 
@@ -56,14 +56,14 @@ void setTable(SymbolTable *table, const char *name, Object *value) {
     return;
   }
   
-  Object *copy = copyObject(value);
+  Object *copy = copyObj ? copyObject(value) : value;
   newSym->value = copy;
 
   newSym->next = table->buckets[index];
   table->buckets[index] = newSym;
 }
 
-void *getTable(SymbolTable *table, const char *name) {
+Object *getTable(SymbolTable *table, const char *name) {
   unsigned long index = hash(name) % table->capacity;
 
   Symbol *sym = table->buckets[index];
@@ -71,6 +71,7 @@ void *getTable(SymbolTable *table, const char *name) {
   while (sym) {
     if (strcmp(sym->name, name) == 0)
       return sym->value;
+
     sym = sym->next;
   }
 

@@ -38,11 +38,16 @@ static inline ObjType promote(const Number* a, const Number* b) {
     : OBJ_NUMBER_INT;
 }
 
+/*
 static inline bool isValid(const Object* a, const Object* b) {
-  return ((a->type == OBJ_NUMBER_FLOAT || a->type == OBJ_NUMBER_INT) && (b->type == OBJ_NUMBER_FLOAT || b->type == OBJ_NUMBER_INT));
-}
+  ObjType aType = a->type;
+  ObjType bType = b->type;
 
-Number *initInt(long value) {
+  return ((aType == OBJ_NUMBER_FLOAT || aType == OBJ_NUMBER_INT) && (b->type == OBJ_NUMBER_FLOAT || b->type == OBJ_NUMBER_INT));
+}
+*/
+
+Number *initInt(int32_t value) {
   _ensureIntCache();
 
   if (value >= -128 && value < 128)
@@ -85,7 +90,7 @@ Number *copyNumber(Number *num) {
 ErrType addNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
+  // if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
 
@@ -102,7 +107,7 @@ ErrType addNumber(Number* dest, const Number* src) {
 ErrType subNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
+  // if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
 
@@ -119,7 +124,7 @@ ErrType subNumber(Number* dest, const Number* src) {
 ErrType divNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
+  // if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   double destVal = toDouble(dest);
 
@@ -136,7 +141,7 @@ ErrType divNumber(Number* dest, const Number* src) {
 ErrType mulNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
 
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
+  // if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   ObjType type = promote(dest, src);
 
@@ -152,7 +157,7 @@ ErrType mulNumber(Number* dest, const Number* src) {
 
 ErrType powNumber(Number* dest, const Number* src) {
   if (!dest || !src) return ERR_NULL;
-  if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
+  // if (!isValid((Object*)dest, (Object*)src)) return ERR_TYPE;
 
   double base = toDouble(src);
   double exp  = toDouble(dest);

@@ -44,6 +44,8 @@ Object* builtIn_append_list(Object** args, size_t argCount) {
 }
 
 Object* builtIn_range(Object** args, size_t argCount) {
+  (void)argCount;
+
   Object* startObj = args[0];
   Object* endObj = args[1];
 

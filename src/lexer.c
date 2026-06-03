@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <limits.h>
 
+#include <ctype.h>
+
 #include <stdio.h>
 
 #define _is_letter(c) (((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')))
@@ -65,87 +67,95 @@ bool _resizeTokensList(Token **tokens, unsigned long *capacity) {
 }
 
 static TokType keywordType(const char *s) {
-  switch (s[0]) {
+  char c = toupper(s[0]);
+
+  switch (c) {
     case 'A':
-      if (s[1] == 'N' && s[2] == 'D' && s[3] == '\0')
+      if (strcasecmp("AND", s) == 0)
         return TOK_AND;
+
       break;
 
     case 'B':
-      if (s[1] == 'R' && s[2] == 'E' && s[3] == 'A' && s[4] == 'K')
+      if (strcasecmp("BREAK", s) == 0)
         return TOK_BREAK; 
+
       break;
 
     case 'E':
-      if (s[1] == 'L' && s[2] == 'I' && s[3] == 'F' && s[4] == '\0')
+      if (strcasecmp("ELIF", s) == 0)
         return TOK_ELIF;
 
-      if (s[1] == 'N' && s[2] == 'D' && s[3] == '\0')
+      if (strcasecmp("END", s) == 0)
         return TOK_END;
 
-      if (s[1] == 'L' && s[2] == 'S' && s[3] == 'E' && s[4] == '\0')
+      if (strcasecmp("ELSE", s) == 0)
         return TOK_ELSE;
       break; 
 
     case 'I':
-      if (s[1] == 'F' && s[2] == '\0')
+      if ((s[1] == 'F' || s[1] == 'f') && s[2] == '\0')
         return TOK_IF;
       
-      if (s[1] == 'N' && s[2] == '\0')
+      if ((s[1] == 'N' || s[1] == 'n') && s[2] == '\0')
         return TOK_IN;
 
-      if (s[1] == 'M' && s[2] == 'P' && s[3] == 'O' && s[4] == 'R' && s[5] == 'T')
+      if (strcasecmp("IMPORT", s) == 0)
         return TOK_IMPORT;
+
       break;
 
     case 'O':
-      if (s[1] == 'R' && s[2] == '\0')
+      if ((s[1] == 'R' || s[1] == 'r') && s[2] == '\0')
         return TOK_OR;
       break;
 
     case 'T':
-      if (s[1] == 'H' && s[2] == 'E' && s[3] == 'N' && s[4] == '\0')
+      if (strcasecmp("THEN", s) == 0)
         return TOK_THEN;
 
-      if (s[1] == 'R' && s[2] == 'Y' && s[3] == '\0')
+      if (strcasecmp("TRY", s) == 0)
         return TOK_TRY;
 
       break;
 
     case 'V':
-      if (s[1] == 'A' && s[2] == 'R' && s[3] == '\0')
+      if (strcasecmp("VAR", s) == 0)
         return TOK_VAR;
+
       break;
 
     case 'W':
-      if (s[1] == 'H' && s[2] == 'I' && s[3] == 'L' && s[4] == 'E' && s[5] == '\0')
+      if (strcasecmp("WHILE", s) == 0)
         return TOK_WHILE;
+
       break;
 
     case 'F':
-      if (s[1] == 'O' && s[2] == 'R' && s[3] == '\0')
+      if (strcasecmp("FOR", s) == 0)
         return TOK_FOR;
       
-      if (s[1] == 'N' && s[2] == '\0')
+      if ((s[1] == 'N' || s[1] == 'n') && s[2] == '\0')
         return TOK_FN;
       break;
 
     case 'R':
-      if (s[1] == 'E' && s[2] == 'T' && s[3] == 'U' && s[4] == 'R' && s[5] == 'N' && s[6] == '\0')
+      if (strcasecmp("RETURN", s) == 0)
         return TOK_RETURN;
 
       break;
 
     case 'C':
-      if (s[1] == 'A' && s[2] == 'T' && s[3] == 'C' && s[4] == 'H' && s[5] == '\0')
+      if (strcasecmp("CATCH", s) == 0)
         return TOK_CATCH;
 
-      if (s[1] == 'O' && s[2] == 'N' && s[3] == 'T' && s[4] == 'I' && s[5] == 'N' && s[6] == 'U' && s[7] == 'E' && s[8] == '\0')
+      if (strcasecmp("CONTINUE", s) == 0)
         return TOK_CONTINUE;
+
       break;
 
     case 'N':
-      if (s[1] == 'O' && s[2] == 'T' && s[3] == '\0')
+      if (strcasecmp("NOT", s) == 0)
         return TOK_NOT;
 
       break;

@@ -128,7 +128,7 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
     call->args[i] = argVal;
 
     if (i < call->function->paramCount) {
-      setTable(call->env, call->function->params[i], argVal);
+      setTable(call->env, call->function->params[i], argVal, false);
     }
   }
 

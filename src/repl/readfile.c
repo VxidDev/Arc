@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-bool isValidExtension(const char *filename) {
+static inline bool isValidExtension(const char *filename) {
   if (!filename) return false;
 
   const char *dot = strrchr(filename, '.');
@@ -32,34 +32,31 @@ char *readFile(const char *filename) {
     return NULL;
   }
 
-  size_t size = 0;
-  size_t capacity = 128;
+  fseek(file, 0, SEEK_END);
+  long size = ftell(file);
 
-  char *buf = calloc(capacity, 1);
+  if (size < 0) {
+    printf("%sArc: %sFailed to open file: \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), filename, COLOR(ANSI_RESET)); 
+    fclose(file);
+    return NULL;
+  }
+
+  rewind(file);
+
+  char *buf = malloc(size + 1);
 
   if (!buf) {
     fclose(file);
     printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return NULL;
-  }
+  } 
 
-  int c = 0;
+  size_t read = fread(buf, 1, size, file);
 
-  while ((c = getc(file)) != EOF) {
-    if (size >= capacity - 1) {
-      capacity *= 2;
-      void *tmp = realloc(buf, sizeof(char) * capacity);
-
-      if (!tmp) {
-        free(buf);
-        printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        return NULL;
-      }
-
-      buf = tmp;
-    }
-
-    buf[size++] = c;
+  if (read != (size_t)size) {
+    printf("%sArc: %sFailed to read file%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET)); 
+    fclose(file);
+    return NULL;
   }
 
   buf[size] = '\0';

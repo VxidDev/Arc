@@ -3,7 +3,5 @@
 
 void initMathModule(SymbolTable* table) {
   NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false);
-  setTable(table, "truncate", (Object*)truncateFn);
-
-  freeObject((Object*)truncateFn); 
+  setTable(table, "truncate", (Object*)truncateFn, false);
 }

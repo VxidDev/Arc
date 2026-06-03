@@ -141,7 +141,7 @@ typedef struct Continue {
   Object base; 
 } Continue;
 
-Number* initInt(long value);
+Number* initInt(int32_t value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
 

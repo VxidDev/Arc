@@ -34,7 +34,7 @@ String** argVect;
 uint64_t argVectSize = 1;
 uint64_t argVectCap = 64;
 
-void appendArgv(String* s) {
+static inline void appendArgv(String* s) {
   if (!s) return;
 
   if (argVectSize >= argVectCap) {
@@ -97,7 +97,7 @@ void printObj(Object* obj) {
   putchar('\n');
 }
 
-void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
+static inline void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
   Lexer *lexer = initLexer(stringDup(filename), text);
 
   if (!lexer) {
@@ -291,15 +291,13 @@ int main(int argc, char **argv) {
   argVect[0] = arg0;
 
   Number* argumentCount = initInt(argVectSize);
-  setTable(variables, "argc", (Object*)argumentCount);
-  freeObject((Object*)argumentCount);
+  setTable(variables, "argc", (Object*)argumentCount, false);
 
   List* list = initList((Object**)argVect, argVectSize, argVectCap);
   
   free(argVect);
 
-  setTable(variables, "argv", (Object*)list);
-  freeObject((Object*)list);
+  setTable(variables, "argv", (Object*)list, false);
 
   registerBuiltins(variables);
 
@@ -325,13 +323,6 @@ int main(int argc, char **argv) {
     unsigned long size = 0;
 
     run(code, &error, &size, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
-
-    if (error) {
-      char *errStr = errorAsString(error);
-      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
-      free(errStr);
-      freeError(error);
-    }
 
     if (!_CODE) {
       free(code);
