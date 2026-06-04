@@ -29,10 +29,28 @@ int _FLOAT_PRECISION = 6;
 char *_CODE = NULL;
 char *_INPUT_FILE = NULL;
 bool _PRINT_LAST_RESULT = false;
+int POOL_SIZE = 1024;
+SymbolTable* variables = NULL;
 
 String** argVect;
 uint64_t argVectSize = 1;
 uint64_t argVectCap = 64;
+
+static inline void _exit(int code) {
+  if (variables) freeTable(variables);
+
+  if (argVect) {
+    for (uint64_t i = 1; i < argVectSize; i++) {
+      freeObject((Object*)argVect[i]);
+    }
+
+    free(argVect);
+  }
+
+  freeMemPools();
+
+  exit(code);
+}
 
 static inline void appendArgv(String* s) {
   if (!s) return;
@@ -236,21 +254,41 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--float-precision") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %sprecision cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        exit(1);
+        _exit(1);
       }
 
       int precision;
 
       if (!parseInt(argv[++i], &precision)) {
         printf("%sArc: %sprecision must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        exit(1);
+        _exit(1);
       }
 
       _FLOAT_PRECISION = precision;
+    } else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--mempool-size") == 0) {
+      if (i + 1 >= argc) {
+        printf("%sArc: %smemory pool size cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        _exit(1);
+      }
+
+      int mempoolSize;
+
+      if (!parseInt(argv[++i], &mempoolSize)) {
+        printf("%sArc: %smemory pool size must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        _exit(1);
+      }
+
+      if (mempoolSize < 8) {
+        printf("%sArc: %smemory pool size must be greater than or equal to 8%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        _exit(1);
+      }
+
+      POOL_SIZE = mempoolSize;
+
     } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--code") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %scode cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        exit(1);
+        _exit(1);
       }
 
       _CODE = argv[++i];
@@ -259,20 +297,20 @@ void parseArguments(int argc, char **argv) {
       continue;
     } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       printHelp();
-      exit(0);
+      _exit(0);
     } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--last-result") == 0) {
       _PRINT_LAST_RESULT = true;
       continue;
     } else {
       printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
-      exit(1);
+      _exit(1);
     }
   }
 }
 
 int main(int argc, char **argv) {
   char *userInput = NULL;
-  SymbolTable *variables = createTable(1024, NULL);
+  variables = createTable(1024, NULL);
   
   argVect = malloc(sizeof(String*) * argVectCap);
 
@@ -281,9 +319,13 @@ int main(int argc, char **argv) {
     printf("%sArc: %sFailed to initialize argv.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG), COLOR(ANSI_RESET));
 
     return 1;
-  }
+  } 
 
   parseArguments(argc, argv);
+  
+  initMemPools();
+
+  if (_DEBUG) printf("[debug] memory pool size: %d\n", POOL_SIZE);
   
   char *arg0raw = _INPUT_FILE ? _INPUT_FILE : argv[0];
   String* arg0 = initString(arg0raw, strlen(arg0raw));
@@ -310,6 +352,7 @@ int main(int argc, char **argv) {
 
     if (!code) {
       freeTable(variables);
+      freeMemPools();
       return 1;
     }
 
@@ -327,8 +370,9 @@ int main(int argc, char **argv) {
     if (!_CODE) {
       free(code);
     }
-
+    
     freeTable(variables);
+    freeMemPools();
     return 0;
   }
 
@@ -354,6 +398,7 @@ int main(int argc, char **argv) {
     if (strcmp(userInput, "exit") == 0) {
       free(userInput);
       freeTable(variables);
+      freeMemPools();
       return 0;
     } else if (strcmp(userInput, "clear") == 0) {
       printf("\033[2J\033[H");

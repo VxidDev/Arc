@@ -10,6 +10,21 @@
 #include "../../include/builtIns/string.h"
 #include "../../include/builtIns/lists.h"
 
+#include "../../include/mempool.h"
+
+MemPool* numberPool = NULL;
+MemPool* stringPool = NULL;
+
+void initMemPools() {
+  numberPool = initPool(sizeof(Number));
+  stringPool = initPool(sizeof(String));
+}
+
+void freeMemPools() {
+  if (numberPool) freePool(numberPool);
+  if (stringPool) freePool(stringPool);
+}
+
 void registerBuiltins(SymbolTable* table) {
   // I/O
 

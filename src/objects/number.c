@@ -1,4 +1,5 @@
 #include "../../include/object.h"
+#include "../../include/mempool.h"
 
 #include <stdlib.h>
 #include <math.h>
@@ -53,7 +54,7 @@ Number *initInt(int32_t value) {
   if (value >= -128 && value < 128)
     return &_intCache[value + 128];
 
-  Number* number = malloc(sizeof(Number));
+  Number* number = poolAlloc(numberPool);
 
   if (!number) return NULL;
 
@@ -65,7 +66,7 @@ Number *initInt(int32_t value) {
 }
 
 Number *initFloat(double value) {
-  Number* number = malloc(sizeof(Number));
+  Number* number = poolAlloc(numberPool);
 
   if (!number) return NULL;
 
@@ -79,7 +80,7 @@ Number *initFloat(double value) {
 Number *copyNumber(Number *num) {
   if (!num) return NULL;
 
-  Number* n = malloc(sizeof(Number));
+  Number* n = poolAlloc(numberPool);
   if (!n) return NULL;
 
   *n = *num;

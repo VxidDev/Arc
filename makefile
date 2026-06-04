@@ -21,9 +21,18 @@ CFLAGS_DEBUG = $(BASE_FLAGS) -O0 -g \
 	-fno-omit-frame-pointer
 
 LDFLAGS_DEBUG = -fsanitize=address,undefined
+CFLAGS_RELEASE = \
+  -O3 \
+  -flto=auto \
+  -march=native \
+  -mtune=native \
+  -ffunction-sections \
+  -fdata-sections \
+  -Wl,--gc-sections \
+  -fno-semantic-interposition \
+  -fmerge-all-constants
 
-CFLAGS_RELEASE = $(BASE_FLAGS) -O3 -flto -march=native
-LDFLAGS_RELEASE = -flto
+LDFLAGS_RELEASE = -flto -Wl,--gc-sections
 
 V ?= 0
 

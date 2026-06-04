@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "../include/builtIns.h"
+#include "../include/mempool.h"
 
 const NativeModuleEntry* stdlibModules[] = {
   &(NativeModuleEntry){ "__mathlib", initMathModule }, NULL
@@ -52,10 +53,10 @@ void freeObject(Object* obj) {
 
       if (n->isStatic) return;
 
-      free(obj); break;
+      poolFree(numberPool, obj); break;
     
     case OBJ_NUMBER_FLOAT:
-      free(obj); break;
+      poolFree(numberPool, obj); break;
 
     case OBJ_STRING: {
       String* str = (String*)obj;

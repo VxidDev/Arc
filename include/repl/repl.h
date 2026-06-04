@@ -4,13 +4,18 @@
 #include <stdbool.h>
 
 #include "../symbol-table.h"
+#include "../mempool.h"
 
 extern char *_CODE;
 extern bool _DEBUG;
 extern int _FLOAT_PRECISION;
 extern bool _IS_COLORED;
+extern int POOL_SIZE;
 
 #define COLOR(c) (_IS_COLORED ? (c) : "")
+
+void initMemPools();
+void freeMemPools();
 
 void registerBuiltins(SymbolTable *table);
 
