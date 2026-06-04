@@ -123,7 +123,7 @@ FOR item IN list THEN
     IF item == 3 THEN
         CONTINUE
     END
-    print("Item: " + item)
+    print("Item: ", item)
 END
 ```
 

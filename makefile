@@ -22,17 +22,19 @@ CFLAGS_DEBUG = $(BASE_FLAGS) -O0 -g \
 
 LDFLAGS_DEBUG = -fsanitize=address,undefined
 CFLAGS_RELEASE = \
+  $(BASE_FLAGS) \
   -O3 \
   -flto=auto \
   -march=native \
   -mtune=native \
   -ffunction-sections \
   -fdata-sections \
-  -Wl,--gc-sections \
   -fno-semantic-interposition \
-  -fmerge-all-constants
+  -pipe
 
-LDFLAGS_RELEASE = -flto -Wl,--gc-sections
+LDFLAGS_RELEASE = \
+  -flto=auto \
+  -Wl,--gc-sections
 
 V ?= 0
 
