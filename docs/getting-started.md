@@ -47,6 +47,27 @@ arc
   arc --float-precision 10
   ```
 
+* **Mempool size**:
+  ```bash
+  arc -m 2048
+  # or
+  arc --mempool-size 2048
+  ```
+
+* **Print last result**:
+  ```bash
+  arc -l script.arc
+  # or
+  arc --last-result script.arc
+  ```
+
+* **Help**:
+  ```bash
+  arc -h
+  # or
+  arc --help
+  ```
+
 * **Execute code**:
   ```bash
   arc -c "5 + 5"

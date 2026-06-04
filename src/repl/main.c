@@ -195,6 +195,15 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
   Object* result = visitNode(ast, filename, error, variables);
 
   if (!result) {
+    if (*error) {
+      char *errStr = errorAsString(*error);
+      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
+      free(errStr);
+
+      freeError(*error);
+      *error = NULL;
+    }
+
     freeAST(ast);
     freeTokens(tokens, *size);
     free(parser);

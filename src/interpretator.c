@@ -548,7 +548,7 @@ static Object* visitFunctionNode(ASTNode* node, SymbolTable* variables) {
     return NULL;
   }
 
-  setTable(variables, func->name, funcObj, false);
+  setTable(variables, func->name, funcObj, true);
 
   return (Object*)initInt(1); // true
 }
