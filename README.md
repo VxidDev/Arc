@@ -104,7 +104,7 @@ Arc is a C-based programming language with a focus on a clean frontend pipeline 
     *   **Loops:** `WHILE` and `FOR` loops for repetitive execution.
     *   **Loop Control:** `BREAK` and `CONTINUE` statements.
 *   **Exception Handling:** `TRY...CATCH` blocks for handling runtime errors.
-*   **Data Types:** Supports numbers (integers and floats), strings, and lists.
+*   **Data Types:** Supports numbers (integers and floats), strings, booleans, and lists.
 *   **Import System:** Modularize code using the `IMPORT` keyword.
 *   **Memory Management:** Uses custom memory pools for efficient object allocation.
 *   **Error Handling:** Robust error reporting with position tracking (file, line, column).
@@ -117,24 +117,25 @@ Arc is a C-based programming language with a focus on a clean frontend pipeline 
 Create a file named `script.arc`:
 
 ```arc
-VAR x = 0
+VAR list = [1, 2, 3, 4, 5]
 
-WHILE x < 5 THEN
-    x = x + 1
-END
-
-IF x == 5 THEN
-    print("Five reached!")
-ELSE
-    print("Not Five")
+FOR item IN list THEN
+    IF item == 3 THEN
+        CONTINUE
+    END
+    print("Item: " + item)
 END
 ```
 
 Running this file (`./arc script.arc`) will output:
 
 ```text
-Five reached!
+Item: 1
+Item: 2
+Item: 4
+Item: 5
 ```
+
 
 ## Roadmap
 

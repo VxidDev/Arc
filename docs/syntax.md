@@ -183,15 +183,32 @@ END
 VAR i = 0
 
 WHILE i < 5 THEN
-    i = i + 1
+    VAR i = i + 1
+END
+```
+
+### FOR Loops
+Arc supports iterating over lists and strings using the `FOR...IN` syntax.
+
+```arc
+VAR my_list = [10, 20, 30]
+
+FOR item IN my_list THEN
+    print(item)
+END
+
+# Iterating over a string
+FOR char IN "Arc" THEN
+    print(char)
 END
 ```
 
 ### Loop Control Statements
 
+
 Arc provides `BREAK` and `CONTINUE` keywords to alter the flow of loops.
 
-*   **BREAK**: Terminates the innermost `WHILE` loop immediately.
+*   **BREAK**: Terminates the innermost loop immediately.
     ```arc
     VAR i = 0
 
@@ -206,7 +223,8 @@ Arc provides `BREAK` and `CONTINUE` keywords to alter the flow of loops.
     print(i) # Output will be 5
     ```
 
-*   **CONTINUE**: Skips the rest of the current iteration of the innermost `WHILE` loop and proceeds to the next iteration.
+*   **CONTINUE**: Skips the rest of the current iteration of the innermost loop and proceeds to the next iteration.
+
     ```arc
     VAR i = 0
 

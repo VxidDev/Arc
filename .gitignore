@@ -5,9 +5,11 @@ test.arc
 test.py
 calc.arc
 test_*.arc 
-*.py
+*.py 
 # Prerequisites
 *.d
+
+RELEASE.md
 
 # Object files
 *.o
