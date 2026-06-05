@@ -2,6 +2,8 @@
 #include "../../include/ansi-colors.h"
 #include "../../include/repl/repl.h"
 
+#include "../../include/memarena.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -43,7 +45,7 @@ char *readFile(const char *filename) {
 
   rewind(file);
 
-  char *buf = malloc(size + 1);
+  char *buf = arenaAlloc(stringArena, size + 1);
 
   if (!buf) {
     fclose(file);

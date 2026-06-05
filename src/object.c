@@ -59,14 +59,8 @@ void freeObject(Object* obj) {
     case OBJ_NUMBER_FLOAT:
       poolFree(numberPool, obj); break;
 
-    case OBJ_STRING: {
-      String* str = (String*)obj;
-
-      if (str->value) free(str->value);
-      free(str);
-
-      break;
-    }
+    case OBJ_STRING: 
+      poolFree(stringPool, obj); break;
 
     case OBJ_LIST: {
       List* list = (List*)obj;
@@ -82,50 +76,12 @@ void freeObject(Object* obj) {
 
       break;
     }
-
-    case OBJ_FUNCTION: {
-      Function* func = (Function*)obj;
-
-      if (func->params) {
-        for (size_t i = 0; i < func->paramCount && func->params[i]; i++)
-          free(func->params[i]);
-
-        free(func->params);
-      }
-
-      if (func->name) free(func->name);
-
-      free(func);
-
+    
+    case OBJ_MODULE:
+    case OBJ_FUNCTION:
+    case OBJ_NATIVE_FUNCTION:
+      free(obj);
       break;
-    }
-
-    case OBJ_NATIVE_FUNCTION: {
-      NativeFunction* nativeFunc = (NativeFunction*)obj;
-
-      if (nativeFunc->name) free(nativeFunc->name);
-      free(nativeFunc);
-
-      break;
-    }
-
-    case OBJ_MODULE: {
-      Module* module = (Module*)obj;
-
-      if (module->astTree) freeAST(module->astTree);
-      if (module->tokens) freeTokens(module->tokens, module->tokenAmount);
-      if (module->parser) free(module->parser);
-      
-      if (module->lexer) {
-        free(module->fileContent);
-        free(module->lexer->filename);
-        freeLexer(module->lexer);
-      }
-      
-      free(module);
-
-      break;
-    }
 
     case OBJ_RETURN: {
       Return* ret = (Return*)obj;
@@ -139,7 +95,6 @@ void freeObject(Object* obj) {
     case OBJ_ERROR: {
       ProgramError* err = (ProgramError*)obj;
 
-      if (err->details) free(err->details);
       free(err);
 
       break;
@@ -164,9 +119,6 @@ void freeObject(Object* obj) {
 
     case OBJ_FILE: {
       File* file = (File*)obj;
-
-      if (file->fname) free(file->fname);
-      if (file->fmod) free(file->fmod);
       
       free(file);
 

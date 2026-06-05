@@ -94,7 +94,6 @@ void removeSymbol(SymbolTable *table, const char *name) {
       else
         table->buckets[index] = curr->next;
 
-      free(curr->name);
       free(curr);
       return;
     }
@@ -113,7 +112,6 @@ void freeTable(SymbolTable *table) {
     while (sym) {
       Symbol *next = sym->next;
 
-      free(sym->name);  
       freeObject(sym->value);
       free(sym);      
 

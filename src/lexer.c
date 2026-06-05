@@ -2,6 +2,8 @@
 #include "../include/error.h"
 #include "../include/token.h"
 
+#include "../include/memarena.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -33,7 +35,7 @@ void advanceLexer(Lexer *lexer) {
 Lexer* initLexer(char *filename, char *text) {
   if (!text) return NULL;
 
-  Lexer* lexer = malloc(sizeof(Lexer));
+  Lexer* lexer = arenaAlloc(parseArena, sizeof(Lexer));
 
   if (!lexer) return NULL;
 
@@ -57,7 +59,7 @@ Lexer* initLexer(char *filename, char *text) {
 bool _resizeTokensList(Token **tokens, unsigned long *capacity) {
   unsigned long newCap = (*capacity) * 2;
 
-  Token *tmp = realloc(*tokens, newCap * sizeof(Token));
+  Token *tmp = arenaRealloc(parseArena, *tokens, *capacity, newCap * sizeof(Token));
   if (!tmp) return false;
 
   *tokens = tmp;
@@ -273,7 +275,7 @@ Token makeIdentifierLexer(Lexer *lexer) {
   unsigned long size = 0;
   unsigned long capacity = 32;
 
-  char *idStr = malloc(capacity);
+  char *idStr = arenaAlloc(stringArena, capacity);
 
   if (!idStr) return (Token){.type = TOK_INVALID};
 
@@ -281,12 +283,12 @@ Token makeIdentifierLexer(Lexer *lexer) {
 
   while (lexer->currChar && (_is_alnum(lexer->currChar) || lexer->currChar == '_')) {
     if (size >= capacity) {
+      size_t oldcap = capacity;
       capacity *= 2;
 
-      void* tmp = realloc(idStr, capacity);
+      void* tmp = arenaRealloc(stringArena, idStr, oldcap, capacity);
 
       if (!tmp) {
-        free(idStr);
         return (Token){.type = TOK_INVALID};
       }
 
@@ -301,10 +303,9 @@ Token makeIdentifierLexer(Lexer *lexer) {
   TokType type = keywordType(idStr);
 
   if (type == TOK_IDENTIFIER) {
-    return initToken(type, idStr, true, start, lexer->pos);
+    return initToken(type, idStr, false, start, lexer->pos);
   }
 
-  free(idStr);
   return initToken(type, NULL, false, start, lexer->pos);
 }
 
@@ -313,7 +314,7 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
 
   advanceLexer(lexer); // Skip opening quote
 
-  char *buffer = malloc(1024); // fixed length for now
+  char *buffer = arenaAlloc(stringArena, 1024); // fixed length for now
   unsigned long len = 0;
 
   while (lexer->currChar && lexer->currChar != '"') {
@@ -344,7 +345,7 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
 
   advanceLexer(lexer); // skip closing quote
 
-  return initToken(TOK_STRING, buffer, true, start, lexer->pos);
+  return initToken(TOK_STRING, buffer, false, start, lexer->pos);
 }
 
 bool _generateToken(Lexer *lexer, Token** tokens, unsigned long *size, unsigned long *capacity, TokType tokenType) {
@@ -452,7 +453,7 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   unsigned long size = 0;
   unsigned long capacity = 1024;
 
-  Token* tokens = malloc(sizeof(Token) * capacity);
+  Token* tokens = arenaAlloc(parseArena, sizeof(Token) * capacity);
   if (!tokens) return NULL;
 
   while (lexer->currChar != 0) {

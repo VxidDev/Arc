@@ -11,13 +11,27 @@
 #include "../../include/builtIns/lists.h"
 
 #include "../../include/mempool.h"
+#include "../../include/memarena.h"
 
 MemPool* numberPool = NULL;
 MemPool* stringPool = NULL;
 
+Arena* parseArena = NULL;
+Arena* stringArena = NULL;
+
 void initMemPools() {
   numberPool = initPool(sizeof(Number));
   stringPool = initPool(sizeof(String));
+}
+
+void initArenas() {
+  parseArena = arenaCreate();
+  stringArena = arenaCreate();
+}
+
+void freeArenas() {
+  arenaDestroy(parseArena);
+  arenaDestroy(stringArena);
 }
 
 void freeMemPools() {
@@ -58,6 +72,9 @@ void registerBuiltins(SymbolTable* table) {
 
   NativeFunction* to_intFn = initNativeFunction("to_int", builtIn_to_int, 1, false);
   setTable(table, "to_int", (Object*)to_intFn, false);
+
+  NativeFunction* to_stringFn = initNativeFunction("to_string", builtIn_to_string, 1, false);
+  setTable(table, "to_string", (Object*)to_stringFn, false);
 
   // Properties
   

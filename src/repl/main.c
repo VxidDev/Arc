@@ -30,6 +30,8 @@ char *_CODE = NULL;
 char *_INPUT_FILE = NULL;
 bool _PRINT_LAST_RESULT = false;
 int POOL_SIZE = 1024;
+bool _SKIP_EVAL = false;
+size_t ARENA_BLOCK_SIZE = (256 * 1024); // 256 Kb
 SymbolTable* variables = NULL;
 int exitcode = 0;
 
@@ -49,6 +51,7 @@ static inline void _exit(int code) {
   }
 
   freeMemPools();
+  freeArenas();
 
   exit(code);
 }
@@ -153,8 +156,6 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
       *error = NULL;
     }
     
-    free(lexer->filename);
-    freeLexer(lexer);
     return;
   }
 
@@ -173,10 +174,6 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
 
   if (!parser) {
     freeTokens(tokens, *size);
-
-    free(lexer->filename);
-    freeLexer(lexer);
-
     return;
   }
 
@@ -202,57 +199,43 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     } 
 
     freeTokens(tokens, *size);
-    free(parser);
-
-    free(lexer->filename);
-    freeLexer(lexer);
-
     return;
   }
+  
+  if (!_SKIP_EVAL) {
+    Object* result = visitNode(ast, filename, error, variables);
 
-  Object* result = visitNode(ast, filename, error, variables);
+    if (!result) {
+      if (*error && (*error)->details[0] != '@') { 
+        char *errStr = errorAsString(*error);
+        printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
+        free(errStr);
 
-  if (!result) {
-    if (*error && (*error)->details[0] != '@') { 
-      char *errStr = errorAsString(*error);
-      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
-      free(errStr);
+        freeError(*error);
+        *error = NULL;
+      } else if (*error && (*error)->details[0] == '@') {
+        char *exitCodeStr = (*error)->details + 1;
+        
+        int exitcodeInt;
 
-      freeError(*error);
-      *error = NULL;
-    } else if (*error && (*error)->details[0] == '@') {
-      char *exitCodeStr = (*error)->details + 1;
-      
-      int exitcodeInt;
+        if (!parseInt(exitCodeStr, &exitcodeInt)) {
+          printf("%sArc: %sExit code is expected to be a valid integer, defaulting to 1.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+          exitcodeInt = 1;
+        }
 
-      if (!parseInt(exitCodeStr, &exitcodeInt)) {
-        printf("%sArc: %sExit code is expected to be a valid integer, defaulting to 1.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        exitcodeInt = 1;
+        exitcode = exitcodeInt; 
       }
 
-      exitcode = exitcodeInt; 
+      freeTokens(tokens, *size);
+      return;
     }
 
-    freeAST(ast);
-    freeTokens(tokens, *size);
-    free(parser);
+    if (_PRINT_LAST_RESULT) printObj(result); 
 
-    free(lexer->filename);
-    freeLexer(lexer);
-
-    return;
+    freeObject(result);
   }
 
-  if (_PRINT_LAST_RESULT) printObj(result); 
-
-  freeObject(result);
-
-  freeAST(ast);
   freeTokens(tokens, *size);
-  free(parser);
-
-  free(lexer->filename);
-  freeLexer(lexer);
 }
 
 void parseArguments(int argc, char **argv) {
@@ -271,6 +254,9 @@ void parseArguments(int argc, char **argv) {
 
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
       _DEBUG = true;
+      continue;
+    } else if (strcmp(argv[i], "-S") == 0 || strcmp(argv[i], "--skip-evaluation") == 0) {
+      _SKIP_EVAL = true;
       continue;
     } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--float-precision") == 0) {
       if (i + 1 >= argc) {
@@ -306,6 +292,25 @@ void parseArguments(int argc, char **argv) {
 
       POOL_SIZE = mempoolSize;
 
+    } else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--arena-block-size") == 0) {
+      if (i + 1 >= argc) {
+        printf("%sArc: %sarena block size cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        _exit(1);
+      }
+
+      int arenaBlockSize;
+
+      if (!parseInt(argv[++i], &arenaBlockSize)) {
+        printf("%sArc: %sarena block size must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        _exit(1); 
+      }
+
+      if (arenaBlockSize < 4) {
+        printf("%sArc: %sarena block size must be greater than or equal to 4 Kb.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        _exit(1);
+      }
+
+      ARENA_BLOCK_SIZE = arenaBlockSize * 1024; // convert to Kbs
     } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--code") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %scode cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
@@ -345,8 +350,12 @@ int main(int argc, char **argv) {
   parseArguments(argc, argv);
   
   initMemPools();
+  initArenas();
 
-  if (_DEBUG) printf("[debug] memory pool size: %d\n", POOL_SIZE);
+  if (_DEBUG) { 
+    printf("[debug] memory pool size: %d bytes\n", POOL_SIZE);
+    printf("[debug] arena block size: %zu bytes\n", ARENA_BLOCK_SIZE);
+  }
   
   char *arg0raw = _INPUT_FILE ? _INPUT_FILE : argv[0];
   String* arg0 = initString(arg0raw, strlen(arg0raw));
@@ -374,6 +383,7 @@ int main(int argc, char **argv) {
     if (!code) {
       freeTable(variables);
       freeMemPools();
+      freeArenas();
       return 1;
     }
 
@@ -387,13 +397,10 @@ int main(int argc, char **argv) {
     unsigned long size = 0;
 
     run(code, &error, &size, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
-
-    if (!_CODE) {
-      free(code);
-    }
     
     freeTable(variables);
     freeMemPools();
+    freeArenas();
 
     return exitcode;
   }
@@ -409,6 +416,8 @@ int main(int argc, char **argv) {
     if (!userInput) {
       printf("%sArc: %sFailed to get user input.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
       freeTable(variables);
+      freeArenas();
+      freeMemPools();
       break;
     }
 
@@ -421,6 +430,7 @@ int main(int argc, char **argv) {
       free(userInput);
       freeTable(variables);
       freeMemPools();
+      freeArenas();
       return 0;
     } else if (strcmp(userInput, "clear") == 0) {
       printf("\033[2J\033[H");
@@ -443,6 +453,7 @@ int main(int argc, char **argv) {
     } else if (error && error->details[0] == '@') {
       freeTable(variables);
       freeMemPools();
+      freeArenas();
       free(userInput);
       freeError(error);
 

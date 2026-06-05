@@ -5,7 +5,8 @@
 
 typedef struct {
   void** slots;
-  int top;
+  void* slab;
+  size_t top;
   size_t objSize;
 } MemPool;
 

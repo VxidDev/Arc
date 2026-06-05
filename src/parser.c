@@ -2,6 +2,8 @@
 #include "../include/token.h"
 #include "../include/utils.h"
 
+#include "../include/memarena.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,7 +22,7 @@ void rewindParser(Parser* parser, ParserCheckpoint checkpoint) {
 Parser* initParser(Token* tokens, const unsigned long tokenAmount, Error **error) {
   if (!tokens || !error) return NULL;
 
-  Parser* parser = malloc(sizeof(Parser));
+  Parser* parser = arenaAlloc(parseArena, sizeof(Parser));
 
   if (!parser) return NULL;
 
@@ -105,7 +107,6 @@ ASTNode* atomParser(Parser* parser) {
       advanceParser(parser);
       return expr;
     } else {
-      freeAST(expr);
       if (*parser->error == NULL) *parser->error = initSyntaxError(token.start, token.end, token.start.filename, "Expression expected");
       return NULL;
     }
@@ -124,7 +125,7 @@ ASTNode* atomParser(Parser* parser) {
     uint64_t size = 0;
     uint64_t capacity = 64;
 
-    ASTNode** objects = malloc(capacity * sizeof(ASTNode*));
+    ASTNode** objects = arenaAlloc(parseArena, capacity * sizeof(ASTNode*));
 
     if (!objects) {
       return NULL;
@@ -135,20 +136,16 @@ ASTNode* atomParser(Parser* parser) {
       ASTNode* val = andOrParser(parser);
 
       if (!val) {
-        for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
-        free(objects);
         return NULL;
       }
 
       if (size >= capacity) {
+        size_t oldcap = capacity;
         capacity *= 2;
 
-        void *tmp = realloc(objects, capacity * sizeof(ASTNode*));
+        void *tmp = arenaRealloc(parseArena, objects, oldcap * sizeof(ASTNode*), capacity * sizeof(ASTNode*));
 
         if (!tmp) {
-          for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
-          free(objects);
-          freeAST(val);
           return NULL;
         }
 
@@ -166,18 +163,12 @@ ASTNode* atomParser(Parser* parser) {
       if (parser->currentToken.type != TOK_EOF && parser->currentToken.type != TOK_RBRACK) {
         if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Expected ',' or ']'.");
 
-        for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
-        free(objects);
-
         return NULL;
       }
     }
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RBRACK) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(start.start, token.end, start.start.filename, "Unterminated list: expected ']'.");
-
-      for (uint64_t i = 0; i < size; i++) freeAST(objects[i]);
-      free(objects);
 
       return NULL;
     }
@@ -208,7 +199,6 @@ ASTNode* powerParser(Parser* parser) {
     ASTNode* right = powerParser(parser);
 
     if (!right) {
-      freeAST(left);
       if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected after '^'");
       return NULL;
     }
@@ -223,7 +213,7 @@ ASTNode* blockParser(Parser* parser) {
   size_t size = 0;
   size_t capacity = 64;
 
-  ASTNode** statements = malloc(sizeof(ASTNode*) * capacity);
+  ASTNode** statements = arenaAlloc(parseArena, sizeof(ASTNode*) * capacity);
 
   if (!statements) return NULL;
 
@@ -237,25 +227,16 @@ ASTNode* blockParser(Parser* parser) {
     ASTNode* stmt = andOrParser(parser);
 
     if (!stmt) {
-      for (size_t i = 0; i < size; i++) {
-        freeAST(statements[i]);
-      }
-
-      free(statements);
       return NULL;
     }
 
     if (size >= capacity) {
+      size_t oldcap = capacity;
       capacity *= 2;
 
-      void* tmp = realloc(statements, sizeof(ASTNode*) * capacity);
+      void* tmp = arenaRealloc(parseArena, statements, oldcap * sizeof(ASTNode*), sizeof(ASTNode*) * capacity);
 
       if (!tmp) {
-        for (size_t i = 0; i < size; i++) {
-          freeAST(statements[i]);
-        }
-
-        free(statements);
         return NULL;
       }
 
@@ -285,7 +266,7 @@ ASTNode* postfixParser(Parser* parser) {
     size_t size = 0;
     size_t capacity = 16;
 
-    ASTNode** args = malloc(sizeof(ASTNode*) * capacity);
+    ASTNode** args = arenaAlloc(parseArena, sizeof(ASTNode*) * capacity);
 
     if (!args) return NULL;
 
@@ -299,17 +280,13 @@ ASTNode* postfixParser(Parser* parser) {
       ASTNode* arg = andOrParser(parser);
 
       if (!arg) {
-        for (size_t i = 0; i < size; i++) 
-          freeAST(args[i]);
-
-        free(args);
-        freeAST(node);
         return NULL;
       }
 
       if (size >= capacity) {
+        size_t oldcap = capacity;
         capacity *= 2;
-        args = realloc(args, sizeof(ASTNode*) * capacity);
+        args = arenaRealloc(parseArena, args, oldcap * sizeof(ASTNode*), sizeof(ASTNode*) * capacity);
       }
 
       args[size++] = arg;
@@ -321,12 +298,6 @@ ASTNode* postfixParser(Parser* parser) {
     }
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RPAREN) {
-      freeAST(node);
-      for (size_t i = 0; i < size; i++) 
-        freeAST(args[i]);
-
-      free(args);
-
       if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expected ')'.");
 
       return NULL;
@@ -346,7 +317,6 @@ ASTNode* postfixParser(Parser* parser) {
     if (parser->currentToken.type == TOK_EOF) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expression expected."); 
 
-      freeAST(node);
       return NULL;
     }
 
@@ -355,14 +325,10 @@ ASTNode* postfixParser(Parser* parser) {
     ASTNode* index = andOrParser(parser);
 
     if (!index) {
-      freeAST(node);
       return NULL;
     }
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RBRACK) {
-      freeAST(index);
-      freeAST(node);
-
       if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, start.filename, "Expected ']'");
       return NULL;
     }
@@ -417,14 +383,12 @@ ASTNode* termParser(Parser* parser) {
 
     if (!right) { // error is already set
       if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected");
-      freeAST(left);
       return NULL;
     }
 
     left = (ASTNode*)initBinOpNode(left, opTok, right);
 
     if (!left) {
-      freeAST(right);
       return NULL;
     }
   }
@@ -479,7 +443,6 @@ ASTNode* exprParser(Parser* parser) {
     if (!iterable) return NULL;
 
     if (parser->currentToken.type != TOK_THEN) {
-        freeAST(iterable);
         if (*parser->error == NULL) *parser->error = initSyntaxError(inTok.start, inTok.end, inTok.start.filename, "Expected 'THEN' after iterable.");
         return NULL;
     }
@@ -489,8 +452,6 @@ ASTNode* exprParser(Parser* parser) {
     advanceParser(parser); // Skip THEN 
     
     if (parser->currentToken.type == TOK_EOF) {
-      freeAST(iterable);
-
       if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected expression after 'THEN'.");
       return NULL;
     }
@@ -498,12 +459,10 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* body = blockParser(parser);
 
     if (!body) { 
-      freeAST(iterable); 
       return NULL;
     }
 
     if (parser->currentToken.type != TOK_END) {
-        freeAST(iterable); freeAST(body);
         if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected 'END' after body.");
         return NULL;
     }
@@ -625,8 +584,6 @@ ASTNode* exprParser(Parser* parser) {
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(whileTok.start, whileTok.end, whileTok.start.filename, "Expected 'THEN'.");
-      freeAST(cond);
-
       return NULL;
     }
     
@@ -636,16 +593,11 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* body = blockParser(parser);
 
     if (!body) {
-      freeAST(cond);
       return NULL;
     }
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_END) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(thenTok.start, thenTok.end, thenTok.start.filename, "Expected 'END'.");
-
-      freeAST(cond);
-      freeAST(body);
-
       return NULL;
     }
 
@@ -674,7 +626,6 @@ ASTNode* exprParser(Parser* parser) {
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_LPAREN) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected '(' after function name.");
-      free(funcName);
       return NULL;
     }
 
@@ -683,10 +634,9 @@ ASTNode* exprParser(Parser* parser) {
     size_t paramCount = 0;
     size_t paramCapacity = 16;
 
-    char **params = malloc(sizeof(char*) * paramCapacity);
+    char **params = arenaAlloc(parseArena, sizeof(char*) * paramCapacity);
 
     if (!params) {
-      free(funcName);
       return NULL;
     }
 
@@ -696,43 +646,22 @@ ASTNode* exprParser(Parser* parser) {
       if (param.type != TOK_IDENTIFIER) {
         if (*parser->error == NULL) *parser->error = initSyntaxError(param.start, param.end, param.start.filename, "Expected parameter name.");
 
-        for (size_t i = 0; i < paramCount; i++) {
-          free(params[i]);
-        }
-
-        free(params);
-        free(funcName);
-
         return NULL;
       }
 
       char* paramName = stringDup(param.val.s);
 
       if (!paramName) {
-        for (size_t i = 0; i < paramCount; i++) {
-          free(params[i]);
-        }
-
-        free(params);
-        free(funcName);
-
         return NULL;
       }
 
       if (paramCount >= paramCapacity) {
+        size_t oldcap = paramCapacity;
         paramCapacity *= 2;
 
-        void* tmp = realloc(params, sizeof(char*) * paramCapacity);
+        void* tmp = arenaRealloc(parseArena, params, oldcap * sizeof(char*), sizeof(char*) * paramCapacity);
 
         if (!tmp) {
-          for (size_t i = 0; i < paramCount; i++) {
-            free(params[i]);
-          }
-
-          free(params);
-          free(paramName);
-          free(funcName);
-
           return NULL;
         }
 
@@ -754,26 +683,12 @@ ASTNode* exprParser(Parser* parser) {
 
       if (*parser->error == NULL)
         *parser->error = initSyntaxError(param.start, param.end, param.start.filename, "Expected ',' or ')' after parameter name.");
-      
-      for (size_t i = 0; i < paramCount; i++) {
-        free(params[i]);
-      }
-
-      free(params);
-      free(funcName);
-
+    
       return NULL;
     }
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_RPAREN) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected ')'.");
-
-      for (size_t i = 0; i < paramCount; i++) {
-        free(params[i]);
-      }
-
-      free(params);
-      free(funcName);
 
       return NULL;
     }
@@ -783,13 +698,6 @@ ASTNode* exprParser(Parser* parser) {
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected 'THEN'.");
 
-      free(funcName);
-
-      for (size_t i = 0; i < paramCount; i++) {
-        free(params[i]);
-      }
-
-      free(params);
       return NULL;
     }
 
@@ -798,41 +706,19 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* body = blockParser(parser);
 
     if (!body) {
-      for (size_t i = 0; i < paramCount; i++) {
-        free(params[i]);
-      }
-
-      free(params);
-      free(funcName);
-
       return NULL;
     }
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_END) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(fnNameTok.start, fnNameTok.end, fnNameTok.start.filename, "Expected 'END'.");
-
-      for (size_t i = 0; i < paramCount; i++) {
-        free(params[i]);
-      }
-
-      free(params);
-      free(funcName);
-
       return NULL;
     }
 
     advanceParser(parser); // skip END.
   
     FunctionNode* node = initFunctionNode(body, funcName, params, paramCount);
-    free(funcName);
     
     if (!node) {
-      for (size_t i = 0; i < paramCount; i++) {
-        free(params[i]);
-      }
-
-      free(params);
-      // free(funcName); // Already freed above
       return NULL;
     }
 
@@ -849,7 +735,6 @@ ASTNode* exprParser(Parser* parser) {
 
     if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok.start, ifTok.end, ifTok.start.filename, "Expected THEN");
-      freeAST(condition);
       return NULL;
     }
 
@@ -858,20 +743,15 @@ ASTNode* exprParser(Parser* parser) {
     ASTNode* thenExpr = blockParser(parser);
 
     if (!thenExpr) {
-      freeAST(condition);
       return NULL;
     }
 
     size_t size = 0;
     size_t capacity = 8;
-    ASTNode** elifConds = calloc(capacity, sizeof(ASTNode*));
-    ASTNode** elifExprs = calloc(capacity, sizeof(ASTNode*));
+    ASTNode** elifConds = arenaAlloc(parseArena, capacity * sizeof(ASTNode*));
+    ASTNode** elifExprs = arenaAlloc(parseArena, capacity * sizeof(ASTNode*));
 
     if (!elifConds || !elifExprs) {
-      free(elifConds);
-      free(elifExprs);
-      freeAST(condition);
-      freeAST(thenExpr);
       return NULL;
     }
 
@@ -881,49 +761,18 @@ ASTNode* exprParser(Parser* parser) {
 
       if (parser->currentToken.type == TOK_EOF) {
         if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok.start, elifTok.end, elifTok.start.filename, "Expected expression after 'ELIF' keyword.");
-        for (size_t i = 0; i < size; i++) {
-          freeAST(elifConds[i]);
-          freeAST(elifExprs[i]);
-        }
-
-        free(elifConds);
-        free(elifExprs);
-        freeAST(condition);
-        freeAST(thenExpr);
-
         return NULL;
       }
 
       ASTNode* elifCond = andOrParser(parser);
 
       if (!elifCond) {
-        for (size_t i = 0; i < size; i++) {
-          freeAST(elifConds[i]);
-          freeAST(elifExprs[i]);
-        }
-
-        free(elifConds);
-        free(elifExprs);
-        freeAST(condition);
-        freeAST(thenExpr);
-
         return NULL;
       }
 
       if (parser->currentToken.type == TOK_EOF || parser->currentToken.type != TOK_THEN) {
         if (*parser->error == NULL) *parser->error = initSyntaxError(elifTok.start, elifTok.end, elifTok.start.filename, "Expected THEN after ELIF condition");
-        freeAST(elifCond);
-
-        for (size_t i = 0; i < size; i++) {
-          freeAST(elifConds[i]);
-          freeAST(elifExprs[i]);
-        }
-
-        free(elifConds);
-        free(elifExprs);
-        freeAST(condition);
-        freeAST(thenExpr);
-
+        
         return NULL;
       }
 
@@ -932,42 +781,18 @@ ASTNode* exprParser(Parser* parser) {
       ASTNode* elifExpr = blockParser(parser);
 
       if (!elifExpr) {
-        freeAST(elifCond);
-        for (size_t i = 0; i < size; i++) {
-          freeAST(elifConds[i]);
-          freeAST(elifExprs[i]);
-        }
-
-        free(elifConds);
-        free(elifExprs);
-        freeAST(condition);
-        freeAST(thenExpr);
-
         return NULL;
       }
 
       if (size >= capacity) {
+        size_t oldcap = capacity;
         capacity *= 2;
-        void* tmp1 = realloc(elifConds, sizeof(ASTNode*) * capacity);
-        void* tmp2 = realloc(elifExprs, sizeof(ASTNode*) * capacity);
+        void* tmp1 = arenaRealloc(parseArena, elifConds, oldcap * sizeof(ASTNode*), sizeof(ASTNode*) * capacity);
+        void* tmp2 = arenaRealloc(parseArena, elifExprs, oldcap * sizeof(ASTNode*), sizeof(ASTNode*) * capacity);
 
         if (!tmp1 || !tmp2) {
           if (tmp1) elifConds = tmp1;
           if (tmp2) elifExprs = tmp2;
-
-          freeAST(elifCond);
-          freeAST(elifExpr);
-
-          for (size_t i = 0; i < size; i++) {
-            freeAST(elifConds[i]);
-            freeAST(elifExprs[i]);
-          }
-
-          free(elifConds);
-          free(elifExprs);
-
-          freeAST(condition);
-          freeAST(thenExpr);
 
           return NULL;
         }
@@ -991,33 +816,12 @@ ASTNode* exprParser(Parser* parser) {
 
       if (parser->currentToken.type == TOK_EOF) {
         if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after 'ELSE' keyword.");
-        for (size_t i = 0; i < size; i++) {
-          freeAST(elifConds[i]);
-          freeAST(elifExprs[i]);
-        }
-
-        free(elifConds);
-        free(elifExprs);
-        freeAST(condition);
-        freeAST(thenExpr);
-
         return NULL;
       }
 
       elseExpr = blockParser(parser);
 
       if (!elseExpr) {
-        for (size_t i = 0; i < size; i++) {
-          freeAST(elifConds[i]);
-          freeAST(elifExprs[i]);
-        }
-
-        free(elifConds);
-        free(elifExprs);
-
-        freeAST(condition);
-        freeAST(thenExpr);
-
         if (*parser->error == NULL) *parser->error = initSyntaxError(tok.start, tok.end, tok.start.filename, "Expected expression after 'ELSE' keyword.");
 
         return NULL;
@@ -1029,21 +833,6 @@ ASTNode* exprParser(Parser* parser) {
 
       if (*parser->error == NULL) *parser->error = initSyntaxError(ifTok.start, endTok.end, ifTok.start.filename, "Expected 'END' token.");
       
-      freeAST(condition);
-      freeAST(thenExpr);
-
-      for (size_t i = 0; i < size; i++) {
-        freeAST(elifConds[i]);
-        freeAST(elifExprs[i]);
-      }
-
-      free(elifConds);
-      free(elifExprs);
-
-      if (elseExpr) {
-        freeAST(elseExpr);
-      }
-
       return NULL;
     }
 
@@ -1157,14 +946,12 @@ ASTNode* exprParser(Parser* parser) {
         ASTNode* value = andOrParser(parser);
 
         if (!value) { 
-          freeAST(index); 
           return NULL; 
         } 
 
         return (ASTNode*)initIndexAssignNode(identTok, index, value, identTok.start, eq.end);
       }
       
-      freeAST(index);
       rewindParser(parser, checkpoint);
     } else {
       rewindParser(parser, checkpoint);
@@ -1182,14 +969,12 @@ ASTNode* exprParser(Parser* parser) {
 
     if (!right) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected");
-      freeAST(left);
       return NULL;
     }
 
     left = (ASTNode*)initBinOpNode(left, opTok, right);
 
     if (!left) {
-      freeAST(right);
       return NULL;
     }
   }
@@ -1210,7 +995,6 @@ ASTNode* andOrParser(Parser* parser) {
     ASTNode* right = compExprParser(parser);
 
     if (!right) {
-      freeAST(left);
       if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected after logical operator");
       return NULL;
     }
@@ -1218,7 +1002,6 @@ ASTNode* andOrParser(Parser* parser) {
     left = (ASTNode*)initBinOpNode(left, opTok, right);
 
     if (!left) {
-      freeAST(right);
       return NULL;
     }
   }
@@ -1245,7 +1028,6 @@ ASTNode* compExprParser(Parser* parser) {
     ASTNode* right = exprParser(parser);
 
     if (!right) {
-      freeAST(left);
       if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, opTok.start.filename, "Expression expected after comparison operator");
       return NULL;
     }
@@ -1253,7 +1035,6 @@ ASTNode* compExprParser(Parser* parser) {
     left = (ASTNode*)initBinOpNode(left, opTok, right);
 
     if (!left) {
-      freeAST(right);
       return NULL;
     }
   }
@@ -1270,7 +1051,6 @@ ASTNode* parseParser(Parser* parser) {
 
   if (parser->currentToken.type != TOK_EOF) {
     if (*parser->error == NULL) *parser->error = initSyntaxError(parser->currentToken.start, parser->currentToken.end, parser->currentToken.start.filename, "Unexpected token after expression");
-    freeAST(res);
     return NULL;
   }
 
@@ -1283,31 +1063,22 @@ ASTNode* parseProgram(Parser* parser) {
   size_t size = 0;
   size_t capacity = 1024;
 
-  ASTNode **statements = malloc(capacity * sizeof(ASTNode*));
+  ASTNode **statements = arenaAlloc(parseArena, capacity * sizeof(ASTNode*));
 
   while (parser->currentToken.type != TOK_EOF) {
     ASTNode *statement = andOrParser(parser);
 
     if (!statement) {
-      for (size_t i = 0; i < size; i++) {
-        freeAST(statements[i]);
-      }
-
-      free(statements);
       return NULL;
     } 
 
     if (size >= capacity) {
+      size_t oldcap = capacity;
       capacity *= 2;
 
-      void *tmp = realloc(statements, sizeof(ASTNode*) * capacity);
+      void *tmp = arenaRealloc(parseArena, statements, oldcap * sizeof(ASTNode*), sizeof(ASTNode*) * capacity);
 
       if (!tmp) {
-        for (size_t i = 0; i < size; i++) {
-          freeAST(statements[i]);
-        }
-
-        free(statements);
         return NULL;
       }
 

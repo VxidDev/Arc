@@ -1,11 +1,14 @@
 #include "../../include/object.h"
 #include "../../include/utils.h"
 
+#include "../../include/mempool.h"
+#include "../../include/memarena.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 String *initString(char *value, uint64_t len) {
-  String* str = malloc(sizeof(String));
+  String* str = poolAlloc(stringPool);
 
   if (!str) return NULL;
 
@@ -27,13 +30,13 @@ String *addString(const String *dest, const String *src) {
   size_t lenDest = strlen(dest->value);
   size_t lenSrc  = strlen(src->value);
 
-  char *newStr = malloc(lenDest + lenSrc + 1);
+  char *newStr = arenaAlloc(stringArena, lenDest + lenSrc + 1);
 
   memcpy(newStr, dest->value, lenDest);
   memcpy(newStr + lenDest, src->value, lenSrc);
   newStr[lenDest + lenSrc] = '\0';
 
-  String *res = malloc(sizeof(String));
+  String *res = poolAlloc(stringPool);
   res->value = newStr;
   res->base.type = OBJ_STRING;
 
@@ -45,7 +48,7 @@ String *mulString(const String *dest, const Number *src) {
 
   size_t len = strlen(dest->value);
 
-  char *newStr = malloc(len * src->as.i + 1);
+  char *newStr = arenaAlloc(stringArena, len * src->as.i + 1);
   char *p = newStr;
 
   for (long int i = 0; i < src->as.i; i++) {
@@ -55,7 +58,7 @@ String *mulString(const String *dest, const Number *src) {
 
   *p = '\0';
 
-  String *res = malloc(sizeof(String));
+  String *res = poolAlloc(stringPool);
   res->value = newStr;
   res->base.type = OBJ_STRING;
 

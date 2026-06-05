@@ -166,8 +166,8 @@ static Object* visitBinOpNode(ASTNode* node, char *filename, Error **err, Symbol
     dest = copyNumber(dest);
 
     if (!dest) {
-        freeObject(srcObj);
-        return NULL;
+      freeObject(srcObj);
+      return NULL;
     }
   }
 
@@ -253,27 +253,35 @@ static Object* visitUnaryOpNode(ASTNode* node, char *filename, Error **err, Symb
 
   switch (op[0]) {
     case '-': {
+      Object* res;
+
       if (numberObj->type == OBJ_NUMBER_INT) {
-        num->as.i *= -1;
-        return numberObj;
+        res = (Object*)initInt(-num->as.i);
+      } else {
+        res = (Object*)initFloat(-num->as.f);
       }
 
-      num->as.f *= -1.0;
-      return numberObj;
+      freeObject(numberObj);
+      return res;
     }
 
     case '+': {
-      return numberObj;
+      Object* res = copyObject(numberObj);
+      freeObject(numberObj);
+      return res;
     }
 
     case 'N': {
+      Object *res;
+
       if (numberObj->type == OBJ_NUMBER_INT) {
-        num->as.i = !num->as.i;
-        return numberObj;
+        res = (Object*)initInt(!num->as.i);
+      } else {
+        res = (Object*)initFloat(!num->as.f);
       }
 
-      num->as.f = !num->as.f;
-      return numberObj;
+      freeObject(numberObj);
+      return res;
     }
 
     default: 
@@ -544,11 +552,10 @@ static Object* visitFunctionNode(ASTNode* node, SymbolTable* variables) {
   Object* funcObj = (Object*)initFunction(func);
 
   if (!funcObj) {
-    freeAST((ASTNode*)func);
     return NULL;
   }
 
-  setTable(variables, func->name, funcObj, true);
+  setTable(variables, func->name, funcObj, false);
 
   return (Object*)initInt(1); // true
 }
@@ -580,6 +587,7 @@ static Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err,
     FunctionCall* call = initFunctionCall(fncallnode, calleeObj, variables, filename, err);
 
     if (!call) {
+      freeObject(calleeObj);
       return NULL;
     }
 
@@ -599,6 +607,7 @@ static Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err,
     res = visitNode(call->function->body, filename, err, call->env);
 
     freeObject((Object*)call);
+    freeObject(calleeObj);
   } else if (calleeObj->type == OBJ_NATIVE_FUNCTION) {
     NativeFunction* nativeFunc = (NativeFunction*)calleeObj;
     
@@ -623,32 +632,32 @@ static Object* visitFunctionCallNode(ASTNode* node, char* filename, Error **err,
     res = nativeFunc->function(evaluatedArgs, fncallnode->argCount);
 
     for (size_t i = 0; i < fncallnode->argCount; i++) freeObject(evaluatedArgs[i]);
+
     free(evaluatedArgs);
+    freeObject(calleeObj);
+  } else {
+    freeObject(calleeObj);
+    return NULL;
   }
 
   if (res && res->type == OBJ_ERROR) {
     if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, ((ProgramError*)res)->details);
     freeObject(res);
-    freeObject(calleeObj);
     return NULL;
   }
 
   if (res && (res->type == OBJ_BREAK || res->type == OBJ_CONTINUE)) {
     if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, fncallnode->start.filename, "Break/Continue outside of loop.");
     freeObject(res);
-    freeObject(calleeObj);
     return NULL;
   }
   
   if (res && res->type == OBJ_RETURN) {
-    freeObject(calleeObj);
     Object* val = ((Return*)res)->value;
-
     free(res);
     return val;
   }
 
-  freeObject(calleeObj);
   return res;
 }
 
@@ -682,8 +691,6 @@ static Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variable
   Token* tokens = makeTokensLexer(lexer, err, &tokenAmount);
 
   if (!tokens) {
-    free(lexer->filename);
-    freeLexer(lexer);
     free(fileContent);
 
     return NULL;
@@ -693,7 +700,6 @@ static Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variable
   
   if (!parser) {
     freeTokens(tokens, tokenAmount);
-    freeLexer(lexer);
     free(fileContent);
 
     return NULL;
@@ -703,9 +709,6 @@ static Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variable
 
   if (!ast) {
     freeTokens(tokens, tokenAmount);
-    free(parser);
-    free(lexer->filename);
-    freeLexer(lexer);
     free(fileContent);
 
     return NULL;
@@ -714,13 +717,7 @@ static Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variable
   Object* result = visitNode(ast, lexer->filename, err, variables);
 
   if (!result) {
-    freeAST(ast);
     freeTokens(tokens, tokenAmount);
-    free(parser);
-
-    free(lexer->filename);
-    freeLexer(lexer);
-
     free(fileContent);
 
     return NULL;
@@ -729,13 +726,9 @@ static Object* visitImportNode(ASTNode* node, Error** err, SymbolTable* variable
   Module* module = initModule(ast, lexer, parser, fileContent, tokens, tokenAmount);
 
   if (!module) {
-    freeAST(ast);
     freeTokens(tokens, tokenAmount);
     free(parser);
     
-    free(lexer->filename);
-    freeLexer(lexer);
-
     free(fileContent);
 
     return NULL;

@@ -3,6 +3,8 @@
 #include "../../include/symbol-table.h"
 #include "../../include/interpretator.h"
 
+#include "../../include/memarena.h"
+
 #include <stdlib.h>
 
 Function* copyFunction(Function* func) {
@@ -16,17 +18,23 @@ Function* copyFunction(Function* func) {
   newFunc->body = func->body;
 
   newFunc->name = stringDup(func->name);
-  if (!newFunc->name) { free(newFunc); return NULL; }
 
-  newFunc->params = malloc(sizeof(char*) * func->paramCount);
-  if (!newFunc->params) { free(newFunc->name); free(newFunc); return NULL; }
+  if (!newFunc->name) { 
+    free(newFunc); 
+    return NULL; 
+  }
+
+  newFunc->params = arenaAlloc(stringArena, sizeof(char*) * func->paramCount);
+
+  if (!newFunc->params) { 
+    free(newFunc);
+    return NULL; 
+  }
 
   for (size_t i = 0; i < func->paramCount; i++) {
     newFunc->params[i] = stringDup(func->params[i]);
+
     if (!newFunc->params[i]) {
-      for (size_t j = 0; j < i; j++) free(newFunc->params[j]);
-      free(newFunc->params);
-      free(newFunc->name);
       free(newFunc);
       return NULL;
     }
@@ -53,17 +61,23 @@ Function* initFunction(FunctionNode* node) {
   func->body = node->body;
   
   func->name = stringDup(node->name);
-  if (!func->name) { free(func); return NULL; }
 
-  func->params = malloc(sizeof(char*) * node->paramCount);
-  if (!func->params) { free(func->name); free(func); return NULL; }
+  if (!func->name) { 
+    free(func);
+    return NULL;
+  }
+
+  func->params = arenaAlloc(stringArena, sizeof(char*) * node->paramCount);
+
+  if (!func->params) { 
+    free(func);
+    return NULL;
+  }
 
   for (size_t i = 0; i < node->paramCount; i++) {
     func->params[i] = stringDup(node->params[i]);
+
     if (!func->params[i]) {
-      for (size_t j = 0; j < i; j++) free(func->params[j]);
-      free(func->params);
-      free(func->name);
       free(func);
       return NULL;
     }
@@ -91,7 +105,6 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
   }
 
   if (calleeObj->type != OBJ_FUNCTION) {
-    freeObject(calleeObj);
     free(call->args);
     free(call);
     return NULL;
@@ -128,7 +141,7 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
     call->args[i] = argVal;
 
     if (i < call->function->paramCount) {
-      setTable(call->env, call->function->params[i], argVal, false);
+      setTable(call->env, call->function->params[i], argVal, true);
     }
   }
 

@@ -58,6 +58,4 @@ void freeTokens(Token *t, unsigned long s) {
   for (unsigned long i = 0; i < s; i++) {
     freeToken(&t[i]);
   }
-
-  free(t);
 }

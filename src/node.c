@@ -2,13 +2,15 @@
 #include "../include/token.h"
 #include "../include/utils.h"
 
+#include "../include/memarena.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 NumberNode* initNumberNode(Token token) {
   if (token.type == TOK_EOF) return NULL;
 
-  NumberNode* node = malloc(sizeof(NumberNode));
+  NumberNode* node = arenaAlloc(parseArena, sizeof(NumberNode));
 
   if (!node) return NULL;
 
@@ -21,7 +23,7 @@ NumberNode* initNumberNode(Token token) {
 ForNode* initForNode(Token forTok, Token identifier, ASTNode* iterable, ASTNode *body) {
   if (!body || !iterable) return NULL;
 
-  ForNode* node = malloc(sizeof(ForNode));
+  ForNode* node = arenaAlloc(parseArena, sizeof(ForNode));
 
   if (!node) return NULL;
 
@@ -35,19 +37,10 @@ ForNode* initForNode(Token forTok, Token identifier, ASTNode* iterable, ASTNode 
   return node;
 }
 
-void freeForNode(ForNode* node) {
-  if (!node) return;
-
-  freeAST(node->iterable);
-  freeAST(node->body);
-
-  free(node);
-}
-
 FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t argCount, Position start, Position end) {
   if (!callee || !args) return NULL;
 
-  FunctionCallNode* fncallNode = malloc(sizeof(FunctionCallNode));
+  FunctionCallNode* fncallNode = arenaAlloc(parseArena, sizeof(FunctionCallNode));
 
   if (!fncallNode) return NULL;
   
@@ -66,7 +59,7 @@ FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t a
 TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier, ASTNode* body, ASTNode* errHandler) {
   if (!body || !errHandler) return NULL;
 
-  TryCatchNode* node = malloc(sizeof(TryCatchNode));
+  TryCatchNode* node = arenaAlloc(parseArena, sizeof(TryCatchNode));
 
   if (!node) return NULL;
     
@@ -82,17 +75,10 @@ TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier
   return node;
 }
 
-void freeTryCatchNode(TryCatchNode* node) {
-  freeAST(node->body);
-  freeAST(node->errHandler);
-
-  free(node);
-}
-
 ContinueNode* initContinueNode(Token tok) {
   if (tok.type == TOK_EOF) return NULL;
 
-  ContinueNode* node = malloc(sizeof(ContinueNode));
+  ContinueNode* node = arenaAlloc(parseArena, sizeof(ContinueNode));
 
   if (!node) return NULL;
   
@@ -105,7 +91,7 @@ ContinueNode* initContinueNode(Token tok) {
 BreakNode* initBreakNode(Token tok) {
   if (tok.type == TOK_EOF) return NULL;
 
-  BreakNode* node = malloc(sizeof(BreakNode));
+  BreakNode* node = arenaAlloc(parseArena, sizeof(BreakNode));
 
   if (!node) return NULL;
   
@@ -115,18 +101,10 @@ BreakNode* initBreakNode(Token tok) {
   return node;
 }
 
-void freeBreakNode(BreakNode* node) {
-  free(node);
-}
-
-void freeContinueNode(ContinueNode* node) {
-  free(node);
-}
-
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount) {
   if (!body) return NULL;
 
-  FunctionNode* node = malloc(sizeof(FunctionNode));
+  FunctionNode* node = arenaAlloc(parseArena, sizeof(FunctionNode));
 
   if (!node) return NULL;
   
@@ -134,10 +112,7 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
   node->body = body;
   node->name = stringDup(name);
 
-  if (!node->name) {
-    free(node);
-    return NULL;
-  }
+  if (!node->name) return NULL;
 
   node->params = params;
   node->paramCount = paramCount;
@@ -148,7 +123,7 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
 ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, uint64_t size, uint64_t capacity) {
   if (startBracket.type == TOK_EOF || endBracket.type == TOK_EOF || !objects) return NULL;
 
-  ListNode* list = malloc(sizeof(ListNode));
+  ListNode* list = arenaAlloc(parseArena, sizeof(ListNode));
 
   if (!list) return NULL;
 
@@ -165,7 +140,7 @@ ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, 
 }
 
 ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
-  ProgramNode *node = malloc(sizeof(ProgramNode));
+  ProgramNode *node = arenaAlloc(parseArena, sizeof(ProgramNode));
   if (!node) return NULL;
 
   node->base.type = NODE_PROGRAM;
@@ -178,7 +153,7 @@ ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
 StringNode* initStringNode(Token token) {
   if (token.type == TOK_EOF) return NULL;
 
-  StringNode* node = malloc(sizeof(StringNode));
+  StringNode* node = arenaAlloc(parseArena, sizeof(StringNode));
 
   if (!node) return NULL;
 
@@ -192,7 +167,7 @@ StringNode* initStringNode(Token token) {
 IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end) {
   if (!target || !index) return NULL;
 
-  IndexNode* node = malloc(sizeof(IndexNode));
+  IndexNode* node = arenaAlloc(parseArena, sizeof(IndexNode));
 
   if (!node) return NULL;
 
@@ -209,7 +184,7 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
 IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode* value, Position start, Position end) {
   if (!index || !value) return NULL;
 
-  IndexAssignNode* node = malloc(sizeof(IndexAssignNode));
+  IndexAssignNode* node = arenaAlloc(parseArena, sizeof(IndexAssignNode));
 
   if (!node) return NULL;
 
@@ -226,7 +201,7 @@ IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode*
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end) {
   if (!condition || !body) return NULL;
 
-  WhileNode* node = malloc(sizeof(WhileNode));
+  WhileNode* node = arenaAlloc(parseArena, sizeof(WhileNode));
 
   if (!node) return NULL;
 
@@ -243,7 +218,7 @@ WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Posi
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode) {
   if (!leftNode || operTok.type == TOK_EOF || !rightNode) return NULL;
 
-  BinOpNode* node = malloc(sizeof(BinOpNode));
+  BinOpNode* node = arenaAlloc(parseArena, sizeof(BinOpNode));
 
   if (!node) return NULL;
 
@@ -259,7 +234,7 @@ BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode) {
 UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
   if (operTok.type == TOK_EOF || !node) return NULL;
 
-  UnaryOpNode* unaryNode = malloc(sizeof(UnaryOpNode));
+  UnaryOpNode* unaryNode = arenaAlloc(parseArena, sizeof(UnaryOpNode));
 
   if (!unaryNode) return NULL;
 
@@ -273,16 +248,13 @@ UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
 VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
   if (!identifier || !value) return NULL;
 
-  VarAssignNode* varAssignNode = malloc(sizeof(VarAssignNode));
+  VarAssignNode* varAssignNode = arenaAlloc(parseArena, sizeof(VarAssignNode));
 
   if (!varAssignNode) return NULL;
 
   varAssignNode->identifier = stringDup(identifier);
 
-  if (!varAssignNode->identifier) {
-    free(varAssignNode);
-    return NULL;
-  }
+  if (!varAssignNode->identifier) return NULL;
 
   varAssignNode->base.type = NODE_VARASSIGN;
   varAssignNode->value = value;
@@ -293,7 +265,7 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
 VarAccessNode* initVarAccessNode(Token token) {
   if (token.type == TOK_EOF) return NULL;
 
-  VarAccessNode* node = malloc(sizeof(VarAccessNode));
+  VarAccessNode* node = arenaAlloc(parseArena, sizeof(VarAccessNode));
 
   if (!node) return NULL;
 
@@ -302,46 +274,10 @@ VarAccessNode* initVarAccessNode(Token token) {
   return node;
 }
 
-void freeVarAssignNode(VarAssignNode* node) {
-  free(node->identifier);
-  freeAST(node->value);
-
-  free(node);
-}
-
-void freeFunctionNode(FunctionNode* node) {
-  free(node->name);
-
-  if (node->params) {
-    for (size_t i = 0; i < node->paramCount; i++) {
-      free(node->params[i]);
-    }
-
-    free(node->params);
-  }
-
-  freeAST(node->body);
-
-  free(node);
-}
-
-void freeFunctionCallNode(FunctionCallNode* node) {
-  if (node->args) {
-    for (size_t i = 0; i < node->argCount; i++) {
-      freeAST(node->args[i]);
-    }
-
-    free(node->args);
-  }
-
-  freeAST(node->callee);
-  free(node);
-}
-
 ImportNode* initImportNode(Token filePath) {
   if (filePath.type == TOK_EOF) return NULL;
 
-  ImportNode* node = malloc(sizeof(ImportNode));
+  ImportNode* node = arenaAlloc(parseArena, sizeof(ImportNode));
   
   if (!node) return NULL;
 
@@ -351,14 +287,10 @@ ImportNode* initImportNode(Token filePath) {
   return node;
 } 
 
-void freeImportNode(ImportNode* node) {
-  free(node);
-}
-
 ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr) {
   if (!expr) return NULL;
   
-  ReturnNode* node = malloc(sizeof(ReturnNode));
+  ReturnNode* node = arenaAlloc(parseArena, sizeof(ReturnNode));
 
   if (!node) return NULL;
 
@@ -370,15 +302,10 @@ ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr) {
   return node;
 }
 
-void freeReturnNode(ReturnNode* node) { 
-  freeAST(node->expr);
-  free(node);
-}
-
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr) {
   if (!condition || !thenExpr) return NULL;
 
-  IfNode* node = malloc(sizeof(IfNode));
+  IfNode* node = arenaAlloc(parseArena, sizeof(IfNode));
   if (!node) return NULL;
 
   node->base.type = NODE_IF;
@@ -390,178 +317,4 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
   node->elseExpr = elseExpr;
 
   return node;
-}
-
-void freeVarAccessNode(VarAccessNode* node) {
-  free(node);
-}
-
-void freeIndexNode(IndexNode* node) {
-  freeAST(node->target);
-  freeAST(node->index);
-
-  free(node);
-}
-
-void freeIndexAssignNode(IndexAssignNode* node) {
-  freeAST(node->index);
-  freeAST(node->value);
-
-  free(node);
-}
-
-void freeWhileNode(WhileNode* node) {
-  freeAST(node->condition);
-  freeAST(node->body);
-
-  free(node);
-}
-
-void freeListNode(ListNode* node) {
-  if (node->objects) {
-    for (uint64_t i = 0; i < node->size; i++) {
-      freeAST(node->objects[i]);
-    }
-
-    free(node->objects);
-  }
-
-  free(node);
-}
-
-void freeStringNode(StringNode* node) {
-  // if (node->token->val.s) free(node->token->val.s);
-  free(node);
-}
-
-void freeNumberNode(NumberNode *node) {
-    free(node);
-}
-
-void freeBinOpNode(BinOpNode *node) {
-    freeAST(node->leftNode);
-    freeAST(node->rightNode);
-
-    free(node);
-}
-
-void freeUnaryOpNode(UnaryOpNode *node) {
-    freeAST(node->node);
-    free(node);
-}
-
-void freeProgramNode(ProgramNode *node) {
-  if (node->statements) {
-    for (size_t i = 0; i < node->count; i++) {
-      if (node->statements[i]) {
-        freeAST(node->statements[i]);
-      }
-    }
-
-    free(node->statements);
-  }
-
-  free(node);
-}
-
-void freeIfNode(IfNode* node) {
-  freeAST(node->condition);
-  freeAST(node->thenExpr);
-
-  for (size_t i = 0; i < node->elifCount; i++) {
-    freeAST(node->elifConds[i]);
-    freeAST(node->elifExprs[i]);
-  }
-
-  free(node->elifConds);
-  free(node->elifExprs);
-
-  freeAST(node->elseExpr);
-  free(node);
-}
-
-void freeAST(ASTNode *node) {
-  if (!node) return;
-
-  switch (node->type) {
-    case NODE_NUMBER:
-      freeNumberNode((NumberNode*)node);
-      break;
-
-    case NODE_BINOP:
-      freeBinOpNode((BinOpNode*)node);
-      break;
-
-    case NODE_UNARYOP:
-      freeUnaryOpNode((UnaryOpNode*)node);
-      break;
-
-    case NODE_VARASSIGN:
-      freeVarAssignNode((VarAssignNode*)node);
-      break;
-
-    case NODE_VARACCESS:
-      freeVarAccessNode((VarAccessNode*)node);
-      break;
-
-    case NODE_STRING:
-      freeStringNode((StringNode*)node);
-      break;
-
-    case NODE_PROGRAM:
-      freeProgramNode((ProgramNode*)node);
-      break;
-
-    case NODE_IF:
-      freeIfNode((IfNode*)node);
-      break;
-
-    case NODE_LIST:
-      freeListNode((ListNode*)node);
-      break;
-
-    case NODE_INDEX:
-      freeIndexNode((IndexNode*)node);
-      break;
-
-    case NODE_WHILE:
-      freeWhileNode((WhileNode*)node);
-      break;
-
-    case NODE_FUNCTION:
-      freeFunctionNode((FunctionNode*)node);
-      break;
-
-    case NODE_FUNCTION_CALL:
-      freeFunctionCallNode((FunctionCallNode*)node);
-      break;
-
-    case NODE_IMPORT:
-      freeImportNode((ImportNode*)node);
-      break;
-
-    case NODE_RETURN:
-      freeReturnNode((ReturnNode*)node);
-      break;
-
-    case NODE_TRYCATCH:
-      freeTryCatchNode((TryCatchNode*)node);
-      break;
-
-    case NODE_CONTINUE:
-      freeContinueNode((ContinueNode*)node);
-      break;
-
-    case NODE_BREAK:
-      freeBreakNode((BreakNode*)node);
-      break;
-
-    case NODE_INDEXASSIGN:
-      freeIndexAssignNode((IndexAssignNode*)node);
-      break;
-
-    case NODE_FOR:
-      freeForNode((ForNode*)node);
-      break;
-  }
 }

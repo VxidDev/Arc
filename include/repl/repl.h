@@ -11,8 +11,12 @@ extern bool _DEBUG;
 extern int _FLOAT_PRECISION;
 extern bool _IS_COLORED;
 extern int POOL_SIZE;
+extern size_t ARENA_BLOCK_SIZE;
 
 #define COLOR(c) (_IS_COLORED ? (c) : "")
+
+void initArenas();
+void freeArenas();
 
 void initMemPools();
 void freeMemPools();

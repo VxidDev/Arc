@@ -1,12 +1,14 @@
 #include "../include/utils.h"
 #include "../include/token.h"
 
+#include "../include/memarena.h"
+
 #include <string.h>
 #include <stdlib.h>
 
 char *stringDup(const char *s) {
   size_t len = strlen(s) + 1;
-  char *sDup = malloc(len);
+  char *sDup = arenaAlloc(stringArena, len);
 
   memcpy(sDup, s, len);
 

@@ -13,14 +13,19 @@ FN logn(x) THEN
     RETURN 0
   END 
 
-  VAR y = 0.0
+  VAR y = 1
+  
+  WHILE exp(y) < x THEN
+    y = y + 1
+  END
+
   VAR i = 0
 
   WHILE i < 20 THEN
-    VAR ey = exp(y)
-    VAR y = y + (x - ey) / ey
+    ey = exp(y)
+    y = y + x * exp(-y) - 1
 
-    VAR i = i + 1
+    i = i + 1
   END
 
   y
@@ -40,9 +45,9 @@ END
 
 FN abs(x) THEN
   IF x < 0 THEN
-    RETURN -x
+   RETURN -x
   END
-
+  
   x
 END 
 
