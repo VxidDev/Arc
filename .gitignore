@@ -4,7 +4,6 @@ gen_py.py
 test.arc 
 test.py
 calc.arc
-test_*.arc
 arc.arc
 *.py 
 # Prerequisites
