@@ -31,6 +31,7 @@ char *_INPUT_FILE = NULL;
 bool _PRINT_LAST_RESULT = false;
 int POOL_SIZE = 1024;
 SymbolTable* variables = NULL;
+int exitcode = 0;
 
 String** argVect;
 uint64_t argVectSize = 1;
@@ -115,6 +116,23 @@ void printObj(Object* obj) {
   putchar('\n');
 }
 
+int parseInt(const char *s, int *out) {
+  char *end = NULL;
+  errno = 0;
+
+  long val = strtol(s, &end, 10);
+
+  if (errno != 0) return 0; // overflow / underflow
+
+  while (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r') end++;
+
+  if (*end != '\0') return 0; // invalid chars
+  if (val < INT_MIN || val > INT_MAX) return 0;
+
+  *out = (int)val;
+  return 1;
+}
+
 static inline void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
   Lexer *lexer = initLexer(stringDup(filename), text);
 
@@ -174,14 +192,14 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
   if (!ast) {
     if (_DEBUG) printf("%sArc: %sFailed to construct AST.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
 
-    if (*error) {
+    if (*error) { 
       char *errStr = errorAsString(*error);
       printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
       free(errStr);
 
       freeError(*error);
       *error = NULL;
-    }
+    } 
 
     freeTokens(tokens, *size);
     free(parser);
@@ -195,13 +213,24 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
   Object* result = visitNode(ast, filename, error, variables);
 
   if (!result) {
-    if (*error) {
+    if (*error && (*error)->details[0] != '@') { 
       char *errStr = errorAsString(*error);
       printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
       free(errStr);
 
       freeError(*error);
       *error = NULL;
+    } else if (*error && (*error)->details[0] == '@') {
+      char *exitCodeStr = (*error)->details + 1;
+      
+      int exitcodeInt;
+
+      if (!parseInt(exitCodeStr, &exitcodeInt)) {
+        printf("%sArc: %sExit code is expected to be a valid integer, defaulting to 1.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        exitcodeInt = 1;
+      }
+
+      exitcode = exitcodeInt; 
     }
 
     freeAST(ast);
@@ -224,23 +253,6 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
 
   free(lexer->filename);
   freeLexer(lexer);
-}
-
-int parseInt(const char *s, int *out) {
-  char *end = NULL;
-  errno = 0;
-
-  long val = strtol(s, &end, 10);
-
-  if (errno != 0) return 0; // overflow / underflow
-
-  while (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r') end++;
-
-  if (*end != '\0') return 0; // invalid chars
-  if (val < INT_MIN || val > INT_MAX) return 0;
-
-  *out = (int)val;
-  return 1;
 }
 
 void parseArguments(int argc, char **argv) {
@@ -382,7 +394,8 @@ int main(int argc, char **argv) {
     
     freeTable(variables);
     freeMemPools();
-    return 0;
+
+    return exitcode;
   }
 
   char *prompt;
@@ -420,11 +433,20 @@ int main(int argc, char **argv) {
     unsigned long size = 0;
     run(userInput, &error, &size, variables, "<stdin>");
 
-    if (error) {
+    if (error && error->details[0] != '@') {
       char *errStr = errorAsString(error);
       printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
       free(errStr);
       freeError(error);
+
+      error = NULL;
+    } else if (error && error->details[0] == '@') {
+      freeTable(variables);
+      freeMemPools();
+      free(userInput);
+      freeError(error);
+
+      return exitcode;
     }
 
     free(userInput);

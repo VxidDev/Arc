@@ -36,6 +36,8 @@ LDFLAGS_RELEASE = \
   -flto=auto \
   -Wl,--gc-sections
 
+TEST_FILES := $(wildcard tests/*.arc)
+
 V ?= 0
 
 ifeq ($(V),1)
@@ -46,7 +48,7 @@ endif
 
 ECHO = @echo
 
-.PHONY: all dev debug release install dev-install debug-install release-install uninstall clean
+.PHONY: all dev debug release install dev-install debug-install release-install uninstall clean test 
 
 all: dev
 
@@ -80,6 +82,14 @@ debug-install: debug
 release-install: release
 	$(ECHO) "Installing RELEASE -> $(BINDIR)"
 	$(Q)install -Dm755 $(TARGET) $(BINDIR)/$(TARGET)
+
+test: release
+	$(ECHO) "Running tests..."
+	$(Q)for f in $(TEST_FILES); do \
+		echo "== $$f =="; \
+		./$(TARGET) "$$f" || exit 1; \
+	done
+	$(ECHO) "All tests passed."
 
 install: release-install
 

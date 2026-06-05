@@ -10,7 +10,8 @@
 #include "../include/mempool.h"
 
 const NativeModuleEntry* stdlibModules[] = {
-  &(NativeModuleEntry){ "__mathlib", initMathModule }, NULL
+  &(NativeModuleEntry){ "__mathlib", initMathModule }, 
+  &(NativeModuleEntry){ "__sys", initSysModule }, NULL 
 };
 
 Object* copyObject(Object* obj) {
