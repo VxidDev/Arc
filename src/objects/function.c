@@ -26,7 +26,7 @@ Function* copyFunction(Function* func) {
 
   newFunc->params = arenaAlloc(stringArena, sizeof(char*) * func->paramCount);
 
-  if (!newFunc->params) { 
+  if (!newFunc->params && func->paramCount != 0) { 
     free(newFunc);
     return NULL; 
   }
@@ -51,7 +51,7 @@ NativeFunction* copyNativeFunction(NativeFunction* func) {
 }
 
 Function* initFunction(FunctionNode* node) {
-  if (!node->body || !node->name || !node->params) return NULL;
+  if (!node->body || !node->name || (!node->params && node->paramCount != 0)) return NULL;
 
   Function* func = malloc(sizeof(Function));
 
@@ -69,7 +69,7 @@ Function* initFunction(FunctionNode* node) {
 
   func->params = arenaAlloc(stringArena, sizeof(char*) * node->paramCount);
 
-  if (!func->params) { 
+  if (!func->params && node->paramCount != 0) { 
     free(func);
     return NULL;
   }
