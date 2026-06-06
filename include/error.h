@@ -15,16 +15,16 @@ typedef struct Error {
   Position start, end;
 } Error;
 
-Error* initError(Position start, Position end, char *filename, char *name, char *details);
-Error* initIllegalCharError(Position start, Position end, char *filename, char *details);
-Error* initSyntaxError(Position start, Position end, char *filename, char *details);
-Error* initValueError(Position start, Position end, char *filename, char *details);
-Error* initLexerError(Position start, Position end, char *filename, char *details);
-Error* initSemanticError(Position start, Position end, char *filename, char *details);
-Error* initNameError(Position start, Position end, char *filename, char *details);
-Error* initTypeError(Position start, Position end, char *filename, char *details);
-Error* initRuntimeError(Position start, Position end, char *filename, char *details);
-Error* initIndexError(Position start, Position end, char *filename, char *details);
+Error* initError(Position start, Position end, char *filename, char *name, char *details, char *filetext);
+Error* initIllegalCharError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initSyntaxError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initValueError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initLexerError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initSemanticError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initNameError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initTypeError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initRuntimeError(Position start, Position end, char *filename, char *details, char *filetext);
+Error* initIndexError(Position start, Position end, char *filename, char *details, char *filetext);
 
 char *errorAsString(const Error *error);
 

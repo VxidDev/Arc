@@ -1,6 +1,7 @@
 #include "../include/node.h"
 #include "../include/token.h"
 #include "../include/utils.h"
+#include "../include/interpretator.h"
 
 #include "../include/memarena.h"
 
@@ -15,6 +16,7 @@ NumberNode* initNumberNode(Token token) {
   if (!node) return NULL;
 
   node->base.type = NODE_NUMBER;
+  node->base.visit = visitNumberNode;
   node->token = token;
 
   return node;
@@ -28,6 +30,7 @@ ForNode* initForNode(Token forTok, Token identifier, ASTNode* iterable, ASTNode 
   if (!node) return NULL;
 
   node->base.type = NODE_FOR;
+  node->base.visit = visitForNode;
   
   node->forTok = forTok;
   node->ident = identifier;
@@ -45,6 +48,7 @@ FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t a
   if (!fncallNode) return NULL;
   
   fncallNode->base.type = NODE_FUNCTION_CALL;
+  fncallNode->base.visit = visitFunctionCallNode;
 
   fncallNode->callee = callee;
   fncallNode->args = args;
@@ -56,7 +60,7 @@ FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t a
   return fncallNode;
 }
 
-TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier, ASTNode* body, ASTNode* errHandler) {
+TryCatchNode* initTryCatchNode(Position tryStart, Position catchEnd, Token errIdentifier, ASTNode* body, ASTNode* errHandler) {
   if (!body || !errHandler) return NULL;
 
   TryCatchNode* node = arenaAlloc(parseArena, sizeof(TryCatchNode));
@@ -64,9 +68,10 @@ TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier
   if (!node) return NULL;
     
   node->base.type = NODE_TRYCATCH;
+  node->base.visit = visitTryCatchNode;
 
-  node->tryTok = tryTok;
-  node->catchTok = catchTok;
+  node->tryStart = tryStart;
+  node->catchEnd = catchEnd;
   node->errIdentifier = errIdentifier;
 
   node->body = body;
@@ -83,6 +88,8 @@ ContinueNode* initContinueNode(Token tok) {
   if (!node) return NULL;
   
   node->base.type = NODE_CONTINUE;
+  node->base.visit = visitContinueNode;
+
   node->tok = tok;
 
   return node;
@@ -96,6 +103,8 @@ BreakNode* initBreakNode(Token tok) {
   if (!node) return NULL;
   
   node->base.type = NODE_BREAK;
+  node->base.visit = visitBreakNode;
+
   node->tok = tok;
 
   return node;
@@ -109,6 +118,8 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
   if (!node) return NULL;
   
   node->base.type = NODE_FUNCTION;
+  node->base.visit = visitFunctionNode;
+
   node->body = body;
   node->name = stringDup(name);
 
@@ -128,6 +139,7 @@ ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, 
   if (!list) return NULL;
 
   list->base.type = NODE_LIST;
+  list->base.visit = visitListNode;
 
   list->startBracket = startBracket;
   list->endBracket = endBracket;
@@ -144,6 +156,8 @@ ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
   if (!node) return NULL;
 
   node->base.type = NODE_PROGRAM;
+  node->base.visit = visitProgramNode;
+
   node->statements = statements;
   node->count = count;
 
@@ -158,6 +172,8 @@ StringNode* initStringNode(Token token) {
   if (!node) return NULL;
 
   node->base.type = NODE_STRING;
+  node->base.visit = visitStringNode;
+
   node->token = token;
   node->len = strlen(token.val.s);
 
@@ -172,6 +188,8 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
   if (!node) return NULL;
 
   node->base.type = NODE_INDEX;
+  node->base.visit = visitIndexNode;
+
   node->target = target;
   node->index = index;
 
@@ -189,6 +207,8 @@ IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode*
   if (!node) return NULL;
 
   node->base.type = NODE_INDEXASSIGN;
+  node->base.visit = visitIndexAssignNode;
+
   node->targetIdent = targetIdent;
   node->index = index;
   node->value = value;
@@ -206,6 +226,8 @@ WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Posi
   if (!node) return NULL;
 
   node->base.type = NODE_WHILE;
+  node->base.visit = visitWhileNode;
+
   node->condition = condition;
   node->body = body;
 
@@ -223,6 +245,7 @@ BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode) {
   if (!node) return NULL;
 
   node->base.type = NODE_BINOP;
+  node->base.visit = visitBinOpNode;
 
   node->leftNode = leftNode;
   node->operTok = operTok;
@@ -239,6 +262,8 @@ UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
   if (!unaryNode) return NULL;
 
   unaryNode->base.type = NODE_UNARYOP;
+  unaryNode->base.visit = visitUnaryOpNode;
+
   unaryNode->operTok = operTok;
   unaryNode->node = node;
 
@@ -257,6 +282,8 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
   if (!varAssignNode->identifier) return NULL;
 
   varAssignNode->base.type = NODE_VARASSIGN;
+  varAssignNode->base.visit = visitVarAssignNode;
+
   varAssignNode->value = value;
 
   return varAssignNode;
@@ -270,6 +297,8 @@ VarAccessNode* initVarAccessNode(Token token) {
   if (!node) return NULL;
 
   node->base.type = NODE_VARACCESS;
+  node->base.visit = visitVarAccessNode;
+
   node->token = token;
   return node;
 }
@@ -282,6 +311,8 @@ ImportNode* initImportNode(Token filePath) {
   if (!node) return NULL;
 
   node->base.type = NODE_IMPORT;
+  node->base.visit = visitImportNode;
+
   node->filePath = filePath;
 
   return node;
@@ -295,6 +326,8 @@ ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr) {
   if (!node) return NULL;
 
   node->base.type = NODE_RETURN;
+  node->base.visit = visitReturnNode;
+
   node->expr = expr;
   node->start = start;
   node->end = end;
@@ -309,6 +342,8 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
   if (!node) return NULL;
 
   node->base.type = NODE_IF;
+  node->base.visit = visitIfNode;
+
   node->condition = condition;
   node->thenExpr = thenExpr;
   node->elifConds = elifConds;

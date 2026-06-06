@@ -2,13 +2,16 @@
 #define OBJECT_H
 
 #include "error.h"
-#include "node.h"
 
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
 
 #include <stdio.h>
+
+typedef struct ASTNode ASTNode;
+typedef struct FunctionNode FunctionNode;
+typedef struct FunctionCallNode FunctionCallNode;
 
 typedef struct SymbolTable SymbolTable;
 
@@ -165,7 +168,7 @@ Return* initReturn(Object* value);
 Break* initBreak();
 Continue* initContinue();
 
-FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, Error** err);
+FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, char *sourcetext, Error** err);
 
 Object* copyObject(Object *obj);
 

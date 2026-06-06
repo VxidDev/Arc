@@ -34,24 +34,27 @@ bool _SKIP_EVAL = false;
 size_t ARENA_BLOCK_SIZE = (256 * 1024); // 256 Kb
 SymbolTable* variables = NULL;
 int exitcode = 0;
+bool _CLEANUP = false;
 
 String** argVect;
 uint64_t argVectSize = 1;
 uint64_t argVectCap = 64;
 
 static inline void _exit(int code) {
-  if (variables) freeTable(variables);
+  if (_CLEANUP) {
+    if (variables) freeTable(variables);
 
-  if (argVect) {
-    for (uint64_t i = 1; i < argVectSize; i++) {
-      freeObject((Object*)argVect[i]);
+    if (argVect) {
+      for (uint64_t i = 1; i < argVectSize; i++) {
+        freeObject((Object*)argVect[i]);
+      }
+
+      free(argVect);
     }
 
-    free(argVect);
+    freeMemPools();
+    freeArenas();
   }
-
-  freeMemPools();
-  freeArenas();
 
   exit(code);
 }
@@ -170,7 +173,7 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     else putchar('\n');
   }
 
-  Parser* parser = initParser(tokens, *size, error);
+  Parser* parser = initParser(tokens, *size, error, text, filename);
 
   if (!parser) {
     freeTokens(tokens, *size);
@@ -203,7 +206,7 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
   }
   
   if (!_SKIP_EVAL) {
-    Object* result = visitNode(ast, filename, error, variables);
+    Object* result = visitNode(ast, filename, text, error, variables);
 
     if (!result) {
       if (*error && (*error)->details[0] != '@') { 
@@ -327,6 +330,9 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--last-result") == 0) {
       _PRINT_LAST_RESULT = true;
       continue;
+    } else if (strcmp(argv[i], "-C") == 0 || strcmp(argv[i], "--cleanup") == 0) {
+      _CLEANUP = true;
+      continue;
     } else {
       printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
       _exit(1);
@@ -381,9 +387,11 @@ int main(int argc, char **argv) {
     code = readFile(_INPUT_FILE);
 
     if (!code) {
-      freeTable(variables);
-      freeMemPools();
-      freeArenas();
+      if (_CLEANUP) {
+        freeTable(variables);
+        freeMemPools();
+        freeArenas();
+      }
       return 1;
     }
 
@@ -398,9 +406,11 @@ int main(int argc, char **argv) {
 
     run(code, &error, &size, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
     
-    freeTable(variables);
-    freeMemPools();
-    freeArenas();
+    if (_CLEANUP) {
+      freeTable(variables);
+      freeMemPools();
+      freeArenas();
+    }
 
     return exitcode;
   }
@@ -415,9 +425,13 @@ int main(int argc, char **argv) {
 
     if (!userInput) {
       printf("%sArc: %sFailed to get user input.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-      freeTable(variables);
-      freeArenas();
-      freeMemPools();
+
+      if (_CLEANUP) {
+        freeTable(variables);
+        freeArenas();
+        freeMemPools();
+      }
+
       break;
     }
 
@@ -427,10 +441,12 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(userInput, "exit") == 0) {
-      free(userInput);
-      freeTable(variables);
-      freeMemPools();
-      freeArenas();
+      if (_CLEANUP) {
+        free(userInput);
+        freeTable(variables);
+        freeMemPools();
+        freeArenas();
+      }
       return 0;
     } else if (strcmp(userInput, "clear") == 0) {
       printf("\033[2J\033[H");
@@ -451,11 +467,13 @@ int main(int argc, char **argv) {
 
       error = NULL;
     } else if (error && error->details[0] == '@') {
-      freeTable(variables);
-      freeMemPools();
-      freeArenas();
-      free(userInput);
-      freeError(error);
+      if (_CLEANUP) {
+        freeTable(variables);
+        freeMemPools();
+        freeArenas();
+        free(userInput);
+        freeError(error);
+      }
 
       return exitcode;
     }

@@ -11,7 +11,8 @@
 
 const NativeModuleEntry* stdlibModules[] = {
   &(NativeModuleEntry){ "__mathlib", initMathModule }, 
-  &(NativeModuleEntry){ "__sys", initSysModule }, NULL 
+  &(NativeModuleEntry){ "__sys", initSysModule }, 
+  &(NativeModuleEntry){ "__time", initTimeModule }, NULL 
 };
 
 Object* copyObject(Object* obj) {
@@ -61,6 +62,9 @@ void freeObject(Object* obj) {
 
     case OBJ_STRING: 
       poolFree(stringPool, obj); break;
+    
+    case OBJ_NATIVE_FUNCTION:
+      poolFree(nativeFuncPool, obj); break;
 
     case OBJ_LIST: {
       List* list = (List*)obj;
@@ -79,7 +83,6 @@ void freeObject(Object* obj) {
     
     case OBJ_MODULE:
     case OBJ_FUNCTION:
-    case OBJ_NATIVE_FUNCTION:
       free(obj);
       break;
 
@@ -108,11 +111,10 @@ void freeObject(Object* obj) {
           freeObject(fncall->args[i]);
         }
 
-        free(fncall->args);
       }
 
       if (fncall->env) freeTable(fncall->env);
-      free(fncall);
+      poolFree(functionCallPool, obj);
 
       break;
     }

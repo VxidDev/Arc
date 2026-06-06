@@ -15,6 +15,8 @@ typedef struct Parser {
   uint64_t tokenAmount;
 
   Error **error;
+  char* sourcetext;
+  char *filename;
 } Parser;
 
 typedef struct ParserCheckpoint {
@@ -25,7 +27,7 @@ typedef struct ParserCheckpoint {
 ParserCheckpoint saveParser(Parser* parser);
 void rewindParser(Parser* parser, ParserCheckpoint checkpoint);
 
-Parser* initParser(Token *tokens, const unsigned long tokenAmount, Error **error);
+Parser* initParser(Token *tokens, const unsigned long tokenAmount, Error **error, char *sourcetext, char *filename);
 Token advanceParser(Parser* parser);
 
 ASTNode* parseParser(Parser* parser);

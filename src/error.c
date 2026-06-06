@@ -11,7 +11,7 @@ void freeError(Error* err) {
   free(err);
 }
 
-Error* initError(Position start, Position end, char *name, char *filename, char *details) {
+Error* initError(Position start, Position end, char *name, char *filename, char *details, char *filetext) {
   if (!name || !details) return NULL;
 
   Error *error = malloc(sizeof(Error));
@@ -28,65 +28,58 @@ Error* initError(Position start, Position end, char *name, char *filename, char 
   error->details = stringDup(details);
 
   if (!error->details) {
-    free(error->name);
     free(error);
     return NULL;
   }
   
   error->filename = stringDup(filename);
-
   error->start = start;
-  
-  char* content = stringDup(start.filetext);
-  error->start.filetext = content;
-
   error->end = end;
-  error->end.filetext = content;
-
+  error->filetext = stringDup(filetext);
   return error;
 }
 
-Error *initIllegalCharError(Position start, Position end, char *filename, char *details) {
-  return initError(start, end, "Illegal Character", filename, details);
+Error *initIllegalCharError(Position start, Position end, char *filename, char *details, char *filetext) {
+  return initError(start, end, "Illegal Character", filename, details, filetext);
 }
 
-Error *initSyntaxError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Syntax Error", filename, details);
+Error *initSyntaxError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Syntax Error", filename, details, filetext);
 }
 
-Error *initValueError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Value Error", filename, details);
+Error *initValueError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Value Error", filename, details, filetext);
 }
 
-Error *initLexerError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Lexer Error", filename, details);
+Error *initLexerError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Lexer Error", filename, details, filetext);
 }
 
-Error *initSemanticError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Semantic Error", filename, details); 
+Error *initSemanticError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Semantic Error", filename, details, filetext); 
 }
 
-Error *initNameError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Name Error", filename, details);
+Error *initNameError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Name Error", filename, details, filetext);
 }
 
-Error *initTypeError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Type Error", filename, details);
+Error *initTypeError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Type Error", filename, details, filetext);
 }
 
-Error *initIndexError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Index Error", filename, details);
+Error *initIndexError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Index Error", filename, details, filetext);
 }
 
-Error *initRuntimeError(Position start, Position end, char *filename, char* details) {
-  return initError(start, end, "Runtime Error", filename, details);
+Error *initRuntimeError(Position start, Position end, char *filename, char* details, char *filetext) {
+  return initError(start, end, "Runtime Error", filename, details, filetext);
 }
 
 char* errorAsString(const Error* error) {
   if (!error || !error->name || !error->details || !error->filename)
     return NULL;
 
-  const char *text = error->start.filetext;
+  const char *text = error->filetext;
   unsigned long startIdx = error->start.index;
 
   unsigned long lineStart = startIdx;

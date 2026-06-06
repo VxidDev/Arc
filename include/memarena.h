@@ -18,6 +18,7 @@ typedef struct Arena {
 
 extern Arena* parseArena;
 extern Arena* stringArena;
+extern Arena* objectArena;
 
 Arena* arenaCreate(void);
 

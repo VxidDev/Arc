@@ -49,7 +49,7 @@ Lexer* initLexer(char *filename, char *text) {
   lexer->filename = filename;
   lexer->textLen = strlen(text);
   lexer->currChar = 0;
-  lexer->pos = (Position){-1, 0, -1, lexer->filename, lexer->text};
+  lexer->pos = (Position){-1, 0, -1};
 
   advanceLexer(lexer);
 
@@ -59,7 +59,7 @@ Lexer* initLexer(char *filename, char *text) {
 bool _resizeTokensList(Token **tokens, unsigned long *capacity) {
   unsigned long newCap = (*capacity) * 2;
 
-  Token *tmp = arenaRealloc(parseArena, *tokens, *capacity, newCap * sizeof(Token));
+  Token *tmp = arenaRealloc(parseArena, *tokens, *capacity * sizeof(Token), newCap * sizeof(Token));
   if (!tmp) return false;
 
   *tokens = tmp;
@@ -169,25 +169,25 @@ static TokType keywordType(const char *s) {
 Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
   if (!lexer) return (Token){.type = TOK_INVALID};
 
-  unsigned long size = 0;
-  unsigned long capacity = 32;
+  size_t size = 0;
+  size_t capacity = 32;
 
-  char *numStr = malloc(capacity);
+  char *numStr = arenaAlloc(stringArena, capacity);
 
   if (!numStr) return (Token){.type = TOK_INVALID};
 
-  unsigned long dotCount = 0;
+  size_t dotCount = 0;
 
   Position start = lexer->pos;
 
   while (lexer->currChar != 0 && (_is_digit(lexer->currChar) || lexer->currChar == '.')) {
     if (size >= capacity) {
+      size_t oldcap = capacity;
       capacity *= 2;
 
-      void* tmp = realloc(numStr, capacity);
+      void* tmp = arenaRealloc(stringArena, numStr, oldcap, capacity);
 
       if (!tmp) {
-        free(numStr);
         return (Token){.type = TOK_INVALID};
       }
 
@@ -214,28 +214,24 @@ Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
 
     // No digits found
     if (end == numStr) {
-      free(numStr);
-      if (*error == NULL) *error = initLexerError(start, lexer->pos, lexer->filename, "Invalid numeral literal");
+      if (*error == NULL) *error = initLexerError(start, lexer->pos, lexer->filename, "Invalid numeral literal", lexer->text);
       return (Token){.type = TOK_INVALID};
     }
 
     // overflow / underflow
     if (errno == ERANGE || value > INT64_MAX || value < INT64_MIN) {
-      free(numStr);
-      *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
+      *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range", lexer->text);
       return (Token){.type = TOK_INVALID};
     }
 
     // trailing garbage
     if (*end != '\0') {
-      free(numStr);
-      *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
+      *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number", lexer->text);
       return (Token){.type = TOK_INVALID};
     }
 
     Token token = initToken(TOK_INT, &value, false, start, lexer->pos);
 
-    free(numStr);
     return token;
   }
 
@@ -246,28 +242,24 @@ Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
 
   // No digits found
   if (end == numStr) {
-    free(numStr);
-    *error = initLexerError(start, lexer->pos, lexer->filename, "Invalid numeric literal");
+    *error = initLexerError(start, lexer->pos, lexer->filename, "Invalid numeric literal", lexer->text);
     return (Token){.type = TOK_INVALID};
   }
 
   // overflow / underflow
   if (errno == ERANGE) {
-    free(numStr);
-    *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range");
+    *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range", lexer->text);
     return (Token){.type = TOK_INVALID};
   }
 
   // trailing garbage
   if (*end != '\0') {
-    free(numStr);
-    *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number");
+    *error = initLexerError(start, lexer->pos, lexer->filename, "Trailing characters after number", lexer->text);
     return (Token){.type = TOK_INVALID};
   }
 
   Token token = initToken(TOK_FLOAT, &value, false, start, lexer->pos);
 
-  free(numStr);
   return token;
 }
 
@@ -336,8 +328,7 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
   }
 
   if (!lexer->currChar) {
-    if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Unterminated string");
-    free(buffer);
+    if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Unterminated string", lexer->text);
     return (Token){.type = TOK_INVALID};
   }
 
@@ -397,7 +388,7 @@ Token makeNotEqualsToken(Lexer* lexer, Error** error) {
   advanceLexer(lexer);
 
   if (!lexer->currChar) {
-    if (*error == NULL) *error = initSyntaxError(start, lexer->pos, start.filename, "Expected '=' symbol after '!'");
+    if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Expected '=' symbol after '!'", lexer->text);
     return (Token){.type = TOK_INVALID};
   }
 
@@ -406,7 +397,7 @@ Token makeNotEqualsToken(Lexer* lexer, Error** error) {
     return initToken(TOK_NE, NULL, false, start, lexer->pos);
   }
 
-  if (*error == NULL) *error = initSyntaxError(start, lexer->pos, start.filename, "Expected '=' symbol after '!'");
+  if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Expected '=' symbol after '!'", lexer->text);
   return (Token){.type = TOK_INVALID};
 }
 
@@ -451,7 +442,7 @@ Token makeGreaterThanToken(Lexer* lexer) {
 
 Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
   unsigned long size = 0;
-  unsigned long capacity = 1024;
+  unsigned long capacity = lexer->textLen / 2 + 64;
 
   Token* tokens = arenaAlloc(parseArena, sizeof(Token) * capacity);
   if (!tokens) return NULL;
@@ -558,7 +549,7 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
     Position end = lexer->pos;
 
     if (error) {
-      *error = initIllegalCharError(start, end, lexer->filename, details);
+      *error = initIllegalCharError(start, end, lexer->filename, details, lexer->text);
     }
 
     freeTokens(tokens, size);

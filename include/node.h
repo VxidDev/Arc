@@ -2,6 +2,7 @@
 #define NODE_H
 
 #include "token.h"
+#include "error.h"
 #include <stddef.h>
 
 typedef enum {
@@ -27,8 +28,15 @@ typedef enum {
   NODE_FOR
 } NodeType;
 
+typedef struct Object Object;
+typedef struct SymbolTable SymbolTable;
+typedef struct ASTNode ASTNode;
+
+typedef Object* (*VisitFn)(ASTNode*, char*, char*, Error**, SymbolTable*);
+
 typedef struct ASTNode {
   NodeType type;
+  VisitFn visit;
 } ASTNode;
 
 typedef struct NumberNode {
@@ -137,7 +145,8 @@ typedef struct ReturnNode {
 
 typedef struct TryCatchNode {
   ASTNode base;
-  Token tryTok, catchTok, errIdentifier;
+  Token errIdentifier;
+  Position tryStart, catchEnd;
   ASTNode *body, *errHandler;
 } TryCatchNode;
 
@@ -182,7 +191,7 @@ ProgramNode* initProgramNode(ASTNode** statements, size_t count);
 FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount);
 FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount, Position start, Position end);
 ImportNode* initImportNode(Token filePath);
-TryCatchNode* initTryCatchNode(Token tryTok, Token catchTok, Token errIdentifier, ASTNode* body, ASTNode* errHandler);
+TryCatchNode* initTryCatchNode(Position tryStart, Position catchEnd, Token errIdentifier, ASTNode* body, ASTNode* errHandler);
 ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr);
 BreakNode* initBreakNode(Token tok);
 ContinueNode* initContinueNode(Token tok);

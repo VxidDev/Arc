@@ -6,6 +6,10 @@ test.py
 calc.arc
 arc.arc
 *.py 
+vgcore.*
+
+benchmark.py
+benchmark.arc
 # Prerequisites
 *.d
 

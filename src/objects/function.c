@@ -3,7 +3,10 @@
 #include "../../include/symbol-table.h"
 #include "../../include/interpretator.h"
 
+#include "../../include/repl/repl.h"
+
 #include "../../include/memarena.h"
+#include "../../include/mempool.h"
 
 #include <stdlib.h>
 
@@ -88,25 +91,29 @@ Function* initFunction(FunctionNode* node) {
   return func;
 }
 
-FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, SymbolTable *globalTable, char *filename, Error** err) {
+FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, SymbolTable *globalTable, char *filename, char *sourcetext, Error** err) {
   if (!node || !globalTable || !calleeObj) return NULL;
 
-  FunctionCall *call = malloc(sizeof(FunctionCall));
+  FunctionCall *call = poolAlloc(functionCallPool);
   if (!call) return NULL;
     
   call->base.type = OBJ_FUNCTION_CALL;
   call->argCount = node->argCount;
 
-  call->args = malloc(sizeof(Object*) * call->argCount);
+  if (call->argCount > 0) {
+    call->args = arenaAlloc(objectArena, sizeof(Object*) * call->argCount);
 
-  if (!call->args) {
-    free(call);
-    return NULL;
+    if (!call->args) {
+      if (_DEBUG) printf("[debug] Failed to arena-allocate memory for an array of Object* @ initFunctionCall - line approx. 103.\n");
+      return NULL;
+    }
+  } else {
+    call->args = NULL;
+    if (_DEBUG) printf("[debug] No arguments passed, skipping arena-allocating memory. @ initFunctionCall - line approx. 111.\n");
   }
 
   if (calleeObj->type != OBJ_FUNCTION) {
     free(call->args);
-    free(call);
     return NULL;
   }
 
@@ -115,26 +122,16 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
   call->env = createTable(64, globalTable);
 
   if (!call->env) {
-    freeObject(calleeObj);
-    free(call->args);
-    free(call);
-
     return NULL;
   }
 
   for (size_t i = 0; i < call->argCount; i++) {
-    Object *argVal = visitNode(node->args[i], filename, err, globalTable);
+    Object *argVal = node->args[i]->visit(node->args[i], filename, sourcetext, err, globalTable);
 
     if (!argVal) {
-      for (size_t j = 0; j < i; j++) {
-        freeObject(call->args[j]);
-      }
-  
-      freeTable(call->env);
-      freeObject(calleeObj);
-      free(call->args);
-      free(call);
+      if (_DEBUG) printf("[debug] Failed to evaluate function arguments @ initFunctionCall - line approx. 123.\n");
 
+      freeTable(call->env); 
       return NULL;
     }
 
@@ -149,7 +146,7 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
 }
 
 NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredArgCount, bool isVariadic) {
-  NativeFunction* nativeFunc = malloc(sizeof(NativeFunction));
+  NativeFunction* nativeFunc = poolAlloc(nativeFuncPool);
 
   if (!nativeFunc) return NULL;
   

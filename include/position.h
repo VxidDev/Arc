@@ -3,7 +3,6 @@
 
 typedef struct Position {
   unsigned long index, line, column;
-  char *filename, *filetext;
 } Position;
 
 void advancePosition(Position *pos, char c);

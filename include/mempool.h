@@ -12,6 +12,8 @@ typedef struct {
 
 extern MemPool* numberPool;
 extern MemPool* stringPool;
+extern MemPool* nativeFuncPool;
+extern MemPool* functionCallPool;
 
 MemPool* initPool(size_t objSize); 
 
