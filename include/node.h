@@ -28,11 +28,11 @@ typedef enum {
   NODE_FOR
 } NodeType;
 
+typedef struct Interpretator Interpretator;
 typedef struct Object Object;
-typedef struct SymbolTable SymbolTable;
 typedef struct ASTNode ASTNode;
 
-typedef Object* (*VisitFn)(ASTNode*, char*, char*, Error**, SymbolTable*);
+typedef Object* (*VisitFn)(ASTNode*, Interpretator*);
 
 typedef struct ASTNode {
   NodeType type;

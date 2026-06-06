@@ -206,7 +206,8 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
   }
   
   if (!_SKIP_EVAL) {
-    Object* result = visitNode(ast, filename, text, error, variables);
+    Interpretator* interpretator = initInterpretator(filename, text, error, variables);
+    Object* result = visitNode(ast, interpretator);
 
     if (!result) {
       if (*error && (*error)->details[0] != '@') { 

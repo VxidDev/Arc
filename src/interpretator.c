@@ -10,11 +10,30 @@
 #include "../include/repl/readfile.h"
 #include "../include/repl/repl.h"
 
+#include "../include/memarena.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-Object* visitNumberNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Interpretator* initInterpretator(char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+  if (!filename || !sourcetext || !err || !variables) return NULL;
+
+  Interpretator* interpretator = arenaAlloc(parseArena, sizeof(Interpretator));
+
+  if (!interpretator) return NULL;
+
+  interpretator->filename = filename;
+  interpretator->sourcetext = sourcetext;
+  interpretator->err = err;
+  interpretator->variables = variables;
+
+  return interpretator;
+}
+
+Object* visitNumberNode(ASTNode* node, Interpretator* ctx) {
+  (void)ctx;
+
   NumberNode* num = (NumberNode*)node;
 
   if (num->token.type == TOK_FLOAT) {
@@ -112,7 +131,7 @@ static Object* _stringBinOp(BinOpNode* binOper, Object* srcObj, const char* op, 
   return out;
 }
 
-Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitBinOpNode(ASTNode* node, Interpretator* ctx) {
   BinOpNode* binOper = (BinOpNode*)node;
 
   TokType opType = binOper->operTok.type;
@@ -123,8 +142,8 @@ Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **
   ASTNode* leftNode = binOper->leftNode;
   ASTNode* rightNode = binOper->rightNode;
 
-  Object *srcObj = leftNode->visit(leftNode, filename, sourcetext, err, variables);
-  Object *destObj = rightNode->visit(rightNode, filename, sourcetext, err, variables);
+  Object *srcObj = leftNode->visit(leftNode, ctx);
+  Object *destObj = rightNode->visit(rightNode, ctx);
 
   if (!srcObj || !destObj) {
     freeObject(srcObj);
@@ -142,10 +161,10 @@ Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **
   bool isDestNum = ((destType == OBJ_NUMBER_INT) || (destType == OBJ_NUMBER_FLOAT));
 
   if (srcType == OBJ_STRING || destType == OBJ_STRING)
-    return _stringBinOp(binOper, srcObj , op, destObj, leftType, rightType, filename, sourcetext, err);
+    return _stringBinOp(binOper, srcObj , op, destObj, leftType, rightType, ctx->filename, ctx->sourcetext, ctx->err);
 
   if (!isSrcNum || !isDestNum) {
-    _initBinOpTypeErr(binOper->operTok.start, binOper->operTok.end, op, leftType, rightType, filename, sourcetext, err);
+    _initBinOpTypeErr(binOper->operTok.start, binOper->operTok.end, op, leftType, rightType, ctx->filename, ctx->sourcetext, ctx->err);
 
     freeObject(srcObj);
     freeObject(destObj);
@@ -157,7 +176,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **
   Number* dest = (Number*)destObj;
 
   if (!src || !dest) {
-    if (!*err) *err = initValueError(binOper->operTok.start, binOper->operTok.end, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL", sourcetext);
+    if (!*ctx->err) *ctx->err = initValueError(binOper->operTok.start, binOper->operTok.end, ctx->filename, "Expected TOK_FLOAT or TOK_INT token, received NULL", ctx->sourcetext);
 
     freeObject(srcObj);
     freeObject(destObj);
@@ -197,16 +216,16 @@ Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **
     case ERR_NONE:
       break;
     case ERR_NULL:
-      if (!*err) *err = initValueError(binOper->operTok.start, binOper->operTok.end, filename, "Expected TOK_FLOAT or TOK_INT token, received NULL", sourcetext);
+      if (!*ctx->err) *ctx->err = initValueError(binOper->operTok.start, binOper->operTok.end, ctx->filename, "Expected TOK_FLOAT or TOK_INT token, received NULL", ctx->sourcetext);
       break;
     case ERR_DIV_BY_ZERO:
-      if (!*err) *err = initValueError(binOper->operTok.start, binOper->operTok.end, filename, "Division by zero", sourcetext);
+      if (!*ctx->err) *ctx->err = initValueError(binOper->operTok.start, binOper->operTok.end, ctx->filename, "Division by zero", ctx->sourcetext);
       break;
     case ERR_TYPE:
-      if (!*err) *err = initTypeError(binOper->operTok.start, binOper->operTok.end, filename, "Incompatible type for binary operation", sourcetext);
+      if (!*ctx->err) *ctx->err = initTypeError(binOper->operTok.start, binOper->operTok.end, ctx->filename, "Incompatible type for binary operation", ctx->sourcetext);
       break;
     default:
-      if (!*err) *err = initValueError(binOper->operTok.start, binOper->operTok.end, filename, "Unknown error.", sourcetext);
+      if (!*ctx->err) *ctx->err = initValueError(binOper->operTok.start, binOper->operTok.end, ctx->filename, "Unknown error.", ctx->sourcetext);
       break;
   }
 
@@ -220,7 +239,7 @@ Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **
   return (Object*)dest;
 }
 
-Object* visitUnaryOpNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitUnaryOpNode(ASTNode* node, Interpretator* ctx) {
   UnaryOpNode* unaryOper = (UnaryOpNode*)node;
 
   char* op;
@@ -232,10 +251,10 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, char *sourcetext, Error 
     default: op = "?"; break;
   }
 
-  Object* numberObj = (Object*)unaryOper->node->visit(unaryOper->node, filename, sourcetext, err, variables);
+  Object* numberObj = unaryOper->node->visit(unaryOper->node, ctx);
 
   if (!numberObj) {
-    if (!*err) *err = initValueError(unaryOper->operTok.start, unaryOper->operTok.end, filename, "Expected Number* result, received NULL.", sourcetext);
+    if (!*ctx->err) *ctx->err = initValueError(unaryOper->operTok.start, unaryOper->operTok.end, ctx->filename, "Expected Number* result, received NULL.", ctx->sourcetext);
     return NULL;
   }
 
@@ -248,7 +267,7 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, char *sourcetext, Error 
 
     freeObject(numberObj);
 
-    if (!*err) *err = initTypeError(unaryOper->operTok.start, unaryOper->operTok.end, filename, buffer, sourcetext);
+    if (!*ctx->err) *ctx->err = initTypeError(unaryOper->operTok.start, unaryOper->operTok.end, ctx->filename, buffer, ctx->sourcetext);
     return NULL;
   }
 
@@ -288,18 +307,18 @@ Object* visitUnaryOpNode(ASTNode* node, char *filename, char *sourcetext, Error 
     }
 
     default: 
-      if (!*err) *err = initSyntaxError(unaryOper->operTok.start, unaryOper->operTok.end, filename, "Unknown unary operator.", sourcetext);
+      if (!*ctx->err) *ctx->err = initSyntaxError(unaryOper->operTok.start, unaryOper->operTok.end, ctx->filename, "Unknown unary operator.", ctx->sourcetext);
       return NULL;
   }
 
   return NULL;
 }
 
-Object* visitVarAccessNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitVarAccessNode(ASTNode* node, Interpretator* ctx) {
   VarAccessNode* va = (VarAccessNode*)node;
   char *varName = va->token.val.s;
 
-  Object* stored = (Object*)getTable(variables, varName);
+  Object* stored = getTable(ctx->variables, varName);
 
   if (!stored) {
     int len = snprintf(NULL, 0, "Undefined variable \"%s\"", varName);
@@ -307,7 +326,7 @@ Object* visitVarAccessNode(ASTNode* node, char *filename, char *sourcetext, Erro
 
     snprintf(buffer, len + 1, "Undefined variable \"%s\"", varName);
 
-    if (!*err) *err = initNameError(va->token.start, va->token.end, filename, buffer, sourcetext);
+    if (!*ctx->err) *ctx->err = initNameError(va->token.start, va->token.end, ctx->filename, buffer, ctx->sourcetext);
     free(buffer);
 
     return NULL;
@@ -316,40 +335,48 @@ Object* visitVarAccessNode(ASTNode* node, char *filename, char *sourcetext, Erro
   return copyObject(stored);
 }
 
-Object* visitVarAssignNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitVarAssignNode(ASTNode* node, Interpretator* ctx) {
   VarAssignNode* va = (VarAssignNode*)node;
 
-  Object* value = va->value->visit(va->value, filename, sourcetext, err, variables);
+  Object* value = va->value->visit(va->value, ctx);
 
   if (!value) return NULL;
 
-  setTable(variables, va->identifier, value, true);
+  setTable(ctx->variables, va->identifier, value, true);
 
   return value;
 }
 
-Object* visitStringNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitStringNode(ASTNode* node, Interpretator* ctx) {
+  (void)ctx;
+
   StringNode* str = (StringNode*)node;
 
   return (Object*)initString(str->token.val.s, str->len);
 }
 
-Object* visitContinueNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitContinueNode(ASTNode* node, Interpretator* ctx) {
+  (void)node;
+  (void)ctx;
+
   return (Object*)initContinue();
 }
 
-Object* visitBreakNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitBreakNode(ASTNode* node, Interpretator* ctx) {
+  (void)node;
+  (void)ctx;
+
   return (Object*)initBreak();
 }
 
-Object* visitProgramNode(ASTNode* node, char *filename, char* sourcetext, Error **err, SymbolTable* variables) {
+Object* visitProgramNode(ASTNode* node, Interpretator* ctx) {
   ProgramNode* prog = (ProgramNode*)node;
 
   Object* last = NULL;
 
   for (size_t i = 0; i < prog->count; i++) {
     freeObject(last);
-    last = prog->statements[i]->visit(prog->statements[i], filename, sourcetext, err, variables);
+    last = prog->statements[i]->visit(prog->statements[i], ctx);
 
     if (!last) return NULL; // error already set
     
@@ -361,36 +388,33 @@ Object* visitProgramNode(ASTNode* node, char *filename, char* sourcetext, Error 
   return last;
 }
 
-Object* visitIfNode(ASTNode* n, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitIfNode(ASTNode* n, Interpretator* ctx) {
   if (!n) return NULL;
 
   IfNode* node = (IfNode*)n;
 
-  Object* condition = node->condition->visit(node->condition, filename, sourcetext, err, variables);
+  Object* condition = node->condition->visit(node->condition, ctx);
 
-  if (!condition) return NULL;
-  if (condition->type != OBJ_NUMBER_INT) return NULL;
+  if (!condition || condition->type != OBJ_NUMBER_INT) return NULL;
 
   Number* cond = (Number*)condition;
 
   if (cond->as.i != 0) {
     freeObject(condition);
-    Object* obj = node->thenExpr->visit(node->thenExpr, filename, sourcetext, err, variables);
-
-    return obj;
+    return node->thenExpr->visit(node->thenExpr, ctx);
   }
 
   freeObject(condition);
 
   for (size_t i = 0; i < node->elifCount; i++) {
-    Object* elifVal = node->elifConds[i]->visit(node->elifConds[i], filename, sourcetext, err, variables);
+    Object* elifVal = node->elifConds[i]->visit(node->elifConds[i], ctx);
     if (!elifVal) return NULL;
 
     if (elifVal->type != OBJ_NUMBER_INT) return NULL;
 
     if (((Number*)elifVal)->as.i != 0) {
       freeObject(elifVal);
-      Object* obj = node->elifExprs[i]->visit(node->elifExprs[i], filename, sourcetext, err, variables);
+      Object* obj = node->elifExprs[i]->visit(node->elifExprs[i], ctx);
 
       return obj;
     }
@@ -400,7 +424,7 @@ Object* visitIfNode(ASTNode* n, char *filename, char *sourcetext, Error **err, S
 
   // Fall through to ELSE if present
   if (node->elseExpr) {
-    Object* obj = node->elseExpr->visit(node->elseExpr, filename, sourcetext, err, variables);
+    Object* obj = node->elseExpr->visit(node->elseExpr, ctx);
 
     return obj;
   }
@@ -408,13 +432,13 @@ Object* visitIfNode(ASTNode* n, char *filename, char *sourcetext, Error **err, S
   return (Object*)initInt(0);
 }
 
-Object* visitListNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitListNode(ASTNode* node, Interpretator* ctx) {
   ListNode* listNode = (ListNode*)node;
   
-  Object *objs[listNode->capacity];
+  Object *objs[listNode->size]; // TODO: replace with heap allocation
 
   for (uint64_t i = 0; i < listNode->size; i++) {
-    objs[i] = listNode->objects[i]->visit(listNode->objects[i], filename, sourcetext, err, variables);
+    objs[i] = listNode->objects[i]->visit(listNode->objects[i], ctx);
   }
 
   List* list = initList(objs, listNode->size, listNode->capacity);
@@ -422,13 +446,13 @@ Object* visitListNode(ASTNode* node, char* filename, char *sourcetext, Error** e
   return (Object*)list;
 }
 
-Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitIndexNode(ASTNode* node, Interpretator* ctx) {
   IndexNode* idx = (IndexNode*)node;
 
   const char* targetType; 
   const char* idxType; 
 
-  Object* target = idx->target->visit(idx->target, filename, sourcetext, err, variables);
+  Object* target = idx->target->visit(idx->target, ctx);
 
   if (!target) {
     return NULL;
@@ -436,7 +460,7 @@ Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **
 
   targetType = typeofobj(target);
 
-  Object* index = idx->index->visit(idx->index, filename, sourcetext, err, variables);
+  Object* index = idx->index->visit(idx->index, ctx);
 
   if (!index) {
     return NULL;
@@ -449,7 +473,7 @@ Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **
 
     snprintf(buff, sizeof(buff), "Object of type \"%s\" is not subscriptable.", targetType);
 
-    if (!*err) *err = initTypeError(idx->start, idx->end, filename, buff, sourcetext);
+    if (!*ctx->err) *ctx->err = initTypeError(idx->start, idx->end, ctx->filename, buff, ctx->sourcetext);
 
     freeObject(target);
     freeObject(index);
@@ -462,7 +486,7 @@ Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **
 
     snprintf(buff, sizeof(buff), "Cannot use a value of type \"%s\" as an index.", idxType);
 
-    if (!*err) *err = initTypeError(idx->start, idx->end, filename, buff, sourcetext);
+    if (!*ctx->err) *ctx->err = initTypeError(idx->start, idx->end, ctx->filename, buff, ctx->sourcetext);
 
     freeObject(target);
     freeObject(index);
@@ -475,7 +499,7 @@ Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **
     Number* id = (Number*)index;
 
     if (id->as.i < 0 || (uint64_t)id->as.i >= str->len) {
-      if (!*err) *err = initIndexError(idx->start, idx->end, filename, "Index out of range.", sourcetext);
+      if (!*ctx->err) *ctx->err = initIndexError(idx->start, idx->end, ctx->filename, "Index out of range.", ctx->sourcetext);
 
       freeObject(target);
       freeObject(index);
@@ -495,7 +519,7 @@ Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **
   Number* id = (Number*)index;
   
   if (id->as.i < 0 || (uint64_t)id->as.i >= list->size) {
-    if (*err == NULL) *err = initIndexError(idx->start, idx->end, filename, "Index out of range.", sourcetext);
+    if (*ctx->err == NULL) *ctx->err = initIndexError(idx->start, idx->end, ctx->filename, "Index out of range.", ctx->sourcetext);
 
     freeObject(target);
     freeObject(index);
@@ -511,19 +535,19 @@ Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error **
   return obj;
 }
 
-Object* visitWhileNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitWhileNode(ASTNode* node, Interpretator* ctx) {
   WhileNode* whileNode = (WhileNode*)node;
 
   ASTNode* condNode = whileNode->condition;
   ASTNode* bodyNode = whileNode->body;
 
   while (true) {  
-    Object* cond = condNode->visit(condNode, filename, sourcetext, err, variables);
+    Object* cond = condNode->visit(condNode, ctx);
 
     if (!cond) return NULL;
 
     if (cond->type != OBJ_NUMBER_INT) {
-      if (*err == NULL) *err = initTypeError(whileNode->start, whileNode->end, filename, "Condition must be evaluated to integer type object.", sourcetext);
+      if (*ctx->err == NULL) *ctx->err = initTypeError(whileNode->start, whileNode->end, ctx->filename, "Condition must be evaluated to integer type object.", ctx->sourcetext);
 
       freeObject(cond);
 
@@ -535,7 +559,7 @@ Object* visitWhileNode(ASTNode* node, char* filename, char *sourcetext, Error** 
 
     if (value == 0) break;
 
-    Object* tmp = bodyNode->visit(bodyNode, filename, sourcetext, err, variables);
+    Object* tmp = bodyNode->visit(bodyNode, ctx);
     if (!tmp) return NULL;
     
     if (tmp->type == OBJ_BREAK) {
@@ -558,7 +582,9 @@ Object* visitWhileNode(ASTNode* node, char* filename, char *sourcetext, Error** 
   return (Object*)initInt(1);
 }
 
-Object* visitFunctionNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitFunctionNode(ASTNode* node, Interpretator* ctx) {
+  (void)ctx;
+
   FunctionNode* func = (FunctionNode*)node;
   Object* funcObj = (Object*)initFunction(func);
 
@@ -566,36 +592,40 @@ Object* visitFunctionNode(ASTNode* node, char *filename, char *sourcetext, Error
     return NULL;
   }
 
-  setTable(variables, func->name, funcObj, false);
+  setTable(ctx->variables, func->name, funcObj, false);
 
   return (Object*)initInt(1); // true
 }
 
-static Object** evaluateArgs(ASTNode** args, size_t argCount, char* filename, char *sourcetext, Error** err, SymbolTable* variables) {
+static Object** evaluateArgs(ASTNode** args, size_t argCount, Interpretator* ctx) {
   Object** evaluatedArgs = malloc(sizeof(Object*) * argCount);
   if (!evaluatedArgs) return NULL;
 
   for (size_t i = 0; i < argCount; i++) {
-    evaluatedArgs[i] = args[i]->visit(args[i], filename, sourcetext, err, variables);
+    evaluatedArgs[i] = args[i]->visit(args[i], ctx);
+
     if (!evaluatedArgs[i]) {
-      for (size_t j = 0; j < i; j++) freeObject(evaluatedArgs[j]);
+      for (size_t j = 0; j < i; j++) 
+        freeObject(evaluatedArgs[j]);
+
       free(evaluatedArgs);
       return NULL;
     }
   }
+
   return evaluatedArgs;
 }
 
-Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitFunctionCallNode(ASTNode* node, Interpretator* ctx) {
   FunctionCallNode* fncallnode = (FunctionCallNode*)node;
-  Object* calleeObj = fncallnode->callee->visit(fncallnode->callee, filename, sourcetext, err, variables);
+  Object* calleeObj = fncallnode->callee->visit(fncallnode->callee, ctx);
 
   if (!calleeObj) return NULL;
 
   Object* res = NULL;
 
   if (calleeObj->type == OBJ_FUNCTION) {
-    FunctionCall* call = initFunctionCall(fncallnode, calleeObj, variables, filename, sourcetext, err);
+    FunctionCall* call = initFunctionCall(fncallnode, calleeObj, ctx);
 
     if (!call) {
       freeObject(calleeObj);
@@ -608,14 +638,19 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, E
       char buf[256];
 
       snprintf(buf, sizeof(buf), "Function '%s' expected %zu arguments, got %zu.", func->name, func->paramCount, call->argCount);
-      if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, filename, buf, sourcetext);
+      if (!*ctx->err) *ctx->err = initRuntimeError(fncallnode->start, fncallnode->end, ctx->filename, buf, ctx->sourcetext);
 
       freeObject((Object*)call);
       freeObject(calleeObj);
       return NULL;
     }
 
-    res = call->function->body->visit(call->function->body, filename, sourcetext, err, call->env);
+    SymbolTable* prevTable = ctx->variables;
+    ctx->variables = call->env;
+
+    res = call->function->body->visit(call->function->body, ctx);
+
+    ctx->variables = prevTable;
 
     freeObject((Object*)call);
     freeObject(calleeObj);
@@ -626,14 +661,14 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, E
       char buf[256];
 
       snprintf(buf, sizeof(buf), "Function '%s' expected atleast %zu argument%s, got %zu.", nativeFunc->name, nativeFunc->requiredArgCount, nativeFunc->requiredArgCount == 1 ? "" : "s", fncallnode->argCount);
-      if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, filename, buf, sourcetext);
+      if (!*ctx->err) *ctx->err = initRuntimeError(fncallnode->start, fncallnode->end, ctx->filename, buf, ctx->sourcetext);
       
       freeObject(calleeObj);
 
       return NULL;
     }
 
-    Object** evaluatedArgs = evaluateArgs(fncallnode->args, fncallnode->argCount, filename, sourcetext, err, variables);
+    Object** evaluatedArgs = evaluateArgs(fncallnode->args, fncallnode->argCount, ctx);
 
     if (!evaluatedArgs) {
       freeObject(calleeObj);
@@ -642,7 +677,8 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, E
 
     res = nativeFunc->function(evaluatedArgs, fncallnode->argCount);
 
-    for (size_t i = 0; i < fncallnode->argCount; i++) freeObject(evaluatedArgs[i]);
+    for (size_t i = 0; i < fncallnode->argCount; i++) 
+      freeObject(evaluatedArgs[i]);
 
     free(evaluatedArgs);
     freeObject(calleeObj);
@@ -652,13 +688,13 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, E
   }
 
   if (res && res->type == OBJ_ERROR) {
-    if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, filename, ((ProgramError*)res)->details, sourcetext);
+    if (!*ctx->err) *ctx->err = initRuntimeError(fncallnode->start, fncallnode->end, ctx->filename, ((ProgramError*)res)->details, ctx->sourcetext);
     freeObject(res);
     return NULL;
   }
 
   if (res && (res->type == OBJ_BREAK || res->type == OBJ_CONTINUE)) {
-    if (!*err) *err = initRuntimeError(fncallnode->start, fncallnode->end, filename, "Break/Continue outside of loop.", sourcetext);
+    if (!*ctx->err) *ctx->err = initRuntimeError(fncallnode->start, fncallnode->end, ctx->filename, "Break/Continue outside of loop.", ctx->sourcetext);
     freeObject(res);
     return NULL;
   }
@@ -672,15 +708,15 @@ Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, E
   return res;
 }
 
-Object* visitImportNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitImportNode(ASTNode* node, Interpretator* ctx) {
   ImportNode* import = (ImportNode*)node;
 
   char* name = import->filePath.val.s;
 
   for (size_t i = 0; stdlibModules[i]; i++) {
     if (strcmp(stdlibModules[i]->name, name) == 0) {
-        stdlibModules[i]->init(variables);
-        return (Object*)initInt(1);
+      stdlibModules[i]->init(ctx->variables);
+      return (Object*)initInt(1);
     }
   }
 
@@ -699,7 +735,7 @@ Object* visitImportNode(ASTNode* node, char *filename, char *sourcetext, Error**
 
   size_t tokenAmount = 0;
 
-  Token* tokens = makeTokensLexer(lexer, err, &tokenAmount);
+  Token* tokens = makeTokensLexer(lexer, ctx->err, &tokenAmount);
 
   if (!tokens) {
     free(fileContent);
@@ -707,7 +743,7 @@ Object* visitImportNode(ASTNode* node, char *filename, char *sourcetext, Error**
     return NULL;
   }
 
-  Parser* parser = initParser(tokens, tokenAmount, err, name, fileContent);
+  Parser* parser = initParser(tokens, tokenAmount, ctx->err, name, fileContent);
   
   if (!parser) {
     freeTokens(tokens, tokenAmount);
@@ -725,7 +761,16 @@ Object* visitImportNode(ASTNode* node, char *filename, char *sourcetext, Error**
     return NULL;
   }
 
-  Object* result = ast->visit(ast, lexer->filename, fileContent, err, variables);
+  char *prevFilename = ctx->filename;
+  char *prevFilecontent = ctx->sourcetext;
+  
+  ctx->sourcetext = fileContent;
+  ctx->filename = lexer->filename;
+
+  Object* result = ast->visit(ast, ctx);
+  
+  ctx->sourcetext = prevFilecontent;
+  ctx->filename = prevFilename;
 
   if (!result) {
     freeTokens(tokens, tokenAmount);
@@ -745,20 +790,20 @@ Object* visitImportNode(ASTNode* node, char *filename, char *sourcetext, Error**
     return NULL;
   }
 
-  setTable(variables, lexer->filename, (Object*)module, true);
+  setTable(ctx->variables, lexer->filename, (Object*)module, true);
 
   return result;
 }
 
-Object* visitReturnNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitReturnNode(ASTNode* node, Interpretator* ctx) {
   ReturnNode* ret = (ReturnNode*)node;
 
-  Object* val = ret->expr->visit(ret->expr, filename, sourcetext, err, variables);
+  Object* val = ret->expr->visit(ret->expr, ctx);
   if (!val) return NULL;
 
   if (val->type == OBJ_BREAK || val->type == OBJ_CONTINUE) {
     freeObject(val);
-    if (!*err) *err = initRuntimeError(ret->start, ret->end, filename, "Cannot return a loop signal.", sourcetext);
+    if (!*ctx->err) *ctx->err = initRuntimeError(ret->start, ret->end, ctx->filename, "Cannot return a loop signal.", ctx->sourcetext);
     return NULL;
   }
 
@@ -767,11 +812,11 @@ Object* visitReturnNode(ASTNode* node, char* filename, char *sourcetext, Error**
   return (Object*)retVal;
 }
 
-Object* visitTryCatchNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitTryCatchNode(ASTNode* node, Interpretator* ctx) {
   TryCatchNode* tryCatch = (TryCatchNode*)node;
 
   Error* innerErr = NULL;
-  Object* bodyRes = tryCatch->body->visit(tryCatch->body, filename, sourcetext, &innerErr, variables);
+  Object* bodyRes = tryCatch->body->visit(tryCatch->body, ctx);
 
   if (!innerErr) return bodyRes;
 
@@ -783,21 +828,21 @@ Object* visitTryCatchNode(ASTNode* node, char *filename, char *sourcetext, Error
   Object* errObj = (Object*)initString((char*)details, (uint64_t)strlen(details));
 
   if (tryCatch->errIdentifier.val.s && errObj) {
-    setTable(variables, tryCatch->errIdentifier.val.s, errObj, false);
+    setTable(ctx->variables, tryCatch->errIdentifier.val.s, errObj, false);
   }
   
   freeError(innerErr);
 
-  if (err) *err = NULL; // clear outer error
+  if (ctx->err) *ctx->err = NULL; // clear outer error
 
-  return tryCatch->errHandler->visit(tryCatch->errHandler, filename, sourcetext, err, variables);
+  return tryCatch->errHandler->visit(tryCatch->errHandler, ctx);
 } 
 
-Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
+Object* visitIndexAssignNode(ASTNode* node, Interpretator* ctx) {
   IndexAssignNode* ia = (IndexAssignNode*)node;
   Token ident = ia->targetIdent;
 
-  Object* obj = (Object*)getTable(variables, ident.val.s);
+  Object* obj = getTable(ctx->variables, ident.val.s);
 
   if (!obj) {
     int len = snprintf(NULL, 0, "Undefined variable \"%s\"", ident.val.s);
@@ -805,7 +850,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
 
     snprintf(buffer, len + 1, "Undefined variable \"%s\"", ident.val.s); 
       
-    if (*err == NULL) *err = initNameError(ident.start, ident.end, filename, buffer, sourcetext);
+    if (*ctx->err == NULL) *ctx->err = initNameError(ident.start, ident.end, ctx->filename, buffer, ctx->sourcetext);
     free(buffer);
 
     return NULL;
@@ -816,17 +861,17 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
 
     snprintf(buf, sizeof(buf), "Object of type '%s' is not indexable.", typeofobj(obj));
 
-    if (*err == NULL) *err = initIndexError(ident.start, ident.end, filename, buf, sourcetext);
+    if (*ctx->err == NULL) *ctx->err = initIndexError(ident.start, ident.end, ctx->filename, buf, ctx->sourcetext);
     return NULL;
   }
 
-  Object* val = ia->value->visit(ia->value, filename, sourcetext, err, variables);
+  Object* val = ia->value->visit(ia->value, ctx);
 
   if (!val) { // Err is already set 
     return NULL;
   }
 
-  Object* index = ia->index->visit(ia->index, filename, sourcetext, err, variables);
+  Object* index = ia->index->visit(ia->index, ctx);
 
   if (!index) { // Err is already set 
     freeObject(val);
@@ -838,7 +883,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
 
     snprintf(buf, sizeof(buf), "Expected object of type 'int', received '%s'.", typeofobj(index));
 
-    if (*err == NULL) *err = initTypeError(ident.start, ident.end, filename, buf, sourcetext);
+    if (*ctx->err == NULL) *ctx->err = initTypeError(ident.start, ident.end, ctx->filename, buf, ctx->sourcetext);
 
     freeObject(val);
     freeObject(index);
@@ -849,7 +894,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
   Number* idx = (Number*)index;
 
   if (idx->as.i < 0) {
-    if (*err == NULL) *err = initValueError(ident.start, ident.end, filename, "Index out of range.", sourcetext);
+    if (*ctx->err == NULL) *ctx->err = initValueError(ident.start, ident.end, ctx->filename, "Index out of range.", ctx->sourcetext);
 
     freeObject(val);
     freeObject(index);
@@ -864,7 +909,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
 
         snprintf(buf, sizeof(buf), "Expected object of type 'string', received '%s'.", typeofobj(val));
 
-        if (*err == NULL) *err = initValueError(ident.start, ident.end, filename, buf, sourcetext);
+        if (*ctx->err == NULL) *ctx->err = initValueError(ident.start, ident.end, ctx->filename, buf, ctx->sourcetext);
         
         freeObject(val);
         freeObject(index);
@@ -875,7 +920,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
       String* valStr = (String*)val;
 
       if (strlen(valStr->value) != 1) {
-        if (*err == NULL) *err = initValueError(ident.start, ident.end, filename, "Expected single-character string.", sourcetext);
+        if (*ctx->err == NULL) *ctx->err = initValueError(ident.start, ident.end, ctx->filename, "Expected single-character string.", ctx->sourcetext);
 
         freeObject(val);
         freeObject(index);
@@ -887,7 +932,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
       uint64_t size = str->len;
 
       if ((uint64_t)idx->as.i > size) {
-        if (*err == NULL) *err = initValueError(ident.start, ident.end, filename, "Index out of range.", sourcetext);
+        if (*ctx->err == NULL) *ctx->err = initValueError(ident.start, ident.end, ctx->filename, "Index out of range.", ctx->sourcetext);
 
         freeObject(val);
         freeObject(index);
@@ -906,7 +951,7 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
       uint64_t size = list->size;
 
       if ((uint64_t)idx->as.i > size) {
-        if (*err == NULL) *err = initValueError(ident.start, ident.end, filename, "Index out of range.", sourcetext);
+        if (*ctx->err == NULL) *ctx->err = initValueError(ident.start, ident.end, ctx->filename, "Index out of range.", ctx->sourcetext);
 
         freeObject(val);
         freeObject(index);
@@ -933,10 +978,10 @@ Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Er
   return (Object*)initInt(1);
 }
 
-Object* visitForNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
+Object* visitForNode(ASTNode* node, Interpretator* ctx) {
   ForNode* fornode = (ForNode*)node;
 
-  Object* iterable = fornode->iterable->visit(fornode->iterable, filename, sourcetext, err, variables);
+  Object* iterable = fornode->iterable->visit(fornode->iterable, ctx);
 
   if (!iterable) { // Error is already set 
     return NULL;
@@ -947,7 +992,7 @@ Object* visitForNode(ASTNode* node, char *filename, char *sourcetext, Error **er
 
     snprintf(buf, sizeof(buf), "Object of type '%s' is not iterable.", typeofobj(iterable));
 
-    if (!*err) *err = initTypeError(fornode->ident.start, fornode->ident.end, filename, buf, sourcetext);
+    if (!*ctx->err) *ctx->err = initTypeError(fornode->ident.start, fornode->ident.end, ctx->filename, buf, ctx->sourcetext);
     freeObject(iterable);
 
     return NULL;
@@ -974,9 +1019,9 @@ Object* visitForNode(ASTNode* node, char *filename, char *sourcetext, Error **er
       obj = copyObject(((List*)iterable)->objects[i]);
     }
 
-    setTable(variables, fornode->ident.val.s, obj, false);
+    setTable(ctx->variables, fornode->ident.val.s, obj, false);
 
-    Object* tmp = fornode->body->visit(fornode->body, filename, sourcetext, err, variables);
+    Object* tmp = fornode->body->visit(fornode->body, ctx);
     if (!tmp) return NULL;
 
     if (tmp->type == OBJ_BREAK) {
@@ -1006,18 +1051,17 @@ Object* visitForNode(ASTNode* node, char *filename, char *sourcetext, Error **er
 
 static int sCallDepth = 0;
 
-Object* visitNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables) {
-  if (!node || !filename || !err || !variables) return NULL;
+Object* visitNode(ASTNode* node, Interpretator* ctx) {
+  if (!ctx || !ctx->filename || !ctx->sourcetext || !ctx->err) return NULL;
   
   if (++sCallDepth > 4096) {
     --sCallDepth;
     return (Object*)initProgramError("Stack Overflow: call depth exceeded.");
   }
 
-  Object* result = NULL;
-
-  result = node->visit(node, filename, sourcetext, err, variables); 
+  Object* result = node->visit(node, ctx); 
 
   --sCallDepth;
   return result;
 }
+

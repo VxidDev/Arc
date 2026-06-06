@@ -91,8 +91,8 @@ Function* initFunction(FunctionNode* node) {
   return func;
 }
 
-FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, SymbolTable *globalTable, char *filename, char *sourcetext, Error** err) {
-  if (!node || !globalTable || !calleeObj) return NULL;
+FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Interpretator* ctx) {
+  if (!node || !ctx || !calleeObj) return NULL;
 
   FunctionCall *call = poolAlloc(functionCallPool);
   if (!call) return NULL;
@@ -119,14 +119,14 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Symbol
 
   call->function = (Function*)calleeObj;
 
-  call->env = createTable(64, globalTable);
+  call->env = createTable(64, ctx->variables);
 
   if (!call->env) {
     return NULL;
   }
 
   for (size_t i = 0; i < call->argCount; i++) {
-    Object *argVal = node->args[i]->visit(node->args[i], filename, sourcetext, err, globalTable);
+    Object *argVal = node->args[i]->visit(node->args[i], ctx);
 
     if (!argVal) {
       if (_DEBUG) printf("[debug] Failed to evaluate function arguments @ initFunctionCall - line approx. 123.\n");

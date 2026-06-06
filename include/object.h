@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 
+typedef struct Interpretator Interpretator;
 typedef struct ASTNode ASTNode;
 typedef struct FunctionNode FunctionNode;
 typedef struct FunctionCallNode FunctionCallNode;
@@ -168,7 +169,7 @@ Return* initReturn(Object* value);
 Break* initBreak();
 Continue* initContinue();
 
-FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, SymbolTable* parentEnv, char *filename, char *sourcetext, Error** err);
+FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, Interpretator* ctx);
 
 Object* copyObject(Object *obj);
 

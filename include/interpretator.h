@@ -6,28 +6,37 @@
 #include "symbol-table.h"
 #include "node.h"
 
-Object* visitNumberNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitStringNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables);
+typedef struct Interpretator {
+  char* filename;
+  char* sourcetext;
+  Error** err;
+  SymbolTable* variables;
+} Interpretator;
 
-Object* visitBinOpNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables);
-Object* visitUnaryOpNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables);
-Object* visitVarAccessNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitVarAssignNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables); 
-Object* visitProgramNode(ASTNode* node, char *filename, char* sourcetext, Error **err, SymbolTable* variables);
-Object* visitIfNode(ASTNode* n, char *filename, char *sourcetext, Error **err, SymbolTable* variables); 
-Object* visitListNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables); 
-Object* visitIndexNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitWhileNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitContinueNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitBreakNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables);
-Object* visitFunctionNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables); 
-Object* visitFunctionCallNode(ASTNode* node, char* filename, char *sourcetext, Error **err, SymbolTable* variables);
-Object* visitImportNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables);
-Object* visitReturnNode(ASTNode* node, char* filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitTryCatchNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables);
-Object* visitIndexAssignNode(ASTNode* node, char *filename, char *sourcetext, Error** err, SymbolTable* variables);
-Object* visitForNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables); 
+Interpretator* initInterpretator(char* filename, char* sourcetext, Error** err, SymbolTable* variables);
 
-Object* visitNode(ASTNode* node, char *filename, char *sourcetext, Error **err, SymbolTable* variables);
+Object* visitNumberNode(ASTNode* node, Interpretator* ctx);
+Object* visitStringNode(ASTNode* node, Interpretator* ctx);
+
+Object* visitBinOpNode(ASTNode* node, Interpretator* ctx);
+Object* visitUnaryOpNode(ASTNode* node, Interpretator* ctx);
+Object* visitVarAccessNode(ASTNode* node, Interpretator* ctx);
+Object* visitVarAssignNode(ASTNode* node, Interpretator* ctx); 
+Object* visitProgramNode(ASTNode* node, Interpretator* ctx);
+Object* visitIfNode(ASTNode* node, Interpretator* ctx); 
+Object* visitListNode(ASTNode* n, Interpretator* ctx); 
+Object* visitIndexNode(ASTNode* node, Interpretator* ctx);
+Object* visitWhileNode(ASTNode* node, Interpretator* ctx);
+Object* visitContinueNode(ASTNode* node, Interpretator* ctx);
+Object* visitBreakNode(ASTNode* node, Interpretator* ctx);
+Object* visitFunctionNode(ASTNode* node, Interpretator* ctx); 
+Object* visitFunctionCallNode(ASTNode* node, Interpretator* ctx);
+Object* visitImportNode(ASTNode* node, Interpretator* ctx);
+Object* visitReturnNode(ASTNode* node, Interpretator* ctx);
+Object* visitTryCatchNode(ASTNode* node, Interpretator* ctx);
+Object* visitIndexAssignNode(ASTNode* node, Interpretator* ctx);
+Object* visitForNode(ASTNode* node, Interpretator* ctx); 
+
+Object* visitNode(ASTNode* node, Interpretator* ctx);
 
 #endif // INTERPRETATOR_H
