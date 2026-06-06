@@ -816,7 +816,13 @@ Object* visitTryCatchNode(ASTNode* node, Interpretator* ctx) {
   TryCatchNode* tryCatch = (TryCatchNode*)node;
 
   Error* innerErr = NULL;
+
+  Error **prevErr = ctx->err;
+  ctx->err = &innerErr;
+
   Object* bodyRes = tryCatch->body->visit(tryCatch->body, ctx);
+  
+  ctx->err = prevErr;
 
   if (!innerErr) return bodyRes;
 
