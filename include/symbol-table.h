@@ -16,7 +16,7 @@ typedef struct SymbolTable {
 } SymbolTable;
 
 SymbolTable *createTable(unsigned long capacity, SymbolTable *parent);
-void setTable(SymbolTable *table, const char *name, Object *value, bool copyObj);
+void setTable(SymbolTable *table, char *name, Object *value, bool copyObj);
 Object* getTable(SymbolTable *table, const char *name);
 void removeSymbol(SymbolTable *table, const char *name);
 void freeTable(SymbolTable *table);

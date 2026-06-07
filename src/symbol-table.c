@@ -34,7 +34,7 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   return table;
 }
 
-void setTable(SymbolTable *table, const char *name, Object *value, bool copyObj) {
+void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
   unsigned long index = hash(name) % table->capacity;
 
   Symbol *sym = table->buckets[index];
@@ -52,11 +52,12 @@ void setTable(SymbolTable *table, const char *name, Object *value, bool copyObj)
   Symbol *newSym = poolAlloc(symbolPool);
   if (!newSym) return;
 
-  newSym->name = stringDup(name);
-
-  if (!newSym->name) {
-    return;
-  }
+  // newSym->name = stringDup(name);
+  newSym->name = name;
+  
+  //if (!newSym->name) {
+  //  return;
+  //}
   
   Object *copy = copyObj ? copyObject(value) : value;
   newSym->value = copy;

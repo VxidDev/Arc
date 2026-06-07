@@ -82,8 +82,11 @@ void freeObject(Object* obj) {
     }
     
     case OBJ_MODULE:
-    case OBJ_FUNCTION:
       free(obj);
+      break;
+
+    case OBJ_FUNCTION:
+      poolFree(functionPool, obj);
       break;
 
     case OBJ_RETURN: {
@@ -105,13 +108,14 @@ void freeObject(Object* obj) {
 
     case OBJ_FUNCTION_CALL: {
       FunctionCall* fncall = (FunctionCall*)obj;
-
+      
+      /*
       if (fncall->args) {
         for (size_t i = 0; i < fncall->argCount; i++) {
           freeObject(fncall->args[i]);
         }
-
       }
+      */
 
       if (fncall->env) freeTable(fncall->env);
       poolFree(functionCallPool, obj);

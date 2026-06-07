@@ -10,6 +10,7 @@ vgcore.*
 
 benchmark.py
 benchmark.arc
+fib.arc
 # Prerequisites
 *.d
 

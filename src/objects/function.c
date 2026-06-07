@@ -13,7 +13,7 @@
 Function* copyFunction(Function* func) {
   if (!func) return NULL;
 
-  Function* newFunc = malloc(sizeof(Function));
+  Function* newFunc = poolAlloc(functionPool);
 
   if (!newFunc) return NULL;
 
@@ -23,14 +23,12 @@ Function* copyFunction(Function* func) {
   newFunc->name = stringDup(func->name);
 
   if (!newFunc->name) { 
-    free(newFunc); 
     return NULL; 
   }
 
   newFunc->params = arenaAlloc(stringArena, sizeof(char*) * func->paramCount);
 
   if (!newFunc->params && func->paramCount != 0) { 
-    free(newFunc);
     return NULL; 
   }
 
@@ -38,7 +36,6 @@ Function* copyFunction(Function* func) {
     newFunc->params[i] = stringDup(func->params[i]);
 
     if (!newFunc->params[i]) {
-      free(newFunc);
       return NULL;
     }
   }
@@ -56,7 +53,7 @@ NativeFunction* copyNativeFunction(NativeFunction* func) {
 Function* initFunction(FunctionNode* node) {
   if (!node->body || !node->name || (!node->params && node->paramCount != 0)) return NULL;
 
-  Function* func = malloc(sizeof(Function));
+  Function* func = poolAlloc(functionPool);
 
   if (!func) return NULL;
 
@@ -66,14 +63,12 @@ Function* initFunction(FunctionNode* node) {
   func->name = stringDup(node->name);
 
   if (!func->name) { 
-    free(func);
     return NULL;
   }
 
   func->params = arenaAlloc(stringArena, sizeof(char*) * node->paramCount);
 
   if (!func->params && node->paramCount != 0) { 
-    free(func);
     return NULL;
   }
 
@@ -81,7 +76,6 @@ Function* initFunction(FunctionNode* node) {
     func->params[i] = stringDup(node->params[i]);
 
     if (!func->params[i]) {
-      free(func);
       return NULL;
     }
   }
@@ -99,7 +93,8 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Interp
     
   call->base.type = OBJ_FUNCTION_CALL;
   call->argCount = node->argCount;
-
+  
+  /*
   if (call->argCount > 0) {
     call->args = arenaAlloc(objectArena, sizeof(Object*) * call->argCount);
 
@@ -111,6 +106,9 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Interp
     call->args = NULL;
     if (_DEBUG) printf("[debug] No arguments passed, skipping arena-allocating memory. @ initFunctionCall - line approx. 111.\n");
   }
+  */
+
+  call->args = NULL; // TODO: clean up FunctionCall object
 
   if (calleeObj->type != OBJ_FUNCTION) {
     free(call->args);
@@ -135,10 +133,8 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Interp
       return NULL;
     }
 
-    call->args[i] = argVal;
-
     if (i < call->function->paramCount) {
-      setTable(call->env, call->function->params[i], argVal, true);
+      setTable(call->env, call->function->params[i], argVal, false);
     }
   }
 
