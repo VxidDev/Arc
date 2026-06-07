@@ -19,6 +19,7 @@ typedef struct Arena {
 extern Arena* parseArena;
 extern Arena* stringArena;
 extern Arena* objectArena;
+extern Arena* symbolPtrArena;
 
 Arena* arenaCreate(void);
 

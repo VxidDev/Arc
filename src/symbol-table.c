@@ -2,6 +2,9 @@
 #include "../include/utils.h"
 #include "../include/object.h"
 
+#include "../include/mempool.h"
+#include "../include/memarena.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,18 +19,18 @@ unsigned long hash(const char *str) {
 }
 
 SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
-  SymbolTable *table = malloc(sizeof(SymbolTable));
+  SymbolTable *table = poolAlloc(symbolTablePool);
   if (!table) return NULL;
 
   table->capacity = capacity;
   table->parent = parent;
-  table->buckets = calloc(capacity, sizeof(Symbol*));
+  table->buckets = arenaAlloc(symbolPtrArena, capacity * sizeof(Symbol*)); 
 
   if (!table->buckets) {
-    free(table);
     return NULL;
   }
 
+  memset(table->buckets, 0, capacity * sizeof(Symbol*));
   return table;
 }
 
@@ -46,13 +49,12 @@ void setTable(SymbolTable *table, const char *name, Object *value, bool copyObj)
     sym = sym->next;
   }
 
-  Symbol *newSym = malloc(sizeof(Symbol));
+  Symbol *newSym = poolAlloc(symbolPool);
   if (!newSym) return;
 
   newSym->name = stringDup(name);
 
   if (!newSym->name) {
-    free(newSym);
     return;
   }
   
@@ -94,7 +96,9 @@ void removeSymbol(SymbolTable *table, const char *name) {
       else
         table->buckets[index] = curr->next;
 
-      free(curr);
+      freeObject(curr->value);
+      poolFree(symbolPool, curr);
+
       return;
     }
 
@@ -113,12 +117,11 @@ void freeTable(SymbolTable *table) {
       Symbol *next = sym->next;
 
       freeObject(sym->value);
-      free(sym);      
+      poolFree(symbolPool, sym);
 
       sym = next;
     }
   }
 
-  free(table->buckets);
-  free(table);
+  poolFree(symbolTablePool, table);
 }

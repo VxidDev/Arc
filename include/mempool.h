@@ -14,6 +14,8 @@ extern MemPool* numberPool;
 extern MemPool* stringPool;
 extern MemPool* nativeFuncPool;
 extern MemPool* functionCallPool;
+extern MemPool* symbolPool;
+extern MemPool* symbolTablePool;
 
 MemPool* initPool(size_t objSize); 
 

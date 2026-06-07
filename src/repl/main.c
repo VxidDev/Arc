@@ -342,13 +342,11 @@ void parseArguments(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-  char *userInput = NULL;
-  variables = createTable(1024, NULL);
+  char *userInput = NULL; 
   
   argVect = malloc(sizeof(String*) * argVectCap);
 
   if (!argVect) {
-    freeTable(variables);
     printf("%sArc: %sFailed to initialize argv.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG), COLOR(ANSI_RESET));
 
     return 1;
@@ -358,6 +356,8 @@ int main(int argc, char **argv) {
   
   initMemPools();
   initArenas();
+
+  variables = createTable(1024, NULL);
 
   if (_DEBUG) { 
     printf("[debug] memory pool size: %d bytes\n", POOL_SIZE);

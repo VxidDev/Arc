@@ -36,6 +36,9 @@ LDFLAGS_RELEASE = \
   -flto=auto \
   -Wl,--gc-sections
 
+CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
+LDFLAGS_PROFILE = -pg
+
 TEST_FILES := $(wildcard tests/*.arc)
 
 V ?= 0
@@ -48,13 +51,17 @@ endif
 
 ECHO = @echo
 
-.PHONY: all dev debug release install dev-install debug-install release-install uninstall clean test 
+.PHONY: all dev debug release install dev-install debug-install release-install uninstall clean test profile
 
 all: dev
 
 dev: CFLAGS = $(CFLAGS_DEV)
 dev: LDFLAGS =
 dev: $(TARGET)
+
+profile: CFLAGS = $(CFLAGS_PROFILE)
+profile: LDFLAGS = $(LDFLAGS_PROFILE)
+profile: $(TARGET)
 
 debug: CFLAGS = $(CFLAGS_DEBUG)
 debug: LDFLAGS = $(LDFLAGS_DEBUG)
