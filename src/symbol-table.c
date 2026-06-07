@@ -9,11 +9,15 @@
 #include <string.h>
 
 unsigned long hash(const char *str) {
-  unsigned long h = 5381;
-  int c;
+  unsigned long h = 1469598103934665603ULL;
+  unsigned long prime = 1099511628211ULL;
 
-  while ((c = *str++))
-    h = ((h << 5) + h) + c;
+  unsigned char c;
+
+  while ((c = (unsigned char)*str++)) {
+    h ^= c;
+    h *= prime;
+  }
 
   return h;
 }

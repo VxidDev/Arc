@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_DEPTH 8192
+
 static int sDepth = 0;
 
 ParserCheckpoint saveParser(Parser* parser) {
@@ -220,7 +222,7 @@ ASTNode* __blockParser(Parser* parser);
 ASTNode* __exprParser(Parser* parser);
 
 ASTNode* blockParser(Parser* parser) {
-  if (++sDepth > 4096) {
+  if (++sDepth > MAX_DEPTH) {
     --sDepth;
 
     if (parser && *parser->error == NULL)
@@ -423,7 +425,7 @@ ASTNode* termParser(Parser* parser) {
 }
 
 ASTNode* exprParser(Parser* parser) {
-  if (++sDepth > 4096) {
+  if (++sDepth > MAX_DEPTH) {
     --sDepth;
       
     if (parser && *parser->error == NULL)
