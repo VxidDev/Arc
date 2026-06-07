@@ -1,10 +1,18 @@
 #include "../include/utils.h"
 #include "../include/token.h"
 
+#include "../include/repl/repl.h"
+
 #include "../include/memarena.h"
 
 #include <string.h>
 #include <stdlib.h>
+
+#ifdef _WIN32
+  #define PATH_SEP '\\'
+#else
+  #define PATH_SEP '/'
+#endif
 
 char *stringDup(const char *s) {
   size_t len = strlen(s) + 1;
@@ -85,4 +93,66 @@ char* tokToString(const TokType type) {
 
     default: return "UNKNOWN";
   }
+}
+
+void getDirectory(const char* path, char* out) {
+  strcpy(out, path);
+
+  char* slash = strrchr(out, '/');
+
+  #ifdef _WIN32
+
+  char* backslash = strrchr(out, '\\');
+
+  if (!slash || (backslash && backslash > slash))
+    slash = backslash;
+
+  #endif // _WIN32
+
+  if (slash)
+    *slash = '\0';
+  else
+    strcpy(out, ".");
+}
+
+static int hasExtension(const char* path) {
+  const char* dot = strrchr(path, '.');
+
+  const char* slash1 = strrchr(path, '/');
+  const char* slash2 = strrchr(path, '\\');
+
+  const char* slash = slash1;
+
+  if (!slash || (slash2 && slash2 > slash))
+    slash = slash2;
+
+  return dot && (!slash || dot > slash);
+}
+
+char* resolveImportPath(const char* currentFile, const char* importPath) {
+  if (importPath[0] == '@') {
+    const char *path = importPath + 1;
+
+    char buffer[4096];
+
+    if (hasExtension(path)) {
+      snprintf(buffer, sizeof(buffer), "%s/%s", ARC_LIB_DIR, path);
+    } else {
+      snprintf(buffer, sizeof(buffer), "%s/%s.arc", ARC_LIB_DIR, path);
+    }
+
+    return stringDup(buffer);
+  } 
+
+  if (importPath[0] == '/' || hasExtension(importPath)) {
+    return stringDup(importPath);
+  }
+
+  char dir[4096];
+  getDirectory(currentFile, dir);
+
+  char buffer[4096];
+  snprintf(buffer, sizeof(buffer), "%s/%s.arc", dir, importPath);
+
+  return stringDup(buffer);
 }

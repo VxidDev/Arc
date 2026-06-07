@@ -67,6 +67,46 @@ ASTNode* compExprParser(Parser* parser);
 ASTNode* postfixParser(Parser* parser);
 ASTNode* blockParser(Parser* parser);
 
+static inline ASTNode* parseBinOp(Parser* parser, ASTNode* (*next)(Parser*), const TokType* ops, size_t opCount) {
+  ASTNode* left = next(parser);
+  if (!left) return NULL;
+
+  while (parser->currentToken.type != TOK_EOF) {
+    TokType t = parser->currentToken.type;
+
+    // check if current token is in ops
+    bool match = false;
+
+    for (size_t i = 0; i < opCount; i++) {
+      if (t == ops[i]) {
+        match = true;
+        break;
+      }
+    }
+
+    if (!match)
+      break;
+
+    Token opTok = parser->currentToken;
+    advanceParser(parser);
+
+    ASTNode* right = next(parser);
+
+    if (!right) {
+      if (*parser->error == NULL) {
+        *parser->error = initSyntaxError(opTok.start, opTok.end, parser->filename, "Expression expected after operator", parser->sourcetext);
+      } 
+
+      return NULL;
+    }
+
+    left = (ASTNode*)initBinOpNode(left, opTok, right);
+    if (!left) return NULL;
+  }
+
+  return left;
+}
+
 ASTNode* atomParser(Parser* parser) {
   if (!parser || parser->currentToken.type == TOK_EOF) return NULL;
 
@@ -397,31 +437,8 @@ ASTNode* factorParser(Parser* parser) {
 }
 
 ASTNode* termParser(Parser* parser) {
-  if (!parser) return NULL;
-
-  ASTNode* left = factorParser(parser);
-  if (!left) return NULL; // error is already set
-
-  while (parser->currentToken.type != TOK_EOF && ((parser->currentToken.type == TOK_MUL) || (parser->currentToken.type == TOK_DIV))) {
-
-    Token opTok = parser->currentToken;
-    advanceParser(parser);
-
-    ASTNode* right = factorParser(parser);
-
-    if (!right) { // error is already set
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, parser->filename, "Expression expected", parser->sourcetext);
-      return NULL;
-    }
-
-    left = (ASTNode*)initBinOpNode(left, opTok, right);
-
-    if (!left) {
-      return NULL;
-    }
-  }
-
-  return left;
+  TokType ops[] = { TOK_MUL, TOK_DIV };
+  return parseBinOp(parser, factorParser, ops, 2);
 }
 
 ASTNode* exprParser(Parser* parser) {
@@ -1044,30 +1061,8 @@ ASTNode* __exprParser(Parser* parser) {
 }
 
 ASTNode* andOrParser(Parser* parser) {
-  if (!parser) return NULL;
-
-  ASTNode* left = compExprParser(parser);
-  if (!left) return NULL;
-
-  while (parser->currentToken.type != TOK_EOF && (parser->currentToken.type == TOK_AND || parser->currentToken.type == TOK_OR)) {
-    Token opTok = parser->currentToken;
-    advanceParser(parser);
-
-    ASTNode* right = compExprParser(parser);
-
-    if (!right) {
-      if (*parser->error == NULL) *parser->error = initSyntaxError(opTok.start, opTok.end, parser->filename, "Expression expected after logical operator", parser->sourcetext);
-      return NULL;
-    }
-
-    left = (ASTNode*)initBinOpNode(left, opTok, right);
-
-    if (!left) {
-      return NULL;
-    }
-  }
-
-  return left;
+  TokType ops[] = { TOK_AND , TOK_OR };
+  return parseBinOp(parser, compExprParser, ops, 2);
 }
 
 ASTNode* compExprParser(Parser* parser) {

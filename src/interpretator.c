@@ -719,8 +719,12 @@ Object* visitImportNode(ASTNode* node, Interpretator* ctx) {
       return (Object*)initInt(1);
     }
   }
+  
+  char *resolvedPath = resolveImportPath(ctx->filename, name);
+  
+  if (_DEBUG) printf("[debug] Resolved import path: %s\n", resolvedPath);
 
-  char* fileContent = readFile(name);
+  char* fileContent = readFile(resolvedPath);
 
   if (!fileContent) {
     return NULL;

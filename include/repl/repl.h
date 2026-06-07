@@ -6,6 +6,8 @@
 #include "../symbol-table.h"
 #include "../mempool.h"
 
+#define ARC_LIB_DIR "/usr/local/share/arc/lib" // TODO: add windows support 
+
 extern char *_CODE;
 extern bool _DEBUG;
 extern int _FLOAT_PRECISION;
