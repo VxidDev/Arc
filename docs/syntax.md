@@ -245,7 +245,7 @@ Arc provides `BREAK` and `CONTINUE` keywords to alter the flow of loops.
 ## Operators
 * Arithmetic: `+`, `-`, `*`, `/`, `^`
 * Comparison: `==`, `!=`, `<`, `>`, `<=`, `>=`
-* Logical: `AND`, `OR`
+* Logical: `AND`, `OR`, `NOT`
 
 ## Importing Files
 ```arc
