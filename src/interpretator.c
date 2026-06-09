@@ -16,6 +16,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+typedef ErrType (*BinOpFn)(Number* dest, const Number* src);
+
+static BinOpFn binOpdispatch[] = {
+  [TOK_PLUS]  = addNumber,
+  [TOK_MINUS] = subNumber,
+  [TOK_MUL] = mulNumber,
+  [TOK_DIV] = divNumber,
+  [TOK_POW] = powNumber,
+
+  [TOK_EE] = isEqualNumber,
+  [TOK_LT] = isLessThanNumber,
+  [TOK_GT] = isGreaterThanNumber,
+  [TOK_LTE] = isLessThanEqualNumber,
+  [TOK_GTE] = isGreaterThanEqualNumber,
+  [TOK_NE] = isNotEqualNumber,
+
+  [TOK_AND] = andNumber,
+  [TOK_OR] = orNumber,
+};
+
 Interpretator* initInterpretator(char *filename, char *sourcetext, Error **err, SymbolTable* variables) {
   if (!filename || !sourcetext || !err || !variables) return NULL;
 
@@ -195,21 +215,12 @@ Object* visitBinOpNode(ASTNode* node, Interpretator* ctx) {
 
   ErrType output;
 
-  switch (opType) {
-    case TOK_PLUS: output = addNumber(dest, src); break;
-    case TOK_MINUS: output = subNumber(dest, src); break;
-    case TOK_MUL: output = mulNumber(dest, src); break;
-    case TOK_DIV: output = divNumber(dest, src); break;
-    case TOK_POW: output = powNumber(dest, src); break;
-    case TOK_EE: output = isEqualNumber(dest, src); break;
-    case TOK_LT: output = isLessThanNumber(dest, src); break;
-    case TOK_GT: output = isGreaterThanNumber(dest, src); break;
-    case TOK_LTE: output = isLessThanEqualNumber(dest, src); break;
-    case TOK_GTE: output = isGreaterThanEqualNumber(dest, src); break;
-    case TOK_NE: output = isNotEqualNumber(dest, src); break;
-    case TOK_AND: output = andNumber(dest, src); break;
-    case TOK_OR: output = orNumber(dest, src); break;
-    default: output = -1;
+  BinOpFn fn = binOpdispatch[opType];
+
+  if (fn) {
+    output = fn(dest, src);
+  } else {
+    output = -1;
   }
 
   switch (output) {

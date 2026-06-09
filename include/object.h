@@ -79,6 +79,7 @@ typedef struct Function {
   size_t paramCount;
 
   ASTNode* body;
+  struct Chunk* chunk;
 } Function;
 
 typedef struct FunctionCall {

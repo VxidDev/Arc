@@ -2,6 +2,7 @@
 #include "../../include/utils.h"
 #include "../../include/symbol-table.h"
 #include "../../include/interpretator.h"
+#include "../../include/compiler.h"
 
 #include "../../include/repl/repl.h"
 
@@ -19,6 +20,7 @@ Function* copyFunction(Function* func) {
 
   newFunc->base.type = OBJ_FUNCTION;
   newFunc->body = func->body;
+  newFunc->chunk = func->chunk;
 
   newFunc->name = stringDup(func->name);
 
@@ -59,6 +61,7 @@ Function* initFunction(FunctionNode* node) {
 
   func->base.type = OBJ_FUNCTION;
   func->body = node->body;
+  func->chunk = NULL;
   
   func->name = stringDup(node->name);
 
@@ -94,20 +97,6 @@ FunctionCall *initFunctionCall(FunctionCallNode *node, Object* calleeObj, Interp
   call->base.type = OBJ_FUNCTION_CALL;
   call->argCount = node->argCount;
   
-  /*
-  if (call->argCount > 0) {
-    call->args = arenaAlloc(objectArena, sizeof(Object*) * call->argCount);
-
-    if (!call->args) {
-      if (_DEBUG) printf("[debug] Failed to arena-allocate memory for an array of Object* @ initFunctionCall - line approx. 103.\n");
-      return NULL;
-    }
-  } else {
-    call->args = NULL;
-    if (_DEBUG) printf("[debug] No arguments passed, skipping arena-allocating memory. @ initFunctionCall - line approx. 111.\n");
-  }
-  */
-
   call->args = NULL; // TODO: clean up FunctionCall object
 
   if (calleeObj->type != OBJ_FUNCTION) {

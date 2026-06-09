@@ -6,32 +6,45 @@
 #include <stdlib.h>
 #include <string.h>
 
-Object* builtIn_print(Object** args, size_t argCount) {
-  for (size_t i = 0; i < argCount; i++) {
-    Object* obj = args[i];
+static void printInternal(Object* obj) {
+  switch (obj->type) {
+    case OBJ_NUMBER_INT:
+      printf("%ld", ((Number*)obj)->as.i);
+      break;
 
-    switch (obj->type) {
-      case OBJ_NUMBER_INT:
-        printf("%ld", ((Number*)obj)->as.i);
-        break;
+    case OBJ_NUMBER_FLOAT:
+      printf("%f", ((Number*)obj)->as.f);
+      break;
 
-      case OBJ_NUMBER_FLOAT:
-        printf("%f", ((Number*)obj)->as.f);
-        break;
+    case OBJ_STRING:
+      printf("%s", ((String*)obj)->value);
+      break;
 
-      case OBJ_STRING:
-        printf("%s", ((String*)obj)->value);
-        break;
-
-      default:
-        printf("<object>");
-        break;
+    case OBJ_LIST: {
+      List* list = (List*)obj;
+      printf("[");
+      for (uint64_t i = 0; i < list->size; i++) {
+        printInternal(list->objects[i]);
+        if (i + 1 < list->size) printf(", ");
+      }
+      printf("]");
+      break;
     }
 
+    default:
+      printf("<object>");
+      break;
+  }
+}
+
+Object* builtIn_print(Object** args, size_t argCount) {
+  for (size_t i = 0; i < argCount; i++) {
+    printInternal(args[i]);
     if (i + 1 < argCount) printf(" ");
   }
 
   printf("\n");
+  fflush(stdout);
 
   return (Object*)initInt(1);
 }
