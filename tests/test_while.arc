@@ -11,3 +11,5 @@ i = 0
 WHILE i > 1 THEN # shouldn't execute 
   exit(1)
 END 
+
+print("test_while.arc passed\n")

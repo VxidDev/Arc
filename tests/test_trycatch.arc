@@ -80,4 +80,6 @@ END
 
 assert_eq(final_check, 7, "execution must jump to catch immediately")
 
-print("TRY/CATCH tests completed")
+print("TRY/CATCH tests completed\n")
+print("test_trycatch.arc passed\n")
+

@@ -14,24 +14,32 @@
 #include <string.h>
 #include <stdlib.h>
 
-static inline void push(VM *vm, Object *obj) {
-  if (vm->stackTop >= VM_STACK_MAX) return; 
-  vm->stack[vm->stackTop++] = obj;
-}
+#define LOAD_STATE() \
+  CallFrame *frame = &vm->frames[vm->frameTop - 1]; \
+  uint8_t *ip = frame->ip; \
+  SymbolTable* vars = frame->variables; \
+  register Object **sp = vm->stack + vm->stackTop;
 
-static inline Object *pop(VM *vm) {
-  if (vm->stackTop <= 0) return NULL;
-  return vm->stack[--vm->stackTop];
-}
+#define REFRESH_FRAME() do { \
+  frame = &vm->frames[vm->frameTop - 1]; \
+  ip = frame->ip; \
+  vars = frame->variables; \
+  sp = vm->stack + vm->stackTop; \
+} while (0)
 
-static inline Object *peek(VM *vm, int distance) {
-  if (vm->stackTop - 1 - distance < 0) return NULL;
-  return vm->stack[vm->stackTop - 1 - distance];
-}
+#define SAVE_STATE() do { \
+  vm->stackTop = sp - vm->stack; \
+  frame->ip = ip; \
+} while (0)
 
-#define READ_BYTE()  (*frame->ip++)
+#define PUSH(v) (*sp++ = (v))
+#define POP() (*--sp)
+#define TOP() (*(sp - 1))
+#define PEEK(i) (*(sp - 1 - (i)))
+
+#define READ_BYTE()  (*ip++)
 #define READ_CONST() (frame->chunk->constants[READ_BYTE()])
-#define READ_SHORT() (frame->ip += 2, (int16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+#define READ_SHORT() (ip += 2, (int16_t)((ip[-2] << 8) | ip[-1]))
 
 #define DISPATCH() do { op = READ_BYTE(); goto *dispatch[op]; } while(0)
 
@@ -184,23 +192,26 @@ static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
 
 #define HANDLE_ERROR() \
   if (vm->tryStackTop > 0) { \
-    frame->ip = vm->tryStack[--vm->tryStackTop]; \
+    ip = vm->tryStack[--vm->tryStackTop]; \
     if (*vm->err) { \
       Object *errStr = (Object *)initString((*vm->err)->details, strlen((*vm->err)->details)); \
-      push(vm, errStr); \
+      PUSH(errStr); \
       freeError(*vm->err); \
       *vm->err = NULL; \
     } else { \
-      push(vm, (Object *)initString("Unknown Error", 13)); \
+      PUSH((Object *)initString("Unknown Error", 13)); \
     } \
+    SAVE_STATE(); \
     continue; \
   } else { \
+    SAVE_STATE(); \
     return NULL; \
   }
 
 Object *vmRun(VM *vm) {
   OpCode op;
-  CallFrame *frame = &vm->frames[vm->frameTop - 1];
+  
+  LOAD_STATE();
 
   static void *dispatch[] = {
     [OP_LOAD_CONST] = &&OP_LOAD_CONST,
@@ -257,32 +268,33 @@ Object *vmRun(VM *vm) {
     DISPATCH();
 
     OP_LOAD_CONST: 
-      push(vm, copyObject(READ_CONST()));
+      PUSH(copyObject(READ_CONST()));
       DISPATCH();
 
     OP_LOAD_VAR: {
       String *name = (String *)READ_CONST();
-      Object *val  = getTable(frame->variables, name->value);
+      Object *val = getTable(vars, name->value);
 
       if (!val) {
-        char buf[256]; snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
         if (!*vm->err) *vm->err = initNameError((Position){0,0,0}, (Position){0,0,0}, vm->filename, buf, vm->sourcetext);
         HANDLE_ERROR();
       }
 
-      push(vm, copyObject(val));
+      PUSH(copyObject(val));
       DISPATCH();
     }
       
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
-      Object *val  = peek(vm, 0);
-      setTable(frame->variables, name->value, val, true);
+      Object *val  = PEEK(0);
+      setTable(vars, name->value, val, true);
       DISPATCH();
     }
 
     OP_POP: { 
-      Object *o = pop(vm);
+      Object *o = POP();
       if (o) freeObject(o);
       DISPATCH();
     }
@@ -290,8 +302,8 @@ Object *vmRun(VM *vm) {
     OP_ADD: OP_SUB: OP_MUL: OP_DIV:
     OP_POW: OP_EQ:  OP_NE:  OP_LT:
     OP_GT:  OP_LTE: OP_GTE: OP_AND: OP_OR: {
-      Object *b = pop(vm);
-      Object *a = pop(vm);
+      Object *b = POP();
+      Object *a = POP();
 
       Object *res = doArith(vm, op, a, b);
 
@@ -300,17 +312,17 @@ Object *vmRun(VM *vm) {
         HANDLE_ERROR();
       }
 
-      push(vm, res);
+      PUSH(res);
       DISPATCH();
     }
 
     OP_NEG: {
-      Object *a = pop(vm);
+      Object *a = POP();
 
       if (a->type == OBJ_NUMBER_INT) 
-        push(vm, (Object *)initInt(-((Number *)a)->as.i));
+        PUSH((Object *)initInt(-((Number *)a)->as.i));
       else if (a->type == OBJ_NUMBER_FLOAT) 
-        push(vm, (Object *)initFloat(-((Number *)a)->as.f));
+        PUSH((Object *)initFloat(-((Number *)a)->as.f));
       else { 
         freeObject(a); 
         HANDLE_ERROR();
@@ -321,12 +333,12 @@ Object *vmRun(VM *vm) {
     }
 
     OP_NOT: {
-      Object *a = pop(vm);
+      Object *a = POP();
 
       if (a->type == OBJ_NUMBER_INT) 
-        push(vm, (Object *)initInt(!((Number *)a)->as.i));
+        PUSH((Object *)initInt(!((Number *)a)->as.i));
       else if (a->type == OBJ_NUMBER_FLOAT) 
-        push(vm, (Object *)initFloat(!((Number *)a)->as.f));
+        PUSH((Object *)initFloat(!((Number *)a)->as.f));
       else { 
         freeObject(a);
         HANDLE_ERROR();
@@ -338,45 +350,47 @@ Object *vmRun(VM *vm) {
 
     OP_JUMP: { 
       int16_t offset = READ_SHORT();
-      frame->ip += offset;
+      ip += offset;
       DISPATCH();
     }
 
     OP_JUMP_IF_FALSE: {
       int16_t offset = READ_SHORT();
-      Object *cond = pop(vm);
+      Object *cond = POP();
 
       if (cond->type != OBJ_NUMBER_INT) {
         if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Condition must be an integer.", vm->sourcetext);
-        freeObject(cond); HANDLE_ERROR();
+        freeObject(cond);
+        HANDLE_ERROR();
       }
+
       if (((Number *)cond)->as.i == 0)
-        frame->ip += offset;
+        ip += offset;
 
       freeObject(cond);
       DISPATCH();
     }
 
     OP_FOR_PREP: {
-      Object *iterable = pop(vm);
+      Object *iterable = POP();
 
       if (iterable->type != OBJ_LIST && iterable->type != OBJ_STRING) { 
         if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Object is not iterable", vm->sourcetext);
         freeObject(iterable); HANDLE_ERROR(); 
       }
 
-      push(vm, iterable);
-      push(vm, (Object *)initInt(iterable->type == OBJ_LIST ? ((List *)iterable)->size : ((String *)iterable)->len));
-      push(vm, (Object *)initInt(0)); // index
+      PUSH(iterable);
+      PUSH((Object *)initInt(iterable->type == OBJ_LIST ? ((List *)iterable)->size : ((String *)iterable)->len));
+      PUSH((Object *)initInt(0)); // index
       
       DISPATCH();
     }
 
     OP_FOR_ITER: {
       int16_t offset = READ_SHORT();
-      Number *index = (Number *)peek(vm, 0);
-      Number *length = (Number *)peek(vm, 1);
-      Object *iterable = peek(vm, 2);
+      Number *index = (Number *)PEEK(0);
+      Number *length = (Number *)PEEK(1);
+      Object *iterable = PEEK(2);
 
       if (index->as.i < length->as.i) {
         Object *item;
@@ -388,10 +402,10 @@ Object *vmRun(VM *vm) {
           item = (Object *)initString(buf, 1);
         }
 
-        push(vm, item);
+        PUSH(item);
         index->as.i++;
       } else {
-        frame->ip += offset;
+        ip += offset;
       }
       
       DISPATCH();
@@ -402,15 +416,15 @@ Object *vmRun(VM *vm) {
       Object *items[256];
 
       for (int i = count - 1; i >= 0; i--) 
-        items[i] = pop(vm);
+        items[i] = POP();
 
-      push(vm, (Object *)initList(items, count, count));
+      PUSH((Object *)initList(items, count, count));
       DISPATCH();
     }
 
     OP_INDEX_GET: {
-      Object *idx = pop(vm);
-      Object *target = pop(vm);
+      Object *idx = POP();
+      Object *target = POP();
 
       if (idx->type != OBJ_NUMBER_INT) { 
         if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index must be an integer.", vm->sourcetext);
@@ -432,7 +446,7 @@ Object *vmRun(VM *vm) {
         }
 
         char buf[2] = { str->value[i], '\0' };
-        push(vm, (Object *)initString(buf, 1));
+        PUSH((Object *)initString(buf, 1));
 
       } else if (target->type == OBJ_LIST) {
         List *list = (List *)target;
@@ -444,7 +458,7 @@ Object *vmRun(VM *vm) {
           HANDLE_ERROR(); 
         }
 
-        push(vm, copyObject(list->objects[i]));
+        PUSH(copyObject(list->objects[i]));
 
       } else { 
         if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Target is not indexable.", vm->sourcetext);
@@ -458,9 +472,9 @@ Object *vmRun(VM *vm) {
     }
 
     OP_INDEX_SET: {
-      Object *val = pop(vm);
-      Object *idx = pop(vm);
-      Object *target = pop(vm);
+      Object *val = POP();
+      Object *idx = POP();
+      Object *target = POP();
 
       if (idx->type != OBJ_NUMBER_INT) { 
         if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index must be an integer.", vm->sourcetext);
@@ -511,7 +525,7 @@ Object *vmRun(VM *vm) {
         HANDLE_ERROR(); 
       }
 
-      push(vm, (Object *)initInt(1));
+      PUSH((Object *)initInt(1));
       freeObject(idx);
       freeObject(target);
       
@@ -520,9 +534,9 @@ Object *vmRun(VM *vm) {
 
     OP_STORE_INDEX: {
       String *name = (String *)READ_CONST();
-      Object *val = pop(vm);
-      Object *idx = pop(vm);
-      Object *target = getTable(frame->variables, name->value);
+      Object *val = POP();
+      Object *idx = POP();
+      Object *target = getTable(vars, name->value);
 
       if (!target) {
         char buf[256]; snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
@@ -572,7 +586,7 @@ Object *vmRun(VM *vm) {
         HANDLE_ERROR();
       }
 
-      push(vm, (Object *)initInt(1));
+      PUSH((Object *)initInt(1));
       freeObject(val);
       freeObject(idx);
       DISPATCH();
@@ -583,13 +597,13 @@ Object *vmRun(VM *vm) {
       Object *args[256];
 
       for (int i = argCount - 1; i >= 0; i--) 
-        args[i] = pop(vm);
+        args[i] = POP();
 
-      Object *callee = pop(vm);
+      Object *callee = POP();
 
       if (callee->type == OBJ_FUNCTION) {
         Function *func = (Function *)callee;
-        SymbolTable *env = createTable(16, frame->variables);
+        SymbolTable *env = createTable(16, vars);
 
         for (int i = 0; i < argCount; i++) {
           if (i < (int)func->paramCount) 
@@ -607,6 +621,8 @@ Object *vmRun(VM *vm) {
             if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Call stack overflow.", vm->sourcetext);
             freeObject(callee); HANDLE_ERROR();
           }
+          
+          SAVE_STATE();
 
           vm->frames[vm->frameTop++] = (CallFrame){ 
             .chunk = func->chunk,
@@ -615,8 +631,7 @@ Object *vmRun(VM *vm) {
             .tryStackTop = vm->tryStackTop
           };
 
-          frame = &vm->frames[vm->frameTop - 1];
-
+          REFRESH_FRAME();
           freeObject(callee);
           DISPATCH(); // Will start executing the new frame in next iteration
         }
@@ -635,12 +650,12 @@ Object *vmRun(VM *vm) {
           }
 
           if (res) 
-            push(vm, res);
+            PUSH(res);
         }
 
         if (!res) { 
           freeObject(callee);
-           HANDLE_ERROR();
+          HANDLE_ERROR();
         }
       } else {
         freeObject(callee);
@@ -655,7 +670,7 @@ Object *vmRun(VM *vm) {
       int16_t offset = READ_SHORT();
 
       if (vm->tryStackTop < VM_TRY_STACK_MAX) 
-        vm->tryStack[vm->tryStackTop++] = frame->ip + offset;
+        vm->tryStack[vm->tryStackTop++] = ip + offset;
 
       DISPATCH();
     }
@@ -672,8 +687,10 @@ Object *vmRun(VM *vm) {
 
       for (size_t i = 0; stdlibModules[i]; i++) {
         if (strcmp(stdlibModules[i]->name, name) == 0) {
-          stdlibModules[i]->init(frame->variables);
-          push(vm, (Object *)initInt(1)); found = true; break;
+          stdlibModules[i]->init(vars);
+          PUSH((Object *)initInt(1));
+          found = true;
+          break;
         }
       }
 
@@ -708,39 +725,44 @@ Object *vmRun(VM *vm) {
       }
 
       if (vm->frameTop >= VM_CALL_STACK_MAX) {
-          if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Call stack overflow.", vm->sourcetext);
-          HANDLE_ERROR();
+        if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Call stack overflow.", vm->sourcetext);
+        HANDLE_ERROR();
       }
+
+      SAVE_STATE();
 
       vm->frames[vm->frameTop++] = (CallFrame){ 
         .chunk = chunk,
         .ip = chunk->code,
-        .variables = frame->variables,
+        .variables = vars,
         .tryStackTop = vm->tryStackTop
       };
 
-      frame = &vm->frames[vm->frameTop - 1];
+      REFRESH_FRAME();
 
       DISPATCH();
     }
 
     OP_RETURN: {
-      Object *val = pop(vm);
+      Object *val = POP();
 
       if (vm->frameTop > 1) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
-        frame = &vm->frames[vm->frameTop - 1];
 
-        if (leavingFrame->variables != frame->variables) {
+        if (leavingFrame->variables != vm->frames[vm->frameTop-1].variables) {
             freeTable(leavingFrame->variables);
         }
 
         vm->tryStackTop = leavingFrame->tryStackTop;
-        push(vm, val);
+        
+        SAVE_STATE();
+        REFRESH_FRAME();
+        PUSH(val);
 
-        DISPATCH(); // Continue execution in previous frame
+        DISPATCH(); 
       }
-
+      
+      SAVE_STATE();
       return val;
     }
 
@@ -750,22 +772,25 @@ Object *vmRun(VM *vm) {
       return (Object *)initContinue();
 
     OP_HALT: {
-      Object *res = vm->stackTop > 0 ? pop(vm) : (Object *)initInt(0);
+      Object *res = (sp > vm->stack) ? POP() : (Object *)initInt(0);
 
       if (vm->frameTop > 1) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
-        frame = &vm->frames[vm->frameTop - 1];
 
-        if (leavingFrame->variables != frame->variables) {
+        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
             freeTable(leavingFrame->variables);
         }
 
         vm->tryStackTop = leavingFrame->tryStackTop;
-        push(vm, res);
+
+        SAVE_STATE();
+        REFRESH_FRAME();
+        PUSH(res);
         
         DISPATCH();
       }
 
+      SAVE_STATE();
       return res;
     }
   }

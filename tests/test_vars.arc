@@ -9,3 +9,6 @@ VAR str = "string"
 
 # lists 
 VAR list = [1, 2.0, "3"]
+
+print("test_vars.arc passed\n")
+
