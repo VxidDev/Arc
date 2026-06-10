@@ -664,6 +664,7 @@ Object *vmRun(VM *vm) {
 
       if (vm->frameTop > 1) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
+        frame = &vm->frames[vm->frameTop - 1];
 
         if (leavingFrame->variables != frame->variables) {
             freeTable(leavingFrame->variables);
@@ -671,8 +672,6 @@ Object *vmRun(VM *vm) {
 
         vm->tryStackTop = leavingFrame->tryStackTop;
         push(vm, val);
-
-        frame = &vm->frames[vm->frameTop - 1];
 
         DISPATCH(); // Continue execution in previous frame
       }
@@ -690,6 +689,7 @@ Object *vmRun(VM *vm) {
 
       if (vm->frameTop > 1) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
+        frame = &vm->frames[vm->frameTop - 1];
 
         if (leavingFrame->variables != frame->variables) {
             freeTable(leavingFrame->variables);
@@ -697,8 +697,7 @@ Object *vmRun(VM *vm) {
 
         vm->tryStackTop = leavingFrame->tryStackTop;
         push(vm, res);
-
-        frame = &vm->frames[vm->frameTop - 1];
+        
         DISPATCH();
       }
 
