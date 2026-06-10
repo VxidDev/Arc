@@ -36,7 +36,6 @@ typedef Object* (*VisitFn)(ASTNode*, Interpretator*);
 
 typedef struct ASTNode {
   NodeType type;
-  VisitFn visit;
 } ASTNode;
 
 typedef struct NumberNode {

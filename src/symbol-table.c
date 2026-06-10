@@ -24,22 +24,16 @@ unsigned long hash(const char *str) {
 
 SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   SymbolTable *table = poolAlloc(symbolTablePool);
-  if (!table) return NULL;
-
-  if (parent == table) {
-    fprintf(stderr, "Fatal: Cyclical scope dependency detected during creation.\n");
-    exit(1);
-  }
+  if (!table) return NULL; 
 
   table->capacity = capacity;
   table->parent = parent;
-  table->buckets = arenaAlloc(symbolPtrArena, capacity * sizeof(Symbol*)); 
+  table->buckets = calloc(capacity, sizeof(Symbol*)); 
 
   if (!table->buckets) {
     return NULL;
   }
 
-  memset(table->buckets, 0, capacity * sizeof(Symbol*));
   return table;
 }
 
@@ -106,7 +100,7 @@ void removeSymbol(SymbolTable *table, const char *name) {
         prev->next = curr->next;
       else
         table->buckets[index] = curr->next;
-
+      
       freeObject(curr->value);
       poolFree(symbolPool, curr);
 
@@ -133,6 +127,8 @@ void freeTable(SymbolTable *table) {
       sym = next;
     }
   }
+
+  free(table->buckets);
 
   table->parent = NULL;  
   table->buckets = NULL;  

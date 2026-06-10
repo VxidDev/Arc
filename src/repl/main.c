@@ -7,7 +7,6 @@
 #include "../../include/node.h"
 #include "../../include/error.h"
 
-#include "../../include/interpretator.h"
 #include "../../include/object.h"
 #include "../../include/vm.h"
 

@@ -7,7 +7,9 @@
 #include "../include/compiler.h"
 #include "../include/node.h"
 #include "../include/repl/readfile.h"
+#include "../include/repl/repl.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,8 +41,71 @@ static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
   ObjType at = a->type;
   ObjType bt = b->type;
 
-  bool aNum = at == OBJ_NUMBER_INT || at == OBJ_NUMBER_FLOAT;
-  bool bNum = bt == OBJ_NUMBER_INT || bt == OBJ_NUMBER_FLOAT;
+  bool aInt = at == OBJ_NUMBER_INT;
+  bool bInt = bt == OBJ_NUMBER_INT;
+  
+  if (aInt && bInt) {
+    if (_DEBUG) printf("[debug] Binary operation fast path (int && int)\n");
+
+    Number* na = (Number*)a;
+    Number* nb = (Number*)b;
+
+    Number* dest;
+
+    if (!nb->isStatic) {
+      dest = nb;
+    } else {
+      dest = (Number*)copyObject(b);
+    }
+    
+    switch (op) {
+      case OP_ADD: 
+        dest->as.i = na->as.i + dest->as.i; break;
+      case OP_SUB: 
+        dest->as.i = na->as.i - dest->as.i; break;
+      case OP_MUL: 
+        dest->as.i = na->as.i * dest->as.i; break;
+      case OP_DIV: 
+        if (dest->as.i == 0) {
+          *vm->err = initValueError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Division by zero.", vm->sourcetext);
+          freeObject((Object*)dest);
+          freeObject(a);
+          return NULL;
+        }
+
+        dest->as.i = na->as.i / dest->as.i; break;
+      case OP_POW: 
+        dest->as.i = pow(na->as.i, dest->as.i); break;
+      case OP_EQ: 
+        dest->as.i = na->as.i == dest->as.i; break;
+      case OP_NE: 
+        dest->as.i = na->as.i != dest->as.i; break;
+      case OP_LT: 
+        dest->as.i = na->as.i < dest->as.i; break;
+      case OP_GT: 
+        dest->as.i = na->as.i > dest->as.i; break;
+      case OP_LTE: 
+        dest->as.i = na->as.i <= dest->as.i; break;
+      case OP_GTE: 
+        dest->as.i = na->as.i >= dest->as.i; break;
+      case OP_AND: 
+        dest->as.i = na->as.i && dest->as.i; break;
+      case OP_OR: 
+        dest->as.i = na->as.i || dest->as.i; break;
+      default:
+        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Incompatible types for operation.", vm->sourcetext); 
+        freeObject((Object*)dest);
+        freeObject(a);
+        return NULL;
+    }
+
+    freeObject(a);
+
+    return (Object*)dest;
+  }
+
+  bool aNum = aInt || at == OBJ_NUMBER_FLOAT;
+  bool bNum = bInt || bt == OBJ_NUMBER_FLOAT;
 
   if (at == OBJ_STRING || bt == OBJ_STRING) {
     Object* res = NULL;
