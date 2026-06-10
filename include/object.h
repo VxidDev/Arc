@@ -52,7 +52,7 @@ typedef struct Number {
   bool isStatic;
 
   union {
-    long i;
+    int64_t i;
     double f;
   } as;
 

@@ -8,7 +8,7 @@
 
 #define VM_STACK_MAX 4096
 #define VM_TRY_STACK_MAX 256
-#define VM_CALL_STACK_MAX 1024
+#define VM_CALL_STACK_MAX 8192
 
 
 typedef struct {

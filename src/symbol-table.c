@@ -26,6 +26,11 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   SymbolTable *table = poolAlloc(symbolTablePool);
   if (!table) return NULL;
 
+  if (parent == table) {
+    fprintf(stderr, "Fatal: Cyclical scope dependency detected during creation.\n");
+    exit(1);
+  }
+
   table->capacity = capacity;
   table->parent = parent;
   table->buckets = arenaAlloc(symbolPtrArena, capacity * sizeof(Symbol*)); 
@@ -71,19 +76,20 @@ void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
 }
 
 Object *getTable(SymbolTable *table, const char *name) {
-  unsigned long index = hash(name) % table->capacity;
+  SymbolTable *currTable = table;
+  while (currTable) {
+    unsigned long index = hash(name) % currTable->capacity;
+    Symbol *sym = currTable->buckets[index];
 
-  Symbol *sym = table->buckets[index];
+    while (sym) {
+      if (strcmp(sym->name, name) == 0)
+        return sym->value;
 
-  while (sym) {
-    if (strcmp(sym->name, name) == 0)
-      return sym->value;
+      sym = sym->next;
+    }
 
-    sym = sym->next;
+    currTable = currTable->parent;
   }
-
-  if (table->parent)
-    return getTable(table->parent, name);
 
   return NULL;
 }
@@ -127,6 +133,10 @@ void freeTable(SymbolTable *table) {
       sym = next;
     }
   }
+
+  table->parent = NULL;  
+  table->buckets = NULL;  
+  table->capacity = 0;   
 
   poolFree(symbolTablePool, table);
 }
