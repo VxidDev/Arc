@@ -53,7 +53,7 @@ static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
   bool bInt = bt == OBJ_NUMBER_INT;
   
   if (aInt && bInt) {
-    if (_DEBUG) printf("[debug] Binary operation fast path (int && int)\n");
+    // if (_DEBUG) printf("[debug] Binary operation fast path (int && int)\n");
 
     Number* na = (Number*)a;
     Number* nb = (Number*)b;
@@ -262,6 +262,9 @@ Object *vmRun(VM *vm) {
     [OP_BREAK] = &&OP_BREAK,
     [OP_CONTINUE] = &&OP_CONTINUE,
     [OP_HALT] = &&OP_HALT,
+
+    [OP_LOAD_LOCAL] = &&OP_LOAD_LOCAL,
+    [OP_STORE_LOCAL] = &&OP_STORE_LOCAL
   };
 
   for (;;) {
@@ -290,6 +293,37 @@ Object *vmRun(VM *vm) {
       String *name = (String *)READ_CONST();
       Object *val  = PEEK(0);
       setTable(vars, name->value, val, true);
+      DISPATCH();
+    }
+
+    OP_LOAD_LOCAL: {
+      uint8_t slot = READ_BYTE();
+      Object *val = frame->locals[slot];
+
+      if (!val) {
+        char buf[256];
+
+        snprintf(buf, sizeof(buf), "Uninitialized local variable at slot %u.", slot);
+        if (!*vm->err) *vm->err = initNameError((Position){0, 0, 0}, (Position){0, 0, 0}, vm->filename, buf, vm->sourcetext);
+        HANDLE_ERROR();
+      }
+
+      PUSH(copyObject(val));
+      DISPATCH();
+    }
+
+    OP_STORE_LOCAL: {
+      uint8_t slot = READ_BYTE();
+      Object *val = PEEK(0);
+
+      if (frame->locals[slot]) freeObject(frame->locals[slot]);
+
+      frame->locals[slot] = copyObject(val);
+      
+      if (slot >= frame->localCount) {
+        frame->localCount = slot + 1;
+      }
+
       DISPATCH();
     }
 
@@ -604,13 +638,6 @@ Object *vmRun(VM *vm) {
       if (callee->type == OBJ_FUNCTION) {
         Function *func = (Function *)callee;
         SymbolTable *env = createTable(16, vars);
-
-        for (int i = 0; i < argCount; i++) {
-          if (i < (int)func->paramCount) 
-            setTable(env, func->params[i], args[i], false);
-          else 
-            freeObject(args[i]);
-        }
           
         if (!func->chunk && func->body) {
           func->chunk = compileAST(func->body, vm->err, vm->filename, vm->sourcetext);
@@ -624,12 +651,21 @@ Object *vmRun(VM *vm) {
           
           SAVE_STATE();
 
-          vm->frames[vm->frameTop++] = (CallFrame){ 
+          CallFrame newFrame = (CallFrame){ 
             .chunk = func->chunk,
             .ip = func->chunk->code,
             .variables = env,
             .tryStackTop = vm->tryStackTop
           };
+
+          for (int i = 0; i < (int)func->paramCount; i++)
+            newFrame.locals[i] = (i < argCount) ? args[i] : NULL;
+
+          // free excess args
+          for (int i = (int)func->paramCount; i < argCount; i++)
+            freeObject(args[i]);
+
+          vm->frames[vm->frameTop++] = newFrame;
 
           REFRESH_FRAME();
           freeObject(callee);
@@ -748,8 +784,11 @@ Object *vmRun(VM *vm) {
 
       if (vm->frameTop > 1) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
+        
+        for (int i = 0; i < leavingFrame->localCount; i++)
+          if (leavingFrame->locals[i]) freeObject(leavingFrame->locals[i]);
 
-        if (leavingFrame->variables != vm->frames[vm->frameTop-1].variables) {
+        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
             freeTable(leavingFrame->variables);
         }
 
@@ -776,6 +815,9 @@ Object *vmRun(VM *vm) {
 
       if (vm->frameTop > 1) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
+
+        for (int i = 0; i < leavingFrame->localCount; i++)
+          if (leavingFrame->locals[i]) freeObject(leavingFrame->locals[i]);
 
         if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
             freeTable(leavingFrame->variables);

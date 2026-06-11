@@ -16,6 +16,9 @@ typedef struct {
   uint8_t *ip;
   SymbolTable *variables;
   int tryStackTop;
+
+  Object* locals[256];
+  int localCount;
 } CallFrame;
 
 typedef struct VM {

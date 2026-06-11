@@ -2,13 +2,103 @@
 #include "../include/memarena.h"
 #include "../include/node.h"
 #include "../include/object.h"
+#include "../include/utils.h"
 #include <string.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <inttypes.h>
 
-#define CHUNK_INIT_CAP 256
-#define CONST_INIT_CAP 64
+static bool internTableResize(InternTable *t, size_t oldCap, size_t newCap) {
+  InternEntry *newEntries = arenaRealloc(objectArena, t->entries, oldCap * sizeof(InternEntry), newCap * sizeof(InternEntry));
+  if (!newEntries) return false;
+
+  t->entries = newEntries;
+  t->cap = newCap;
+
+  return true;
+}
+
+static uint8_t internString(Compiler *c, char *str, size_t len) {
+  if (!c->intern.entries) {
+    size_t cap = INTERN_TABLE_INIT_CAP;
+    c->intern.entries = arenaAlloc(objectArena, cap * sizeof(InternEntry));
+    if (!c->intern.entries) goto oom;
+
+    memset(c->intern.entries, 0, cap * sizeof(InternEntry));
+
+    c->intern.cap = cap;
+    c->intern.count = 0;
+  }
+
+  uint32_t hash = hashStr(str, len);
+  size_t slot = hash & (c->intern.cap - 1);
+
+  while (c->intern.entries[slot].used) {
+    InternEntry *e = &c->intern.entries[slot];
+
+    if (e->len == len && memcmp(e->str, str, len) == 0)
+      return e->constIdx;  /* cache hit */
+
+    slot = (slot + 1) & (c->intern.cap - 1);
+  }
+
+  if (c->chunk->constCount >= 256) {
+    if (c->err && !*c->err)
+      *c->err = initRuntimeError(
+        (Position){0,0,0}, (Position){0,0,0},
+        c->filename,
+        "Too many constants in chunk (max 256).",
+        c->sourcetext);
+
+    return 0;
+  }
+
+  Object *obj;
+  if (len > 0) {
+    char* interned = internIdentifier(str, len);
+    obj = (Object *)initStringConst(interned, len);
+  } else {
+    obj = (Object *)initString(str, len);
+  }
+
+  if (!obj) goto oom;
+
+  int raw = chunkAddConst(c->chunk, obj);
+  if (raw < 0) goto oom;
+
+  uint8_t idx = (uint8_t)raw;
+
+  if (c->intern.count * 4 >= c->intern.cap * 3) {
+    if (!internTableResize(&c->intern, c->intern.cap, c->intern.cap * 2)) goto oom;
+
+    /* Recompute slot in the new table. */
+    slot = hash & (c->intern.cap - 1);
+
+    while (c->intern.entries[slot].used)
+      slot = (slot + 1) & (c->intern.cap - 1);
+  }
+
+  c->intern.entries[slot] = (InternEntry){
+    .str = ((String *)obj)->value,   /* interned pointer */
+    .len = len,
+    .constIdx = idx,
+    .used = true,
+  };
+
+  c->intern.count++;
+
+  return idx;
+
+oom:
+  if (c->err && !*c->err)
+    *c->err = initRuntimeError(
+    (Position){0,0,0}, (Position){0,0,0},
+    c->filename, "Out of memory.", c->sourcetext);
+  return 0;
+}
+
+#define CHUNK_INIT_CAP 256 // TODO: add flag for this 
+#define CONST_INIT_CAP 64 // TODO: add flag for this 
 
 Chunk *initChunk(void) {
   Chunk *chunk = arenaNew(objectArena, Chunk);
@@ -72,7 +162,29 @@ void freeChunk(Chunk *chunk) {
   chunk->count = 0; chunk->constCount = 0;
 }
 
+static int resolveLocal(Compiler *c, const char *name) {
+  for (int i = c->localCount - 1; i >= 0; i--)
+    if (strcmp(c->locals[i].name, name) == 0)
+      return c->locals[i].slot;
+
+  return -1;
+}
+
+static int addLocal(Compiler *c, const char *name) {
+  if (c->localCount >= MAX_LOCALS) return -1;
+  Local *l = &c->locals[c->localCount];
+  
+  l->name = name; 
+  l->len = strlen(name);
+  l->slot = c->localCount;
+
+  c->localCount++;
+
+  return l->slot;
+}
+
 static void compileNode(ASTNode *node, Compiler *c);
+static void compileProgram(ASTNode *node, Compiler *c); 
 
 static inline void emitByte(Compiler *c, uint8_t byte) {
   chunkWrite(c->chunk, byte);
@@ -134,21 +246,42 @@ static void compileNumber(ASTNode *node, Compiler *c) {
 
 static void compileString(ASTNode *node, Compiler *c) {
   StringNode *str = (StringNode *)node;
-  Object *obj = (Object *)initString(str->token.val.s, str->len);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, obj));
+  emitBytes(c, OP_LOAD_CONST, internString(c, str->token.val.s, str->len));
 }
 
 static void compileVarAccess(ASTNode *node, Compiler *c) {
   VarAccessNode *va = (VarAccessNode *)node;
-  Object *name = (Object *)initString(va->token.val.s, strlen(va->token.val.s));
-  emitBytes(c, OP_LOAD_VAR, addConst(c, name));
+
+  if (c->isFunction) {
+    int slot = resolveLocal(c, va->token.val.s);
+
+    if (slot >= 0) {
+      emitBytes(c, OP_LOAD_LOCAL, (uint8_t)slot);
+      return;
+    }
+  }
+
+  emitBytes(c, OP_LOAD_VAR, internString(c, va->token.val.s, strlen(va->token.val.s)));
 }
 
 static void compileVarAssign(ASTNode *node, Compiler *c) {
   VarAssignNode *va = (VarAssignNode *)node;
   compileNode(va->value, c);
-  Object *name = (Object *)initString(va->identifier, strlen(va->identifier));
-  emitBytes(c, OP_STORE_VAR, addConst(c, name));
+
+  if (c->isFunction) {
+    int slot = resolveLocal(c, va->identifier);
+
+    if (slot < 0) {
+      slot = addLocal(c, va->identifier);
+    }
+
+    if (slot >= 0) {
+      emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
+      return;
+    }
+  }
+
+  emitBytes(c, OP_STORE_VAR, internString(c, va->identifier, strlen(va->identifier)));
 }
 
 static void compileBinOp(ASTNode *node, Compiler *c) {
@@ -305,8 +438,7 @@ static void compileFor(ASTNode *node, Compiler *c) {
   int loopStart = (int)c->chunk->count;
   int exitJump = emitJump(c, OP_FOR_ITER);
 
-  Object *name = (Object *)initString(fn->ident.val.s, strlen(fn->ident.val.s));
-  emitBytes(c, OP_STORE_VAR, addConst(c, name));
+  emitBytes(c, OP_STORE_VAR, internString(c, fn->ident.val.s, strlen(fn->ident.val.s)));
   emitByte(c, OP_POP);
 
   LoopInfo info = { .start = loopStart, .breaks = NULL, .continues = NULL, .next = c->loop };
@@ -354,13 +486,31 @@ static void compileFunction(ASTNode *node, Compiler *c) {
   FunctionNode *fn = (FunctionNode *)node;
   Function *func = initFunction(fn);
 
-  func->chunk = compileAST(fn->body, c->err, c->filename, c->sourcetext);
+  // compile body with a fresh compiler marked as function scope
+  Compiler fc = {
+    .chunk = initChunk(),
+    .err = c->err,
+    .filename = c->filename,
+    .sourcetext = c->sourcetext,
+    .loop = NULL,
+    .localCount = 0,
+    .isFunction = true
+  };
+
+  // pre-declare parameters as locals in order
+  for (size_t i = 0; i < fn->paramCount; i++)
+    addLocal(&fc, fn->params[i]);
+
+  if (fn->body->type == NODE_PROGRAM)
+    compileProgram(fn->body, &fc);
+  else
+    compileNode(fn->body, &fc);
+
+  emitByte(&fc, OP_HALT);
+  func->chunk = fc.chunk;
 
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)func));
-
-  Object *name = (Object *)initString(fn->name, strlen(fn->name));
-  emitBytes(c, OP_STORE_VAR, addConst(c, name));
-
+  emitBytes(c, OP_STORE_VAR, internString(c, fn->name, strlen(fn->name)));
   emitByte(c, OP_POP);
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
 }
@@ -389,8 +539,7 @@ static void compileTryCatch(ASTNode *node, Compiler *c) {
   int endJump = emitJump(c, OP_JUMP);
   patchJump(c, catchJump);
 
-  Object *name = (Object *)initString(tn->errIdentifier.val.s, strlen(tn->errIdentifier.val.s));
-  emitBytes(c, OP_STORE_VAR, addConst(c, name));
+  emitBytes(c, OP_STORE_VAR, internString(c, tn->errIdentifier.val.s, strlen(tn->errIdentifier.val.s)));
   emitByte(c, OP_POP);
 
   compileNode(tn->errHandler, c);
@@ -400,8 +549,7 @@ static void compileTryCatch(ASTNode *node, Compiler *c) {
 
 static void compileImport(ASTNode *node, Compiler *c) {
   ImportNode *in = (ImportNode *)node;
-  Object *path = (Object *)initString(in->filePath.val.s, strlen(in->filePath.val.s));
-  emitBytes(c, OP_IMPORT, addConst(c, path));
+  emitBytes(c, OP_IMPORT, internString(c, in->filePath.val.s, strlen(in->filePath.val.s)));
 }
 
 static void compileReturn(ASTNode *node, Compiler *c) {
@@ -428,10 +576,9 @@ static void compileIndex(ASTNode *node, Compiler *c) {
 
 static void compileIndexAssign(ASTNode *node, Compiler *c) {
   IndexAssignNode *ia = (IndexAssignNode *)node;
-  Object *name = (Object *)initString(ia->targetIdent.val.s, strlen(ia->targetIdent.val.s));
   compileNode(ia->index, c);
   compileNode(ia->value, c);
-  emitBytes(c, OP_STORE_INDEX, addConst(c, name));
+  emitBytes(c, OP_STORE_INDEX, internString(c, ia->targetIdent.val.s, strlen(ia->targetIdent.val.s)));
 }
 
 static void compileFunctionCall(ASTNode *node, Compiler *c) {
@@ -602,6 +749,8 @@ void disassembleChunk(Chunk *chunk, const char *name) {
       case OP_CONTINUE: printf("OP_CONTINUE\n"); break;
       case OP_RETURN: printf("OP_RETURN\n"); break;
       case OP_HALT: printf("OP_HALT\n"); break;
+      case OP_LOAD_LOCAL:  printf("OP_LOAD_LOCAL  %u\n", chunk->code[++i]); break;
+      case OP_STORE_LOCAL: printf("OP_STORE_LOCAL %u\n", chunk->code[++i]); break;
 
       case OP_JUMP: {
         uint8_t hi = chunk->code[++i], lo = chunk->code[++i];

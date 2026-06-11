@@ -6,7 +6,9 @@
 typedef enum OpCode {
   OP_LOAD_CONST, // push a constant onto the stack
   OP_LOAD_VAR, // push variable value
+  OP_LOAD_LOCAL,
   OP_STORE_VAR, // pop and assign to variable
+  OP_STORE_LOCAL,
   OP_ADD,
   OP_SUB,
   OP_MUL,
@@ -35,6 +37,14 @@ typedef enum OpCode {
   OP_HALT,
 } OpCode;
 
+#define MAX_LOCALS 256 // TODO: add flag for this 
+
+typedef struct Local {
+  const char *name;
+  size_t len;
+  int slot;
+} Local;
+
 typedef struct Chunk {
   uint8_t *code;
   size_t count;
@@ -56,12 +66,32 @@ typedef struct LoopInfo {
   struct LoopInfo *next;
 } LoopInfo;
 
+#define INTERN_TABLE_INIT_CAP 64 // TODO: add flag for this 
+
+typedef struct InternEntry {
+  const char *str;  
+  size_t len;
+  uint8_t constIdx;
+  bool used;
+} InternEntry;
+
+typedef struct InternTable {
+  InternEntry *entries;
+  size_t cap;     
+  size_t count; 
+} InternTable;
+
 typedef struct Compiler {
   Chunk *chunk;
   Error **err;
   char *filename;
   char *sourcetext;
   LoopInfo *loop;
+
+  Local locals[MAX_LOCALS];
+  int localCount;
+  bool isFunction; // false = top-level, no locals
+  InternTable intern;
 } Compiler;
 
 Chunk* initChunk(void);

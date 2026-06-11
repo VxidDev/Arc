@@ -8,18 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-unsigned long hash(const char *str) {
-  unsigned long h = 1469598103934665603ULL;
-  unsigned long prime = 1099511628211ULL;
-
-  unsigned char c;
-
-  while ((c = (unsigned char)*str++)) {
-    h ^= c;
-    h *= prime;
-  }
-
-  return h;
+static unsigned long hashPointer(const char *ptr) {
+  return ((unsigned long)ptr >> 3);
 }
 
 SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
@@ -38,12 +28,12 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
 }
 
 void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
-  unsigned long index = hash(name) % table->capacity;
+  unsigned long index = hashPointer(name) % table->capacity;
 
   Symbol *sym = table->buckets[index];
 
   while (sym) {
-    if (strcmp(sym->name, name) == 0) {
+    if (sym->name == name) {
       freeObject(sym->value);
       sym->value = copyObj ? copyObject(value) : value;
       return;
@@ -55,13 +45,8 @@ void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
   Symbol *newSym = poolAlloc(symbolPool);
   if (!newSym) return;
 
-  // newSym->name = stringDup(name);
   newSym->name = name;
-  
-  //if (!newSym->name) {
-  //  return;
-  //}
-  
+
   Object *copy = copyObj ? copyObject(value) : value;
   newSym->value = copy;
 
@@ -72,11 +57,11 @@ void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
 Object *getTable(SymbolTable *table, const char *name) {
   SymbolTable *currTable = table;
   while (currTable) {
-    unsigned long index = hash(name) % currTable->capacity;
+    unsigned long index = hashPointer(name) % currTable->capacity;
     Symbol *sym = currTable->buckets[index];
 
     while (sym) {
-      if (strcmp(sym->name, name) == 0)
+      if (sym->name == name)
         return sym->value;
 
       sym = sym->next;
@@ -89,18 +74,18 @@ Object *getTable(SymbolTable *table, const char *name) {
 }
 
 void removeSymbol(SymbolTable *table, const char *name) {
-  unsigned long index = hash(name) % table->capacity;
+  unsigned long index = hashPointer(name) % table->capacity;
 
   Symbol *curr = table->buckets[index];
   Symbol *prev = NULL;
 
   while (curr) {
-    if (strcmp(curr->name, name) == 0) {
+    if (curr->name == name) {
       if (prev)
         prev->next = curr->next;
       else
         table->buckets[index] = curr->next;
-      
+
       freeObject(curr->value);
       poolFree(symbolPool, curr);
 
@@ -111,7 +96,6 @@ void removeSymbol(SymbolTable *table, const char *name) {
     curr = curr->next;
   }
 }
-
 void freeTable(SymbolTable *table) {
   if (!table) return;
 

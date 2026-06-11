@@ -154,7 +154,9 @@ File* initFile(FILE* file, char* fname, char* fmod);
 File* copyFile(File* file);
 
 String* initString(char *value, uint64_t len);
+String* initStringConst(char *value, uint64_t len);
 String* copyString(String *str);
+char* internIdentifier(const char* value, uint64_t len);
 
 List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);
