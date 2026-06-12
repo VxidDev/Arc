@@ -1,37 +1,35 @@
-# Architecture
+# Arc Architecture
 
-Arc is intentionally designed to stay simple and easy to reason about. The main goals are:
+Arc is a stack-based virtual machine and compiler designed for simplicity and performance. It follows a classic pipeline: source code is tokenized, parsed into an Abstract Syntax Tree (AST), compiled into custom bytecode, and finally executed on a VM.
 
-## Components
+## Execution Pipeline
 
-Arc is intentionally designed to stay simple and easy to reason about. The main components include:
+1.  **Lexical Analysis (`src/lexer.c`)**: Converts the raw source text into a stream of `Token` structures. Keywords are case-insensitive (e.g., `VAR` and `var` are identical).
+2.  **Syntax Analysis (`src/parser.c`)**: A recursive descent parser that builds an **Abstract Syntax Tree (AST)** composed of `ASTNode` structures.
+3.  **Compilation (`src/compiler.c`)**: Traverses the AST and emits custom **Bytecode** into a `Chunk`. This phase performs local variable resolution, constant interning, and jump patching for control flow.
+4.  **Virtual Machine (`src/vm.c`)**: A stack-based executor that runs the bytecode. It uses a high-performance "computed goto" dispatch loop.
 
-*   **Lexer**: Tokenizes the input source code.
-*   **Parser**: Performs recursive descent parsing to construct an Abstract Syntax Tree (AST).
-*   **AST Nodes**: Represents the structure of the program, supporting multiple statements, expressions, and control flow.
-*   **Interpreter**: Visits the AST nodes to execute the program logic.
-*   **Symbol Table**: Manages variable scopes and function definitions.
-*   **Built-in Functions**: Core functions implemented in C for performance and system access.
-*   **Memory Management**: Custom memory pooling for efficient object allocation and reuse.
-*   **Error Handling**: Detailed error reporting with position tracking (file, line, column).
-*   **REPL**: An interactive environment for rapid development and testing.
+## Virtual Machine Design
+
+- **Type**: Stack-based. Operands are pushed onto and popped from a central data stack.
+- **Dispatch**: Uses a labels-as-values jump table for opcode dispatch, significantly faster than a traditional `switch` statement in C.
+- **Call Stack**: Managed by `CallFrame` structures. Each function call or module import creates a new frame with its own Instruction Pointer (`ip`) and local variable array.
+- **Symbol Tables**: Global variables and module-level symbols are stored in hash tables (`SymbolTable`).
+- **Data Stack**: A fixed-size array of `Object*` pointers (default limit is 4096).
 
 ## Memory Management
 
-Arc uses a custom memory pooling system to manage the allocation of frequently used objects (like numbers and strings).
+Arc employs a hybrid memory management strategy focused on performance and low fragmentation:
 
-*   **Object Pooling**: Instead of frequent calls to `malloc` and `free`, Arc maintains pools of pre-allocated memory slots. When an object is "freed", it is returned to the pool for later reuse.
-*   **Efficiency**: This reduces fragmentation and improves performance for programs that create and destroy many small objects.
-*   **Configurable**: The memory pool size can be adjusted via command-line arguments (`-m` or `--mempool-size`).
+- **Arena Allocation (`src/memarena.c`)**: Used for persistent data structures that live for the duration of a phase (like the AST during parsing).
+- **Memory Pools (`src/mempool.c`)**: Used for frequently allocated runtime objects like `Number` and `String`. This reduces the overhead of `malloc` and `free`.
+- **Manual Reference Management**: The VM handles object lifecycles using `copyObject` and `freeObject`. There is currently no automated generational garbage collector; instead, the stack and symbol tables own references to objects.
 
-## Memory Safety
+## Object System
 
-Arc is regularly tested with Valgrind to ensure:
-
-* No memory leaks
-* No invalid reads or writes
-* Clear and consistent ownership rules
-
-```bash
-valgrind --leak-check=full --show-leak-kinds=all ./arc script.arc
-```
+Every value in Arc is an `Object` with a specific `ObjType`:
+- **Numbers**: Supports 64-bit integers and double-precision floats. Small integers (-128 to 127) are cached and statically allocated.
+- **Strings**: Stored in a dedicated string arena. Identifiers (variable names) are interned to allow for fast pointer-comparison lookups.
+- **Lists**: Dynamically sized arrays of `Object` pointers.
+- **Functions**: First-class objects containing a reference to their compiled bytecode `Chunk`.
+- **Native Functions**: C function pointers wrapped as Arc objects for standard library integration.

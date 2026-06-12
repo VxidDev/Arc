@@ -55,16 +55,12 @@ VAR empty_string = ""
 ```
 
 ## Variables
-Variables are declared using the `VAR` keyword.
+Variables are declared using the `VAR` keyword, though it is optional for subsequent assignments.
 
 ```arc
-VAR x = 10
-```
-
-To update a variable, you must re-declare it using the same name:
-
-```arc
-x = x + 1
+VAR x = 10  # Initial declaration
+x = 20      # Re-assignment
+VAR x = 30  # Re-declaration (also valid)
 ```
 
 ## Functions
@@ -120,8 +116,10 @@ Arc provides several built-in functions implemented in C for core functionality:
 - `append_list(list, value)`: Appends a value to the end of a list.
 - `range(start, end)`: Generates a list of numbers from `start` to `end` (exclusive).
 
-### Error Handling
-- `RuntimeError(message)`: Raises a runtime error with a message.
+### System & Time
+These functions are available via `IMPORT` or registered in specific native modules:
+- `exit(code)`: Terminates the program with the given exit code. (Native module `__sys`).
+- `perf_counter()`: Returns a high-resolution performance counter for timing. (Native module `__time`).
 
 ## Command Line Arguments
 
@@ -168,13 +166,17 @@ END
 ## Control Flow
 
 ### IF Statements
+Truthiness in Arc is strictly integer-based. A condition is considered **FALSE** if it evaluates to the integer `0`, and **TRUE** if it evaluates to any non-zero integer. Non-integer types (strings, lists) will cause a `TypeError` if used as conditions.
+
 ```arc
-IF x == 5 THEN
-    print("Five")
-ELIF x > 5 THEN
-    print("Greater than five")
+IF 1 THEN
+    print("This is true")
+END
+
+IF 0 THEN
+    # This will not execute
 ELSE
-    print("Less than five")
+    print("This is false")
 END
 ```
 
@@ -183,7 +185,7 @@ END
 VAR i = 0
 
 WHILE i < 5 THEN
-    VAR i = i + 1
+    i = i + 1
 END
 ```
 
