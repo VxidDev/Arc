@@ -225,6 +225,8 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     Object* result = vmRun(vm);
     if (_DEBUG) printf("[vm] vmRun returned. Result: %p, Error: %p\n", (void*)result, (void*)*error);
 
+    deinitVM(vm);
+
     if (!result) {
       if (*error && (*error)->details[0] != '@') { 
         char *errStr = errorAsString(*error);
@@ -258,6 +260,7 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     freeObject(result);
   }
 
+  freeChunk(chunk);
   freeTokens(tokens, *size);
 }
 

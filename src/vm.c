@@ -691,7 +691,8 @@ Object *vmRun(VM *vm) {
             .chunk = func->chunk,
             .ip = func->chunk->code,
             .variables = env,
-            .tryStackTop = vm->tryStackTop
+            .tryStackTop = vm->tryStackTop,
+            .localCount = (int)func->paramCount
           };
 
           for (int i = 0; i < (int)func->paramCount; i++)
@@ -878,8 +879,39 @@ VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, ch
   VM *vm = arenaNew(objectArena, VM);
   if (!vm) return NULL;
   vm->frameTop = 0;
-  vm->frames[vm->frameTop++] = (CallFrame){ .chunk = chunk, .ip = chunk->code, .variables = variables, .tryStackTop = 0 };
+  vm->frames[vm->frameTop++] = (CallFrame){ .chunk = chunk, .ip = chunk->code, .variables = variables, .tryStackTop = 0, .localCount = 0 };
   vm->stackTop = 0; vm->tryStackTop = 0;
   vm->err = err; vm->filename = filename; vm->sourcetext = sourcetext;
   return vm;
 }
+
+void deinitVM(VM *vm) {
+  if (!vm) return;
+
+  for (int i = 0; i < vm->stackTop; i++) {
+    if (vm->stack[i]) freeObject(vm->stack[i]);
+  }
+  vm->stackTop = 0;
+
+  while (vm->frameTop > 1) {
+    CallFrame *frame = &vm->frames[--vm->frameTop];
+
+    for (int i = 0; i < frame->localCount; i++) {
+      if (frame->locals[i]) freeObject(frame->locals[i]);
+    }
+
+    if (frame->variables != vm->frames[vm->frameTop - 1].variables) {
+      freeTable(frame->variables);
+    }
+  }
+
+  // Handle frame 0
+  if (vm->frameTop == 1) {
+    CallFrame *frame = &vm->frames[--vm->frameTop];
+    for (int i = 0; i < frame->localCount; i++) {
+      if (frame->locals[i]) freeObject(frame->locals[i]);
+    }
+    // Note: frame 0's variables is global, freed in main.c
+  }
+}
+

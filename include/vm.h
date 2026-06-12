@@ -39,6 +39,7 @@ typedef struct VM {
 } VM;
 
 VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, char *sourcetext);
+void deinitVM(VM *vm);
 Object *vmRun(VM *vm);
 
 #endif
