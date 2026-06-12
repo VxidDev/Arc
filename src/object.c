@@ -25,22 +25,18 @@ Object* copyObject(Object* obj) {
       return (Object*)copyNumber((Number*)obj);
     case OBJ_LIST:
       return (Object*)copyList((List*)obj);
-    case OBJ_FUNCTION:
-      return (Object*)copyFunction((Function*)obj);
     case OBJ_NATIVE_FUNCTION:
       return (Object*)copyNativeFunction((NativeFunction*)obj);
     case OBJ_STRING:
       return (Object*)copyString((String*)obj);
     case OBJ_MODULE:
-      return obj;
+    case OBJ_FUNCTION:
     case OBJ_ERROR:
+    case OBJ_CONTINUE:
+    case OBJ_BREAK:
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
-    case OBJ_BREAK:
-      return obj;
-    case OBJ_CONTINUE:
-      return obj;
     default:
       return NULL;
   }
