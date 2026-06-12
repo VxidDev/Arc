@@ -41,9 +41,45 @@
 #define READ_CONST() (frame->chunk->constants[READ_BYTE()])
 #define READ_SHORT() (ip += 2, (int16_t)((ip[-2] << 8) | ip[-1]))
 
-#define DISPATCH() do { op = READ_BYTE(); goto *dispatch[op]; } while(0)
+#define DISPATCH() do { \
+  frame->currentInstr = (uint32_t)(ip - frame->chunk->code); \
+  op = READ_BYTE(); \
+  goto *dispatch[op]; \
+} while(0)
 
-static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
+#define VM_ERR(initFn, msg) do { \
+  if (!*vm->err) { \
+    Position _ps, _pe; \
+    vmGetPos(frame, &_ps, &_pe); \
+    *vm->err = initFn(_ps, _pe, frame->chunk->filename, msg, frame->chunk->sourcetext); \
+  } \
+} while(0)
+
+static void vmGetPos(CallFrame *frame, Position *start, Position *end) {
+  Chunk *chunk = frame->chunk;
+  PosEntry *entries = chunk->positions;
+  size_t count = chunk->posCount;
+
+  if (count == 0) {
+    *start = (Position){0,0,0};
+    *end = (Position){0,0,0};
+    return;
+  }
+
+  size_t lo = 0, hi = count;
+
+  while (lo < hi) {
+    size_t mid = (lo + hi) >> 1;
+    if (entries[mid].offset <= frame->currentInstr) lo = mid + 1;
+    else hi = mid;
+  }
+
+  size_t idx = (lo == 0) ? 0 : lo - 1;
+  *start = entries[idx].start;
+  *end = entries[idx].end;
+}
+
+static Object *doArith(VM *vm, CallFrame* frame, OpCode op, Object *a, Object *b) {
   (void)vm;
 
   ObjType at = a->type;
@@ -75,7 +111,7 @@ static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
         dest->as.i = na->as.i * dest->as.i; break;
       case OP_DIV: 
         if (dest->as.i == 0) {
-          *vm->err = initValueError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Division by zero.", vm->sourcetext);
+          VM_ERR(initValueError, "Division by zero.");
           freeObject((Object*)dest);
           freeObject(a);
           return NULL;
@@ -101,7 +137,7 @@ static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
       case OP_OR: 
         dest->as.i = na->as.i || dest->as.i; break;
       default:
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Incompatible types for operation.", vm->sourcetext); 
+        VM_ERR(initTypeError, "Incompatible types for operation.");
         freeObject((Object*)dest);
         freeObject(a);
         return NULL;
@@ -175,11 +211,11 @@ static Object *doArith(VM *vm, OpCode op, Object *a, Object *b) {
   if (result != ERR_NONE) {
     if (!*vm->err) {
       if (result == ERR_DIV_BY_ZERO)
-        *vm->err = initValueError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Division by zero.", vm->sourcetext);
+        VM_ERR(initValueError, "Division by zero.");
       else if (result == ERR_TYPE)
-        *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Incompatible types for operation.", vm->sourcetext);
+        VM_ERR(initTypeError, "Incompatible types for operation.");
       else if (result == ERR_NULL)
-        *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Null operand in arithmetic operation.", vm->sourcetext);
+        VM_ERR(initRuntimeError, "Null operand in arithmetic operation");
     }
 
     freeObject((Object*)dest);
@@ -281,7 +317,7 @@ Object *vmRun(VM *vm) {
       if (!val) {
         char buf[256];
         snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
-        if (!*vm->err) *vm->err = initNameError((Position){0,0,0}, (Position){0,0,0}, vm->filename, buf, vm->sourcetext);
+        VM_ERR(initNameError, buf); 
         HANDLE_ERROR();
       }
 
@@ -304,7 +340,7 @@ Object *vmRun(VM *vm) {
         char buf[256];
 
         snprintf(buf, sizeof(buf), "Uninitialized local variable at slot %u.", slot);
-        if (!*vm->err) *vm->err = initNameError((Position){0, 0, 0}, (Position){0, 0, 0}, vm->filename, buf, vm->sourcetext);
+        VM_ERR(initNameError, buf);
         HANDLE_ERROR();
       }
 
@@ -339,10 +375,10 @@ Object *vmRun(VM *vm) {
       Object *b = POP();
       Object *a = POP();
 
-      Object *res = doArith(vm, op, a, b);
+      Object *res = doArith(vm, frame, op, a, b);
 
       if (!res) {
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Incompatible types for operation", vm->sourcetext);
+        VM_ERR(initTypeError, "Incompatible types for operation");
         HANDLE_ERROR();
       }
 
@@ -393,7 +429,7 @@ Object *vmRun(VM *vm) {
       Object *cond = POP();
 
       if (cond->type != OBJ_NUMBER_INT) {
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Condition must be an integer.", vm->sourcetext);
+        VM_ERR(initTypeError, "Condition must be an integer.");
         freeObject(cond);
         HANDLE_ERROR();
       }
@@ -408,8 +444,8 @@ Object *vmRun(VM *vm) {
     OP_FOR_PREP: {
       Object *iterable = POP();
 
-      if (iterable->type != OBJ_LIST && iterable->type != OBJ_STRING) { 
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Object is not iterable", vm->sourcetext);
+      if (iterable->type != OBJ_LIST && iterable->type != OBJ_STRING) {
+        VM_ERR(initTypeError, "Object is not iterable");
         freeObject(iterable); HANDLE_ERROR(); 
       }
 
@@ -461,7 +497,7 @@ Object *vmRun(VM *vm) {
       Object *target = POP();
 
       if (idx->type != OBJ_NUMBER_INT) { 
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index must be an integer.", vm->sourcetext);
+        VM_ERR(initIndexError, "Index out of range."); 
         freeObject(idx);
         freeObject(target);
         HANDLE_ERROR(); 
@@ -473,7 +509,7 @@ Object *vmRun(VM *vm) {
         String *str = (String *)target;
 
         if (i < 0 || (uint64_t)i >= str->len) { 
-          if (!*vm->err) *vm->err = initIndexError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index out of range.", vm->sourcetext);
+          VM_ERR(initIndexError, "Index out of range."); 
           freeObject(idx);
           freeObject(target);
           HANDLE_ERROR(); 
@@ -486,7 +522,7 @@ Object *vmRun(VM *vm) {
         List *list = (List *)target;
 
         if (i < 0 || (uint64_t)i >= list->size) { 
-          if (!*vm->err) *vm->err = initIndexError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index out of range.", vm->sourcetext);
+          VM_ERR(initIndexError, "Index out of range.");
           freeObject(idx);
           freeObject(target);
           HANDLE_ERROR(); 
@@ -495,7 +531,7 @@ Object *vmRun(VM *vm) {
         PUSH(copyObject(list->objects[i]));
 
       } else { 
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Target is not indexable.", vm->sourcetext);
+        VM_ERR(initTypeError, "Target is not indexable.");
         freeObject(idx);
         freeObject(target);
         HANDLE_ERROR(); 
@@ -510,8 +546,8 @@ Object *vmRun(VM *vm) {
       Object *idx = POP();
       Object *target = POP();
 
-      if (idx->type != OBJ_NUMBER_INT) { 
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index must be an integer.", vm->sourcetext);
+      if (idx->type != OBJ_NUMBER_INT) {
+        VM_ERR(initTypeError, "Index must be an integer.");
         freeObject(val);
         freeObject(idx);
         freeObject(target);
@@ -528,8 +564,8 @@ Object *vmRun(VM *vm) {
           list->objects[i] = val; 
         }
 
-        else { 
-          if (!*vm->err) *vm->err = initIndexError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index out of range.", vm->sourcetext);
+        else {
+          VM_ERR(initIndexError, "Index out of range.");
           freeObject(val);
           freeObject(idx);
           freeObject(target);
@@ -544,15 +580,15 @@ Object *vmRun(VM *vm) {
           freeObject(val);
         }
 
-        else { 
-          if (!*vm->err) *vm->err = initIndexError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index out of range or invalid value.", vm->sourcetext);
+        else {
+          VM_ERR(initIndexError, "Index out of range or invalid value.");
           freeObject(val);
           freeObject(idx);
           freeObject(target);
           HANDLE_ERROR(); 
         }
-      } else { 
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Target is not indexable.", vm->sourcetext);
+      } else {
+        VM_ERR(initTypeError, "Target is not indexable.");
         freeObject(val);
         freeObject(idx);
         freeObject(target);
@@ -574,14 +610,14 @@ Object *vmRun(VM *vm) {
 
       if (!target) {
         char buf[256]; snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
-        if (!*vm->err) *vm->err = initNameError((Position){0,0,0}, (Position){0,0,0}, vm->filename, buf, vm->sourcetext);
+        VM_ERR(initNameError, buf);
         freeObject(val);
         freeObject(idx);
         HANDLE_ERROR();
       }
 
       if (idx->type != OBJ_NUMBER_INT) {
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index must be an integer.", vm->sourcetext);
+        VM_ERR(initTypeError, "Index must be an integer.");
         freeObject(val);
         freeObject(idx);
         HANDLE_ERROR();
@@ -596,7 +632,7 @@ Object *vmRun(VM *vm) {
           freeObject(list->objects[i]);
           list->objects[i] = copyObject(val);
         } else {
-          if (!*vm->err) *vm->err = initIndexError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index out of range.", vm->sourcetext);
+          VM_ERR(initIndexError, "Index out of range.");
           freeObject(val);
           freeObject(idx);
           HANDLE_ERROR();
@@ -608,13 +644,13 @@ Object *vmRun(VM *vm) {
         if (i >= 0 && (uint64_t)i < str->len && val->type == OBJ_STRING && ((String *)val)->len == 1) { 
           str->value[i] = ((String *)val)->value[0];
         } else {
-          if (!*vm->err) *vm->err = initIndexError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Index out of range or invalid value.", vm->sourcetext);
+          VM_ERR(initIndexError, "Index out of range or invalid value.");
           freeObject(val);
           freeObject(idx);
           HANDLE_ERROR();
         }
       } else {
-        if (!*vm->err) *vm->err = initTypeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Target is not indexable.", vm->sourcetext);
+        VM_ERR(initTypeError, "Target is not indexable.");
         freeObject(val);
         freeObject(idx);
         HANDLE_ERROR();
@@ -645,7 +681,7 @@ Object *vmRun(VM *vm) {
 
         if (func->chunk) {
           if (vm->frameTop >= VM_CALL_STACK_MAX) {
-            if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Call stack overflow.", vm->sourcetext);
+            VM_ERR(initRuntimeError, "Call stack overflow.");
             freeObject(callee); HANDLE_ERROR();
           }
           
@@ -680,7 +716,7 @@ Object *vmRun(VM *vm) {
           
         if (res) {
           if (res->type == OBJ_ERROR) {
-            if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, ((ProgramError*)res)->details, vm->sourcetext);
+            VM_ERR(initRuntimeError, ((ProgramError*)res)->details);
             freeObject(res); 
             res = NULL;
           }
@@ -735,8 +771,8 @@ Object *vmRun(VM *vm) {
       char *resolvedPath = resolveImportPath(vm->filename, name);
       char *fileContent = readFile(resolvedPath);
 
-      if (!fileContent) { 
-        if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Failed to load imported file", vm->sourcetext);
+      if (!fileContent) {
+        VM_ERR(initRuntimeError, "Failed to load imported file.");
         HANDLE_ERROR(); 
       }
 
@@ -761,7 +797,7 @@ Object *vmRun(VM *vm) {
       }
 
       if (vm->frameTop >= VM_CALL_STACK_MAX) {
-        if (!*vm->err) *vm->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, vm->filename, "Call stack overflow.", vm->sourcetext);
+        VM_ERR(initRuntimeError, "Call stack overflow.");
         HANDLE_ERROR();
       }
 

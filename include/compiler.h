@@ -45,6 +45,12 @@ typedef struct Local {
   int slot;
 } Local;
 
+typedef struct PosEntry {
+  uint32_t offset; // first bytecode offset where this span applies
+  Position start;
+  Position end;
+} PosEntry;
+
 typedef struct Chunk {
   uint8_t *code;
   size_t count;
@@ -52,6 +58,12 @@ typedef struct Chunk {
   Object **constants;  
   size_t constCount;
   size_t constCapacity;
+
+  PosEntry *positions;
+  size_t posCount, posCapacity;
+
+  char* filename;
+  char* sourcetext;
 } Chunk;
 
 typedef struct JumpList {
@@ -92,6 +104,10 @@ typedef struct Compiler {
   int localCount;
   bool isFunction; // false = top-level, no locals
   InternTable intern;
+
+  Position posStart;
+  Position posEnd;
+  bool posDirty;
 } Compiler;
 
 Chunk* initChunk(void);

@@ -101,7 +101,7 @@ BreakNode* initBreakNode(Token tok) {
   return node;
 }
 
-FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount) {
+FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount, Position start, Position end) {
   if (!body) return NULL;
 
   FunctionNode* node = arenaAlloc(parseArena, sizeof(FunctionNode));
@@ -117,6 +117,8 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
 
   node->params = params;
   node->paramCount = paramCount;
+  node->start = start;
+  node->end = end;
 
   return node;
 }
@@ -252,7 +254,7 @@ UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
   return unaryNode;
 }
 
-VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
+VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position start) {
   if (!identifier || !value) return NULL;
 
   VarAssignNode* varAssignNode = arenaAlloc(parseArena, sizeof(VarAssignNode));
@@ -265,6 +267,8 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value) {
 
   varAssignNode->base.type = NODE_VARASSIGN;
   varAssignNode->value = value;
+
+  varAssignNode->start = start;
 
   return varAssignNode;
 }
@@ -324,4 +328,67 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
   node->elseExpr = elseExpr;
 
   return node;
+}
+
+Position getNodeStart(ASTNode *node) {
+  if (!node) return (Position){0,0,0};
+
+  switch (node->type) {
+    case NODE_NUMBER: return ((NumberNode*)node)->token.start;
+    case NODE_STRING: return ((StringNode*)node)->token.start;
+    case NODE_VARACCESS: return ((VarAccessNode*)node)->token.start;
+    case NODE_VARASSIGN: return ((VarAssignNode*)node)->start;
+    case NODE_BINOP: return getNodeStart(((BinOpNode*)node)->leftNode);
+    case NODE_UNARYOP: return ((UnaryOpNode*)node)->operTok.start;
+    case NODE_IF: return getNodeStart(((IfNode*)node)->condition);
+    case NODE_LIST: return ((ListNode*)node)->startBracket.start;
+    case NODE_INDEX: return ((IndexNode*)node)->start;
+    case NODE_WHILE: return ((WhileNode*)node)->start;
+    case NODE_FUNCTION: return ((FunctionNode*)node)->start;
+    case NODE_FUNCTION_CALL: return ((FunctionCallNode*)node)->start;
+    case NODE_IMPORT: return ((ImportNode*)node)->filePath.start;
+    case NODE_RETURN: return ((ReturnNode*)node)->start;
+    case NODE_TRYCATCH: return ((TryCatchNode*)node)->tryStart;
+    case NODE_BREAK: return ((BreakNode*)node)->tok.start;
+    case NODE_CONTINUE: return ((ContinueNode*)node)->tok.start;
+    case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
+    case NODE_FOR: return ((ForNode*)node)->forTok.start;
+    case NODE_PROGRAM: {
+      ProgramNode *p = (ProgramNode*)node;
+      return p->count > 0 ? getNodeStart(p->statements[0]) : (Position){0,0,0};
+    }
+
+    default: return (Position){0,0,0};
+  }
+}
+
+Position getNodeEnd(ASTNode *node) {
+  if (!node) return (Position){0,0,0};
+
+  switch (node->type) {
+    case NODE_NUMBER: return ((NumberNode*)node)->token.end;
+    case NODE_STRING: return ((StringNode*)node)->token.end;
+    case NODE_VARACCESS: return ((VarAccessNode*)node)->token.end;
+    case NODE_VARASSIGN: return getNodeEnd(((VarAssignNode*)node)->value);
+    case NODE_BINOP: return getNodeEnd(((BinOpNode*)node)->rightNode);
+    case NODE_UNARYOP: return getNodeEnd(((UnaryOpNode*)node)->node);
+    case NODE_IF: return getNodeEnd(((IfNode*)node)->condition);
+    case NODE_LIST: return ((ListNode*)node)->endBracket.end;
+    case NODE_INDEX: return ((IndexNode*)node)->end;
+    case NODE_WHILE: return ((WhileNode*)node)->end;
+    case NODE_FUNCTION: return ((FunctionNode*)node)->end;
+    case NODE_FUNCTION_CALL: return ((FunctionCallNode*)node)->end;
+    case NODE_IMPORT: return ((ImportNode*)node)->filePath.end;
+    case NODE_RETURN: return ((ReturnNode*)node)->end;
+    case NODE_TRYCATCH: return ((TryCatchNode*)node)->catchEnd;
+    case NODE_BREAK: return ((BreakNode*)node)->tok.end;
+    case NODE_CONTINUE: return ((ContinueNode*)node)->tok.end;
+    case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->end;
+    case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
+    case NODE_PROGRAM: {
+      ProgramNode *p = (ProgramNode*)node;
+      return p->count > 0 ? getNodeEnd(p->statements[p->count-1]) : (Position){0,0,0};
+    }
+    default: return (Position){0,0,0};
+  }
 }

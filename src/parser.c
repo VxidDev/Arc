@@ -696,6 +696,9 @@ ASTNode* __exprParser(Parser* parser) {
     start = parser->currentToken.start;
     end = parser->currentToken.end;
 
+    Position funcStart = start;
+    Position funcEnd = end;
+
     if (!funcName) {
       return NULL;
     }
@@ -794,7 +797,7 @@ ASTNode* __exprParser(Parser* parser) {
 
     advanceParser(parser); // skip END.
   
-    FunctionNode* node = initFunctionNode(body, funcName, params, paramCount);
+    FunctionNode* node = initFunctionNode(body, funcName, params, paramCount, funcStart, funcEnd);
     
     if (!node) {
       return NULL;
@@ -939,6 +942,7 @@ ASTNode* __exprParser(Parser* parser) {
 
   if (parser->currentToken.type == TOK_VAR) {
     Token tok = parser->currentToken; // safe copy
+    Position start = tok.start;
     advanceParser(parser);
 
     if (parser->currentToken.type == TOK_EOF) {
@@ -977,13 +981,14 @@ ASTNode* __exprParser(Parser* parser) {
       return NULL;
     }
 
-    return (ASTNode*)initVarAssignNode(varName, expr);
+    return (ASTNode*)initVarAssignNode(varName, expr, start);
   }
 
   if (parser->currentToken.type == TOK_IDENTIFIER) {
     ParserCheckpoint checkpoint = saveParser(parser);
 
     Token identTok = parser->currentToken;
+    Position start = identTok.start;
     advanceParser(parser); // skip identifier 
 
     if (parser->currentToken.type == TOK_EQ) {
@@ -998,7 +1003,7 @@ ASTNode* __exprParser(Parser* parser) {
         return NULL;
       }
 
-      return (ASTNode*)initVarAssignNode(identTok.val.s, expr);
+      return (ASTNode*)initVarAssignNode(identTok.val.s, expr, start);
     } 
 
     if (parser->currentToken.type == TOK_LBRACK) {

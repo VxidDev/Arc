@@ -19,6 +19,8 @@ typedef struct {
 
   Object* locals[256];
   int localCount;
+
+  uint32_t currentInstr;
 } CallFrame;
 
 typedef struct VM {

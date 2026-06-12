@@ -8,6 +8,39 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+static void chunkAddPosEntry(Chunk *chunk, uint32_t offset, Position start, Position end) {
+  if (chunk->posCount > 0 && chunk->positions[chunk->posCount - 1].offset == offset) {
+    chunk->positions[chunk->posCount - 1].start = start;
+    chunk->positions[chunk->posCount - 1].end = end;
+    return;
+  }
+
+  if (chunk->posCount >= chunk->posCapacity) {
+    size_t oldCap = chunk->posCapacity;
+    size_t newCap = oldCap == 0 ? 64 : oldCap * 2;
+
+    PosEntry *grown = arenaRealloc(objectArena, chunk->positions, oldCap * sizeof(PosEntry), newCap * sizeof(PosEntry));
+    if (!grown) return;
+
+    chunk->positions = grown;
+    chunk->posCapacity = newCap;
+  }
+
+  chunk->positions[chunk->posCount++] = (PosEntry){
+    .offset = offset, .start = start, .end = end
+  };
+}
+
+static inline void setPos(Compiler *c, Position start, Position end) {
+  c->posStart = start;
+  c->posEnd = end;
+  c->posDirty = true;
+}
+
+static inline void setPosFromNode(Compiler *c, ASTNode *node) {
+  setPos(c, getNodeStart(node), getNodeEnd(node));
+}
+
 static bool internTableResize(InternTable *t, size_t oldCap, size_t newCap) {
   InternEntry *newEntries = arenaRealloc(objectArena, t->entries, oldCap * sizeof(InternEntry), newCap * sizeof(InternEntry));
   if (!newEntries) return false;
@@ -113,7 +146,14 @@ Chunk *initChunk(void) {
   chunk->constants = arenaAlloc(objectArena, CONST_INIT_CAP * sizeof(Object *));
   if (!chunk->constants) return NULL;
 
-  chunk->constCount = 0; chunk->constCapacity = CONST_INIT_CAP;
+  chunk->constCount = 0; 
+  chunk->constCapacity = CONST_INIT_CAP;
+
+  chunk->positions = NULL;
+  chunk->posCount = 0;
+  chunk->posCapacity = 0;
+  chunk->filename = NULL;
+  chunk->sourcetext = NULL;
 
   return chunk;
 }
@@ -187,6 +227,11 @@ static void compileNode(ASTNode *node, Compiler *c);
 static void compileProgram(ASTNode *node, Compiler *c); 
 
 static inline void emitByte(Compiler *c, uint8_t byte) {
+  if (c->posDirty) {
+    chunkAddPosEntry(c->chunk, (uint32_t)c->chunk->count, c->posStart, c->posEnd);
+    c->posDirty = false;
+  }
+
   chunkWrite(c->chunk, byte);
 }
 
@@ -241,16 +286,20 @@ static void compileNumber(ASTNode *node, Compiler *c) {
   NumberNode *num = (NumberNode *)node;
 
   Object *obj = num->token.type == TOK_FLOAT ? (Object *)initFloat(num->token.val.f) : (Object *)initInt(num->token.val.i);
+  setPosFromNode(c, node);
   emitBytes(c, OP_LOAD_CONST, addConst(c, obj));
 }
 
 static void compileString(ASTNode *node, Compiler *c) {
   StringNode *str = (StringNode *)node;
+  setPosFromNode(c, node);
   emitBytes(c, OP_LOAD_CONST, internString(c, str->token.val.s, str->len));
 }
 
 static void compileVarAccess(ASTNode *node, Compiler *c) {
   VarAccessNode *va = (VarAccessNode *)node;
+
+  setPosFromNode(c, node);
 
   if (c->isFunction) {
     int slot = resolveLocal(c, va->token.val.s);
@@ -266,7 +315,11 @@ static void compileVarAccess(ASTNode *node, Compiler *c) {
 
 static void compileVarAssign(ASTNode *node, Compiler *c) {
   VarAssignNode *va = (VarAssignNode *)node;
+  
+  setPosFromNode(c, va->value);
   compileNode(va->value, c);
+
+  setPosFromNode(c, node);
 
   if (c->isFunction) {
     int slot = resolveLocal(c, va->identifier);
@@ -286,9 +339,14 @@ static void compileVarAssign(ASTNode *node, Compiler *c) {
 
 static void compileBinOp(ASTNode *node, Compiler *c) {
   BinOpNode *bin = (BinOpNode *)node;
-
+  
+  setPosFromNode(c, bin->leftNode);
   compileNode(bin->leftNode, c);
+
+  setPosFromNode(c, bin->rightNode);
   compileNode(bin->rightNode, c);
+
+  setPosFromNode(c, node);
 
   switch (bin->operTok.type) {
     case TOK_PLUS: emitByte(c, OP_ADD); break;
@@ -310,7 +368,10 @@ static void compileBinOp(ASTNode *node, Compiler *c) {
 
 static void compileUnaryOp(ASTNode *node, Compiler *c) {
   UnaryOpNode *un = (UnaryOpNode *)node;
+
+  setPosFromNode(c, node);
   compileNode(un->node, c);
+  setPosFromNode(c, node);
 
   switch (un->operTok.type) {
     case TOK_MINUS: emitByte(c, OP_NEG); break;
@@ -341,16 +402,20 @@ static void compileIf(ASTNode *node, Compiler *c) {
   int endJumpCount = 0;
 
   compileNode(n->condition, c);
+  setPosFromNode(c, node);
   int toNext = emitJump(c, OP_JUMP_IF_FALSE);
 
   compileNode(n->thenExpr, c);
+  setPosFromNode(c, node);
   endJumps[endJumpCount++] = emitJump(c, OP_JUMP);
   patchJump(c, toNext);
 
   for (size_t i = 0; i < n->elifCount; i++) {
     compileNode(n->elifConds[i], c);
+    setPosFromNode(c, node);
     toNext = emitJump(c, OP_JUMP_IF_FALSE);
     compileNode(n->elifExprs[i], c);
+    setPosFromNode(c, node);
     endJumps[endJumpCount++] = emitJump(c, OP_JUMP);
     patchJump(c, toNext);
   }
@@ -358,6 +423,7 @@ static void compileIf(ASTNode *node, Compiler *c) {
   if (n->elseExpr) {
     compileNode(n->elseExpr, c);
   } else {
+    setPosFromNode(c, node);
     emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(0)));
   }
 
@@ -381,14 +447,17 @@ static void compileWhile(ASTNode *node, Compiler *c) {
   WhileNode *wn = (WhileNode *)node;
 
   int loopStart = (int)c->chunk->count;
-
+  
+  setPosFromNode(c, node);
   compileNode(wn->condition, c);
+  setPosFromNode(c, node);
   int exitJump = emitJump(c, OP_JUMP_IF_FALSE);
 
   LoopInfo info = { .start = loopStart, .breaks = NULL, .continues = NULL, .next = c->loop };
   c->loop = &info;
 
   compileNode(wn->body, c);
+  setPosFromNode(c, node);
   emitByte(c, OP_POP);
 
   /* Patch continues to the back-edge (re-evaluate condition). */
@@ -400,7 +469,8 @@ static void compileWhile(ASTNode *node, Compiler *c) {
   }
 
   c->loop = info.next;
-
+  
+  setPosFromNode(c, node);
   emitLoop(c, loopStart);
   patchJump(c, exitJump);
 
@@ -433,11 +503,12 @@ static void compileFor(ASTNode *node, Compiler *c) {
   ForNode *fn = (ForNode *)node;
 
   compileNode(fn->iterable, c);
+  setPosFromNode(c, node);
   emitByte(c, OP_FOR_PREP);
 
   int loopStart = (int)c->chunk->count;
   int exitJump = emitJump(c, OP_FOR_ITER);
-
+  
   emitBytes(c, OP_STORE_VAR, internString(c, fn->ident.val.s, strlen(fn->ident.val.s)));
   emitByte(c, OP_POP);
 
@@ -497,6 +568,11 @@ static void compileFunction(ASTNode *node, Compiler *c) {
     .isFunction = true
   };
 
+  fc.chunk->filename = c->filename;
+  fc.chunk->sourcetext = c->sourcetext;
+  
+  setPosFromNode(&fc, fn->body);
+
   // pre-declare parameters as locals in order
   for (size_t i = 0; i < fn->paramCount; i++)
     addLocal(&fc, fn->params[i]);
@@ -505,13 +581,17 @@ static void compileFunction(ASTNode *node, Compiler *c) {
     compileProgram(fn->body, &fc);
   else
     compileNode(fn->body, &fc);
-
+  
+  setPosFromNode(&fc, node);
   emitByte(&fc, OP_HALT);
   func->chunk = fc.chunk;
-
+  
+  setPosFromNode(c, node);
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)func));
   emitBytes(c, OP_STORE_VAR, internString(c, fn->name, strlen(fn->name)));
   emitByte(c, OP_POP);
+
+  setPosFromNode(c, node);
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
 }
 
@@ -530,65 +610,101 @@ static void compileFunction(ASTNode *node, Compiler *c) {
  */
 static void compileTryCatch(ASTNode *node, Compiler *c) {
   TryCatchNode *tn = (TryCatchNode *)node;
-
+  
+  setPosFromNode(c, node);
   int catchJump = emitJump(c, OP_TRY_PUSH);
 
   compileNode(tn->body, c);
+  setPosFromNode(c, node);
   emitByte(c, OP_TRY_POP);
-
+  
+  setPosFromNode(c, node);
   int endJump = emitJump(c, OP_JUMP);
-  patchJump(c, catchJump);
 
+  setPosFromNode(c, node);
+  patchJump(c, catchJump);
+  
+  setPosFromNode(c, node);
   emitBytes(c, OP_STORE_VAR, internString(c, tn->errIdentifier.val.s, strlen(tn->errIdentifier.val.s)));
+
+  setPosFromNode(c, node);
   emitByte(c, OP_POP);
 
   compileNode(tn->errHandler, c);
-
+  
+  setPosFromNode(c, node);
   patchJump(c, endJump);
 }
 
 static void compileImport(ASTNode *node, Compiler *c) {
   ImportNode *in = (ImportNode *)node;
+  setPosFromNode(c, node);
   emitBytes(c, OP_IMPORT, internString(c, in->filePath.val.s, strlen(in->filePath.val.s)));
 }
 
 static void compileReturn(ASTNode *node, Compiler *c) {
   ReturnNode *ret = (ReturnNode *)node;
+
+  setPosFromNode(c, node);
   compileNode(ret->expr, c);
+  setPosFromNode(c, node);
+
   emitByte(c, OP_RETURN);
 }
 
 static void compileList(ASTNode *node, Compiler *c) {
   ListNode *ln = (ListNode *)node;
+  setPosFromNode(c, node);
 
-  for (uint64_t i = 0; i < ln->size; i++) 
+  for (uint64_t i = 0; i < ln->size; i++) {
+    setPosFromNode(c, node);
     compileNode(ln->objects[i], c);
-
+  }
+  
+  setPosFromNode(c, node);
   emitBytes(c, OP_BUILD_LIST, (uint8_t)ln->size);
 }
 
 static void compileIndex(ASTNode *node, Compiler *c) {
   IndexNode *in = (IndexNode *)node;
+
+  setPosFromNode(c, node);
   compileNode(in->target, c);
+  
+  setPosFromNode(c, node);
+
   compileNode(in->index, c);
+  setPosFromNode(c, node);
+
   emitByte(c, OP_INDEX_GET);
 }
 
 static void compileIndexAssign(ASTNode *node, Compiler *c) {
   IndexAssignNode *ia = (IndexAssignNode *)node;
+
+  setPosFromNode(c, node);
   compileNode(ia->index, c);
+  
+  setPosFromNode(c, node);
+
   compileNode(ia->value, c);
+  setPosFromNode(c, node);
+
   emitBytes(c, OP_STORE_INDEX, internString(c, ia->targetIdent.val.s, strlen(ia->targetIdent.val.s)));
 }
 
 static void compileFunctionCall(ASTNode *node, Compiler *c) {
   FunctionCallNode *fc = (FunctionCallNode *)node;
+
+  setPosFromNode(c, node);
   compileNode(fc->callee, c);
 
   for (size_t i = 0; i < fc->argCount; i++) {
+    setPosFromNode(c, fc->args[i]);
     compileNode(fc->args[i], c);
   }
-
+  
+  setPosFromNode(c, node);
   emitBytes(c, OP_CALL, (uint8_t)fc->argCount);
 }
 
@@ -602,12 +718,14 @@ static void compileProgram(ASTNode *node, Compiler *c) {
   ProgramNode *prog = (ProgramNode *)node;
 
   if (prog->count == 0) {
+    setPosFromNode(c, node);
     emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(0)));
     return;
   }
 
   for (size_t i = 0; i < prog->count; i++) {
     compileNode(prog->statements[i], c);
+    setPosFromNode(c, prog->statements[i]);
 
     if (i < prog->count - 1) 
       emitByte(c, OP_POP);
@@ -637,6 +755,7 @@ static void compileNode(ASTNode *node, Compiler *c) {
     case NODE_RETURN: compileReturn(node, c); break;
     case NODE_BREAK:
       if (c->loop) {
+        setPosFromNode(c, node);
         int j = emitJump(c, OP_JUMP);
         JumpList *bl = arenaAlloc(objectArena, sizeof(JumpList));
         bl->offset = j; bl->next = c->loop->breaks; c->loop->breaks = bl;
@@ -644,13 +763,14 @@ static void compileNode(ASTNode *node, Compiler *c) {
       break;
     case NODE_CONTINUE:
       if (c->loop) {
+        setPosFromNode(c, node);
         int j = emitJump(c, OP_JUMP);
         JumpList *cl = arenaAlloc(objectArena, sizeof(JumpList));
         cl->offset = j; cl->next = c->loop->continues; c->loop->continues = cl;
       }
 
       break;
-    case NODE_PROGRAM:       compileProgram(node, c);      break;
+    case NODE_PROGRAM: compileProgram(node, c); break;
     default: break;
   }
 }
@@ -666,11 +786,15 @@ Chunk *compileAST(ASTNode *ast, Error **err, char *filename, char *sourcetext) {
 
   if (!c.chunk) return NULL;
 
+  c.chunk->filename = filename;
+  c.chunk->sourcetext = sourcetext;
+
   if (ast->type == NODE_PROGRAM) 
     compileProgram(ast, &c);
   else                           
     compileNode(ast, &c);
-
+  
+  setPos(&c, getNodeStart(ast), getNodeEnd(ast));
   emitByte(&c, OP_HALT);
 
   if (*err) { 
