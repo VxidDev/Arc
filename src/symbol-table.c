@@ -8,8 +8,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-static unsigned long hashPointer(const char *ptr) {
-  return ((unsigned long)ptr >> 3);
+static inline unsigned long hashPointer(const char *ptr) {
+  unsigned long x = (unsigned long)ptr;
+  x ^= x >> 33;
+  x *= 0xff51afd7ed558ccdULL;
+  x ^= x >> 33;
+  x *= 0xc4ceb9fe1a85ec53ULL;
+  x ^= x >> 33;
+  return x;
 }
 
 SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
@@ -28,18 +34,14 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
 }
 
 void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
-  unsigned long index = hashPointer(name) % table->capacity;
+  unsigned long index = hashPointer(name) & (table->capacity - 1); // table capacity MUST be power of 2
 
-  Symbol *sym = table->buckets[index];
-
-  while (sym) {
+  for (Symbol* sym = table->buckets[index]; sym; sym = sym->next) {
     if (sym->name == name) {
       freeObject(sym->value);
       sym->value = copyObj ? copyObject(value) : value;
       return;
     }
-
-    sym = sym->next;
   }
 
   Symbol *newSym = poolAlloc(symbolPool);
@@ -55,10 +57,10 @@ void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
 }
 
 Object *getTable(SymbolTable *table, const char *name) {
-  SymbolTable *currTable = table;
-  while (currTable) {
-    unsigned long index = hashPointer(name) % currTable->capacity;
-    Symbol *sym = currTable->buckets[index];
+  unsigned long hash = hashPointer(name);
+
+  for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
+    Symbol *sym = currTable->buckets[hash & (currTable->capacity - 1)];
 
     while (sym) {
       if (sym->name == name)
@@ -66,15 +68,13 @@ Object *getTable(SymbolTable *table, const char *name) {
 
       sym = sym->next;
     }
-
-    currTable = currTable->parent;
   }
 
   return NULL;
 }
 
 void removeSymbol(SymbolTable *table, const char *name) {
-  unsigned long index = hashPointer(name) % table->capacity;
+  unsigned long index = hashPointer(name) & (table->capacity - 1);
 
   Symbol *curr = table->buckets[index];
   Symbol *prev = NULL;
