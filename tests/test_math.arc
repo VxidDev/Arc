@@ -48,3 +48,6 @@ WHILE i < 10000 THEN
 END
 
 assert_true(acc != 0, "stress sin loop")
+
+print("test_math.arc passed\n")
+

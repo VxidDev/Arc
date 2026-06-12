@@ -167,3 +167,5 @@ END
 assert_eq(result, 99, "if/elif with no else leaves result unchanged")
 
 print("all IF/ELIF/ELSE tests passed")
+print("test_if.arc passed\n")
+

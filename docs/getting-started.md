@@ -75,6 +75,27 @@ arc
   arc --code "VAR x = 10"
   ```
 
+* **Skip evaluation**:
+  ```bash
+  arc -S script.arc
+  # or
+  arc --skip-evaluation script.arc
+  ```
+
+* **Arena block size**:
+  ```bash
+  arc -A 512 script.arc
+  # or
+  arc --arena-block-size 512 script.arc
+  ```
+
+* **Cleanup on exit**:
+  ```bash
+  arc -C script.arc
+  # or
+  arc --cleanup script.arc
+  ```
+
 * **Disable colors**:
   ```bash
   arc -n

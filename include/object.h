@@ -52,7 +52,7 @@ typedef struct Number {
   bool isStatic;
 
   union {
-    long i;
+    int64_t i;
     double f;
   } as;
 
@@ -79,6 +79,7 @@ typedef struct Function {
   size_t paramCount;
 
   ASTNode* body;
+  struct Chunk* chunk;
 } Function;
 
 typedef struct FunctionCall {
@@ -153,7 +154,9 @@ File* initFile(FILE* file, char* fname, char* fmod);
 File* copyFile(File* file);
 
 String* initString(char *value, uint64_t len);
+String* initStringConst(char *value, uint64_t len);
 String* copyString(String *str);
+char* internIdentifier(const char* value, uint64_t len);
 
 List* initList(Object** list, uint64_t size, uint64_t capacity);
 List* copyList(List* list);

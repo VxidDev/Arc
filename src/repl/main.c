@@ -7,8 +7,8 @@
 #include "../../include/node.h"
 #include "../../include/error.h"
 
-#include "../../include/interpretator.h"
 #include "../../include/object.h"
+#include "../../include/vm.h"
 
 #include "../../include/ansi-colors.h"
 #include "../../include/repl/repl.h"
@@ -204,10 +204,26 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     freeTokens(tokens, *size);
     return;
   }
+
+  Chunk* chunk = compileAST(ast, error, filename, text);
+
+  if (!chunk) {
+    printf("%sArc: %sFailed to compile AST tree to bytecode.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+    return;
+  }
+
+  if (_DEBUG) {
+    disassembleChunk(chunk, "main");
+  }
   
   if (!_SKIP_EVAL) {
-    Interpretator* interpretator = initInterpretator(filename, text, error, variables);
-    Object* result = visitNode(ast, interpretator);
+    //Interpretator* interpretator = initInterpretator(filename, text, error, variables);
+    //Object* result = visitNode(ast, interpretator);
+
+    VM* vm = initVM(chunk, variables, error, filename, text);
+    if (_DEBUG) printf("[vm] Starting vmRun...\n");
+    Object* result = vmRun(vm);
+    if (_DEBUG) printf("[vm] vmRun returned. Result: %p, Error: %p\n", (void*)result, (void*)*error);
 
     if (!result) {
       if (*error && (*error)->details[0] != '@') { 
@@ -228,6 +244,9 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
         }
 
         exitcode = exitcodeInt; 
+      } else {
+        printf("%sArc: %sFailed to execute bytecode.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+        return;
       }
 
       freeTokens(tokens, *size);
@@ -370,13 +389,13 @@ int main(int argc, char **argv) {
   argVect[0] = arg0;
 
   Number* argumentCount = initInt(argVectSize);
-  setTable(variables, "argc", (Object*)argumentCount, false);
+  setTable(variables, internIdentifier("argc", 4), (Object*)argumentCount, false);
 
   List* list = initList((Object**)argVect, argVectSize, argVectCap);
   
   free(argVect);
 
-  setTable(variables, "argv", (Object*)list, false);
+  setTable(variables, internIdentifier("argv", 4), (Object*)list, false);
 
   registerBuiltins(variables);
 

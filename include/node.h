@@ -36,7 +36,6 @@ typedef Object* (*VisitFn)(ASTNode*, Interpretator*);
 
 typedef struct ASTNode {
   NodeType type;
-  VisitFn visit;
 } ASTNode;
 
 typedef struct NumberNode {
@@ -67,6 +66,7 @@ typedef struct VarAssignNode {
   ASTNode base;
   char *identifier;
   ASTNode *value;
+  Position start;
 } VarAssignNode;
 
 typedef struct IndexNode {
@@ -115,6 +115,7 @@ typedef struct FunctionNode {
   char **params;
   size_t paramCount;
   ASTNode* body;
+  Position start, end;
 } FunctionNode;
 
 typedef struct FunctionCallNode {
@@ -183,12 +184,12 @@ StringNode* initStringNode(Token token);
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode);
 UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node);
 VarAccessNode* initVarAccessNode(Token token);
-VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value);
+VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position start);
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr);
 ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, uint64_t size, uint64_t capacity);
 IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end);
 ProgramNode* initProgramNode(ASTNode** statements, size_t count);
-FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount);
+FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t paramCount, Position start, Position end);
 FunctionCallNode *initFunctionCallNode(ASTNode *callee, ASTNode **args, size_t argCount, Position start, Position end);
 ImportNode* initImportNode(Token filePath);
 TryCatchNode* initTryCatchNode(Position tryStart, Position catchEnd, Token errIdentifier, ASTNode* body, ASTNode* errHandler);
@@ -199,9 +200,7 @@ IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode*
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 ForNode* initForNode(Token forTok, Token ident, ASTNode* iterable, ASTNode* body);
 
-void freeBinOpNode(BinOpNode* node);
-void freeNumberNode(NumberNode* node);
-void freeUnaryOpNode(UnaryOpNode *node);
-void freeAST(ASTNode* root);
+Position getNodeStart(ASTNode* node);
+Position getNodeEnd(ASTNode* node);
 
 #endif // NODE_H

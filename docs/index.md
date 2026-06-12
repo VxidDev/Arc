@@ -1,9 +1,10 @@
 # Arc Documentation
 
-Arc is a small programming language project written in C. It focuses on building a clean and reliable frontend pipeline, along with a simple interpreter for evaluating expressions and basic variable assignments.
+Welcome to the documentation for the Arc programming language.
 
-## Table of Contents
+## Documentation Sections
 
-- [Getting Started](getting-started.md)
-- [Language Reference](syntax.md)
-- [Architecture](architecture.md)
+*   [**Getting Started**](getting-started.md): Installation and your first program.
+*   [**Language Reference**](syntax.md): Syntax, literals, control flow, and built-ins.
+*   [**Architecture**](architecture.md): High-level design of the compiler and VM.
+*   [**Bytecode Reference**](bytecode.md): Detailed guide to the Arc VM instruction set.

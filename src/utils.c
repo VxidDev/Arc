@@ -23,6 +23,17 @@ char *stringDup(const char *s) {
   return sDup;
 }
 
+uint32_t hashStr(const char *str, size_t len) {
+  uint32_t hash = 2166136261u;
+
+  for (size_t i = 0; i < len; i++) {
+    hash ^= (uint8_t)str[i];
+    hash *= 16777619u;
+  }
+
+  return hash;
+}
+
 char* typeofobj(const Object* obj) {
   switch (obj->type) {
     case OBJ_NUMBER_INT: return "int";

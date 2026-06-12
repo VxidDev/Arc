@@ -30,7 +30,9 @@ CFLAGS_RELEASE = \
   -ffunction-sections \
   -fdata-sections \
   -fno-semantic-interposition \
-  -pipe
+  -pipe \
+	-fomit-frame-pointer \
+	-fno-math-errno
 
 LDFLAGS_RELEASE = \
   -flto=auto \

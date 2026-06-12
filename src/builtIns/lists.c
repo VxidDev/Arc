@@ -23,7 +23,7 @@ Object* builtIn_append_list(Object** args, size_t argCount) {
     return (Object*)initProgramError("Failed to append item to a list.");
   }
 
-  if (list->size != list->capacity) {
+  if (list->size >= list->capacity) {
     size_t tmpCap = list->capacity * 2;
 
     void* tmp = realloc(list->objects, tmpCap * sizeof(Object*));
