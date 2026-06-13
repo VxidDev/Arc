@@ -31,12 +31,18 @@ CFLAGS_RELEASE = \
   -fdata-sections \
   -fno-semantic-interposition \
   -pipe \
-	-fomit-frame-pointer \
-	-fno-math-errno
+  -fomit-frame-pointer \
+  -fno-math-errno \
+  -fno-stack-protector \
+  -fno-unwind-tables \
+  -fno-asynchronous-unwind-tables \
+	-falign-functions=16 \
+  -falign-loops=16
 
 LDFLAGS_RELEASE = \
   -flto=auto \
-  -Wl,--gc-sections
+  -Wl,--gc-sections \
+  -Wl,-O2
 
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
 LDFLAGS_PROFILE = -pg

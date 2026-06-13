@@ -392,13 +392,13 @@ int main(int argc, char **argv) {
   argVect[0] = arg0;
 
   Number* argumentCount = initInt(argVectSize);
-  setTable(variables, internIdentifier("argc", 4), (Object*)argumentCount, false);
+  setTable(variables, internIdentifier("argc", 4), VAL_OBJ((Object*)argumentCount));
 
   List* list = initList((Object**)argVect, argVectSize, argVectCap);
   
   free(argVect);
 
-  setTable(variables, internIdentifier("argv", 4), (Object*)list, false);
+  setTable(variables, internIdentifier("argv", 4), VAL_OBJ((Object*)list));
 
   registerBuiltins(variables);
 

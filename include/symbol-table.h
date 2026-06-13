@@ -2,10 +2,11 @@
 #define SYMBOL_TABLE_H
 
 #include "object.h"
+#include "value.h"
 
 typedef struct Symbol {
   char *name;
-  Object *value;
+  Value value;
   struct Symbol *next;
 } Symbol;
 
@@ -17,8 +18,8 @@ typedef struct SymbolTable {
 } SymbolTable;
 
 SymbolTable *createTable(unsigned long capacity, SymbolTable *parent);
-void setTable(SymbolTable *table, char *name, Object *value, bool copyObj);
-Object* getTable(SymbolTable *table, const char *name);
+void setTable(SymbolTable *table, char *name, Value value);
+Value getTable(SymbolTable *table, const char *name);
 void removeSymbol(SymbolTable *table, const char *name);
 void freeTable(SymbolTable *table);
 

@@ -19,6 +19,9 @@ typedef struct {
 
 } Value;
 
+void freeValue(Value v);
+Value copyValue(Value v);
+
 // Constructors
 #define VAL_INT(n) ((Value){ VAL_INT, { .i = (n) } })
 #define VAL_FLOAT(n) ((Value){ VAL_FLOAT, { .f = (n) } })

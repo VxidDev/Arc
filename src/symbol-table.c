@@ -34,13 +34,13 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   return table;
 }
 
-void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
+void setTable(SymbolTable *table, char *name, Value value) {
   unsigned long index = hashPointer(name) & (table->capacity - 1); // table capacity MUST be power of 2
 
   for (Symbol* sym = table->buckets[index]; sym; sym = sym->next) {
     if (sym->name == name) {
-      freeObject(sym->value);
-      sym->value = copyObj ? copyObject(value) : value;
+      freeValue(sym->value);
+      sym->value = IS_OBJ(value) ? copyValue(value) : value;
       return;
     }
   }
@@ -50,15 +50,14 @@ void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
 
   newSym->name = name;
 
-  Object *copy = copyObj ? copyObject(value) : value;
-  newSym->value = copy;
+  newSym->value = IS_OBJ(value) ? copyValue(value) : value;
 
   newSym->next = table->buckets[index];
   table->buckets[index] = newSym;
   table->count++;
 }
 
-Object *getTable(SymbolTable *table, const char *name) {
+Value getTable(SymbolTable *table, const char *name) {
   unsigned long hash = hashPointer(name);
 
   for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
@@ -83,9 +82,10 @@ Object *getTable(SymbolTable *table, const char *name) {
     }
   }
 
-  return NULL;
+  return VAL_UNDEF();
 }
 
+/*
 void removeSymbol(SymbolTable *table, const char *name) {
   if (table->count == 0) return;
 
@@ -112,6 +112,7 @@ void removeSymbol(SymbolTable *table, const char *name) {
     curr = curr->next;
   }
 }
+*/
 void freeTable(SymbolTable *table) {
   if (!table) return;
 
@@ -122,7 +123,7 @@ void freeTable(SymbolTable *table) {
       while (sym) {
         Symbol *next = sym->next;
 
-        freeObject(sym->value);
+        freeValue(sym->value);
         poolFree(symbolPool, sym);
 
         sym = next;

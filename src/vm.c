@@ -16,15 +16,17 @@
 
 #define LOAD_STATE() \
   CallFrame *frame = &vm->frames[vm->frameTop - 1]; \
-  uint8_t *ip = frame->ip; \
+  register uint8_t *ip = frame->ip; \
   SymbolTable* vars = frame->variables; \
-  register Value *sp = vm->stack + vm->stackTop;
+  register Value *sp = vm->stack + vm->stackTop; \
+  Object** constants = frame->chunk->constants;
 
 #define REFRESH_FRAME() do { \
   frame = &vm->frames[vm->frameTop - 1]; \
   ip = frame->ip; \
   vars = frame->variables; \
   sp = vm->stack + vm->stackTop; \
+  constants = frame->chunk->constants; \
 } while (0)
 
 #define SAVE_STATE() do { \
@@ -38,7 +40,7 @@
 #define PEEK(i) (*(sp - 1 - (i)))
 
 #define READ_BYTE()  (*ip++)
-#define READ_CONST() (frame->chunk->constants[READ_BYTE()])
+#define READ_CONST() (constants[*ip++])
 #define READ_SHORT() (ip += 2, (int16_t)((ip[-2] << 8) | ip[-1]))
 
 #define LOCAL(slot) (vm->locals[frame->localsBase + (slot)])
@@ -57,11 +59,11 @@
   } \
 } while(0)
 
-static inline void freeValue(Value v) {
+void freeValue(Value v) {
   if (IS_OBJ(v)) freeObject(AS_OBJ(v));
 }
 
-static inline Value copyValue(Value v) {
+Value copyValue(Value v) {
   if (!IS_OBJ(v)) return v;
 
   Object* obj = AS_OBJ(v);
@@ -138,19 +140,27 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
   }
 
   // Handle strings
-  Object* aObj = valueToObject(a);
-  Object* bObj = valueToObject(b);
+  if (!IS_OBJ(a) && !IS_OBJ(b)) {
+    VM_ERR(initTypeError, "Incompatible types for operation.");
+    return VAL_INT(0);
+  }
+
+  Object* aObj = IS_OBJ(a) ? AS_OBJ(a) : NULL;
+  Object* bObj = IS_OBJ(b) ? AS_OBJ(b) : NULL;
 
   bool aStr = aObj && aObj->type == OBJ_STRING;
-  bool bStr = bObj && bObj->type == OBJ_STRING;
+  bool bStr = bObj && bObj->type == OBJ_STRING; 
 
   if (aStr || bStr) {
-    Value res = VAL_INT(0);
+    Value res = VAL_UNDEF();
+
     if (op == OP_ADD && aStr && bStr) 
       res = VAL_OBJ((Object *)addString((String *)aObj, (String *)bObj));
     else if (op == OP_MUL && aStr && (IS_INT(b) || IS_FLOAT(b))) {
-      Number* n = (Number*)bObj;
-      res = VAL_OBJ((Object *)mulString((String *)aObj, n));
+      Number tmp;
+      tmp.as.i = IS_INT(b) ? AS_INT(b) : (int64_t)AS_FLOAT(b);
+      tmp.base.type = OBJ_NUMBER_INT;
+      res = VAL_OBJ((Object *)mulString((String *)aObj, &tmp));
     }
     else if (op == OP_EQ) 
       res = VAL_INT(aStr && bStr && strcmp(((String *)aObj)->value, ((String *)bObj)->value) == 0);
@@ -303,21 +313,19 @@ Object *vmRun(VM *vm) {
 
     OP_LOAD_VAR: {
       String *name = (String *)READ_CONST();
-      Object* val = getTable(vars, name->value);
+      Value val = getTable(vars, name->value);
 
-      if (!val) {
+      if (IS_UNDEF(val)) {
         char buf[256];
         snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
         VM_ERR(initNameError, buf); 
         HANDLE_ERROR();
       }
 
-      if (val->type == OBJ_NUMBER_INT)
-        PUSH(VAL_INT(((Number*)val)->as.i));
-      else if (val->type == OBJ_NUMBER_FLOAT)
-        PUSH(VAL_FLOAT(((Number*)val)->as.f));
+      if (IS_OBJ(val) && !AS_OBJ(val)->isStatic)
+        PUSH(copyValue(val));
       else
-        PUSH(copyValue(objectToValue(val)));
+        PUSH(val);
 
       DISPATCH();
     }
@@ -325,15 +333,7 @@ Object *vmRun(VM *vm) {
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
       Value val = PEEK(0);
-
-      if (IS_INT(val)) {
-        setTable(vars, name->value, (Object*)initInt(AS_INT(val)), false);
-      } else if (IS_FLOAT(val)) {
-        setTable(vars, name->value, (Object*)initFloat(AS_FLOAT(val)), false);
-      } else {
-        setTable(vars, name->value, AS_OBJ(val), true);
-      }
-
+      setTable(vars, name->value, val);
       DISPATCH();
     }
 
@@ -661,15 +661,17 @@ Object *vmRun(VM *vm) {
       String *name = (String *)READ_CONST();
       Value val = POP();
       Value idxVal = POP();
-      Object *target = getTable(vars, name->value);
-
-      if (!target) {
+      Value targetVal = getTable(vars, name->value);
+    
+      if (IS_UNDEF(targetVal)) {
         char buf[256]; snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
         VM_ERR(initNameError, buf);
         freeValue(val);
         freeValue(idxVal);
         HANDLE_ERROR();
       }
+
+      Object* target = AS_OBJ(targetVal);
 
       if (!IS_INT(idxVal)) {
         VM_ERR(initTypeError, "Index must be an integer.");
@@ -733,7 +735,7 @@ Object *vmRun(VM *vm) {
         HANDLE_ERROR();
       }
 
-      Object *callee = valueToObject(calleeVal);
+      Object *callee = AS_OBJ(calleeVal);
 
       if (callee->type == OBJ_FUNCTION) {
         Function *func = (Function *)callee;
@@ -761,23 +763,24 @@ Object *vmRun(VM *vm) {
           newFrame->localCount = func->maxLocals;
           newFrame->currentInstr = 0;
 
-          for (int i = 0; i < func->maxLocals; i++)
-            if (i < (int)func->paramCount) {
-              Value arg = (i < argCount) ? args[i] : VAL_INT(0);
+          for (int i = 0; i < (int)func->paramCount; i++) {
+            Value arg = (i < argCount) ? args[i] : VAL_INT(0);
 
-              if (IS_OBJ(arg)) {
-                Object* o = AS_OBJ(arg);
+            if (IS_OBJ(arg)) {
+              Object* o = AS_OBJ(arg);
 
-                if (o->type == OBJ_NUMBER_INT)
-                  arg = VAL_INT(((Number*)o)->as.i);
-                else if (o->type == OBJ_NUMBER_FLOAT)
-                  arg = VAL_FLOAT(((Number*)o)->as.f);
-              }
+              if (o->type == OBJ_NUMBER_INT)
+                arg = VAL_INT(((Number*)o)->as.i);
+              else if (o->type == OBJ_NUMBER_FLOAT)
+                arg = VAL_FLOAT(((Number*)o)->as.f);
+            }
 
-              vm->locals[newFrame->localsBase + i] = arg;
-            } else 
-              vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
-          
+            vm->locals[newFrame->localsBase + i] = arg; 
+          }
+
+          for (int i = (int)func->paramCount; i < func->maxLocals; i++)
+            vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
+
           for (int i = (int)func->paramCount; i < argCount; i++)
             freeValue(args[i]);
 
@@ -785,7 +788,10 @@ Object *vmRun(VM *vm) {
           vm->frameTop++;
 
           REFRESH_FRAME();
-          freeValue(calleeVal);
+
+          if (!IS_OBJ(calleeVal) || !AS_OBJ(calleeVal)->isStatic)
+            freeValue(calleeVal);
+
           DISPATCH(); 
         }
       } else if (callee->type == OBJ_NATIVE_FUNCTION) {
@@ -796,8 +802,10 @@ Object *vmRun(VM *vm) {
         Object *res = nf->function(objArgs, argCount);
 
         for (int i = 0; i < argCount; i++) {
-          if (!IS_OBJ(args[i])) freeObject(objArgs[i]);
-          freeValue(args[i]);
+          if (!IS_OBJ(args[i])) 
+            freeObject(objArgs[i]);
+          else if (objArgs[i] != res) 
+            freeValue(args[i]);
         }
           
         if (res) {
