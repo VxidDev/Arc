@@ -14,6 +14,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define LIKELY(x) __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+
 #define LOAD_STATE() \
   CallFrame *frame = &vm->frames[vm->frameTop - 1]; \
   register uint8_t *ip = frame->ip; \
@@ -30,7 +33,7 @@
 } while (0)
 
 #define SAVE_STATE() do { \
-  vm->stackTop = sp - vm->stack; \
+  vm->stackTop = (int)(sp - vm->stack); \
   frame->ip = ip; \
 } while (0)
 
@@ -52,12 +55,38 @@
 
 #define VM_ERR(initFn, msg) do { \
   if (!*vm->err) { \
-    frame->currentInstr = (uint32_t)(frame->ip - frame->chunk->code); \
+    frame->currentInstr = (uint32_t)(ip - frame->chunk->code); \
     Position _ps, _pe; \
     vmGetPos(frame, &_ps, &_pe); \
     *vm->err = initFn(_ps, _pe, frame->chunk->filename, msg, frame->chunk->sourcetext); \
   } \
 } while(0)
+
+#define VM_ERR_FRAME(vm, frame, initFn, msg) do { \
+  if (!*(vm)->err) { \
+    Position _ps, _pe; \
+    vmGetPos(frame, &_ps, &_pe); \
+    *(vm)->err = initFn(_ps, _pe, (frame)->chunk->filename, msg, (frame)->chunk->sourcetext); \
+  } \
+} while (0)
+
+#define HANDLE_ERROR() \
+  if (LIKELY(vm->tryStackTop > 0)) { \
+    ip = vm->tryStack[--vm->tryStackTop]; \
+    if (*vm->err) { \
+      Object *errStr = (Object *)initString((*vm->err)->details, strlen((*vm->err)->details)); \
+      PUSH(objectToValue(errStr)); \
+      freeError(*vm->err); \
+      *vm->err = NULL; \
+    } else { \
+      PUSH(objectToValue((Object *)initString("Unknown Error", 13))); \
+    } \
+    SAVE_STATE(); \
+    continue; \
+  } else { \
+    SAVE_STATE(); \
+    return NULL; \
+  }
 
 void freeValue(Value v) {
   if (IS_OBJ(v)) freeObject(AS_OBJ(v));
@@ -73,7 +102,7 @@ Value copyValue(Value v) {
 }
 
 static inline Value objectToValue(Object *o) {
-  if (!o) return VAL_INT(0);
+  if (UNLIKELY(!o)) return VAL_INT(0);
   if (o->type == OBJ_NUMBER_INT) return VAL_INT(((Number*)o)->as.i);
   if (o->type == OBJ_NUMBER_FLOAT) return VAL_FLOAT(((Number*)o)->as.f);
   return VAL_OBJ(o);
@@ -90,9 +119,8 @@ static void vmGetPos(CallFrame *frame, Position *start, Position *end) {
   PosEntry *entries = chunk->positions;
   size_t count = chunk->posCount;
 
-  if (count == 0) {
-    *start = (Position){0,0,0};
-    *end = (Position){0,0,0};
+  if (UNLIKELY(count == 0)) {
+    *start = *end = (Position){0, 0, 0};
     return;
   }
 
@@ -104,14 +132,12 @@ static void vmGetPos(CallFrame *frame, Position *start, Position *end) {
     else hi = mid;
   }
 
-  size_t idx = (lo == 0) ? 0 : lo - 1;
+  size_t idx = lo ? lo - 1 : 0;
   *start = entries[idx].start;
   *end = entries[idx].end;
 }
 
 static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
-  (void)vm; 
-
   if ((IS_INT(a) || IS_FLOAT(a)) && (IS_INT(b) || IS_FLOAT(b))) {
     double na = IS_INT(a) ? (double)AS_INT(a) : AS_FLOAT(a);
     double nb = IS_INT(b) ? (double)AS_INT(b) : AS_FLOAT(b);
@@ -121,10 +147,11 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
       case OP_SUB: return VAL_FLOAT(na - nb);
       case OP_MUL: return VAL_FLOAT(na * nb);
       case OP_DIV: 
-        if (nb == 0.0) {
-          VM_ERR(initValueError, "Division by zero.");
-          return VAL_INT(0);
+        if (UNLIKELY(nb == 0.0)) {
+          VM_ERR_FRAME(vm, frame, initValueError, "Division by zero.");
+          return VAL_UNDEF();
         }
+
         return VAL_FLOAT(na / nb);
       case OP_POW: return VAL_FLOAT(pow(na, nb));
       case OP_EQ: return VAL_INT(na == nb); 
@@ -133,16 +160,16 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
       case OP_GT: return VAL_INT(na > nb); 
       case OP_LTE: return VAL_INT(na <= nb); 
       case OP_GTE: return VAL_INT(na >= nb); 
-      case OP_AND: return VAL_INT(na && nb); 
-      case OP_OR: return VAL_INT(na || nb); 
+      case OP_AND: return VAL_INT((int)(na) && (int)(nb)); 
+      case OP_OR: return VAL_INT((int)(na) || (int)(nb)); 
       default: break;
     }
   }
 
   // Handle strings
   if (!IS_OBJ(a) && !IS_OBJ(b)) {
-    VM_ERR(initTypeError, "Incompatible types for operation.");
-    return VAL_INT(0);
+    VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
+    return VAL_UNDEF();
   }
 
   Object* aObj = IS_OBJ(a) ? AS_OBJ(a) : NULL;
@@ -196,48 +223,31 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
     }
 
     freeValue(a);
-    if (result != ERR_NONE) {
+
+    if (UNLIKELY(result != ERR_NONE)) {
       if (!*vm->err) {
-        if (result == ERR_DIV_BY_ZERO) VM_ERR(initValueError, "Division by zero.");
-        else VM_ERR(initTypeError, "Incompatible types for operation.");
+        if (result == ERR_DIV_BY_ZERO) VM_ERR_FRAME(vm, frame, initValueError, "Division by zero.");
+        else VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
       }
+
       freeValue(b);
       return VAL_INT(0);
     }
-    Value final = objectToValue((Object*)nb);
-    return final;
+
+    return objectToValue((Object*)nb);
   }
 
-  VM_ERR(initTypeError, "Incompatible types for operation.");
+  VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
   freeValue(a);
   freeValue(b);
-  return VAL_INT(0);
+  return VAL_UNDEF();
 }
-
-#define HANDLE_ERROR() \
-  if (vm->tryStackTop > 0) { \
-    ip = vm->tryStack[--vm->tryStackTop]; \
-    if (*vm->err) { \
-      Object *errStr = (Object *)initString((*vm->err)->details, strlen((*vm->err)->details)); \
-      PUSH(objectToValue(errStr)); \
-      freeError(*vm->err); \
-      *vm->err = NULL; \
-    } else { \
-      PUSH(objectToValue((Object *)initString("Unknown Error", 13))); \
-    } \
-    SAVE_STATE(); \
-    continue; \
-  } else { \
-    SAVE_STATE(); \
-    return NULL; \
-  }
 
 Object *vmRun(VM *vm) {
   OpCode op;
-  
   LOAD_STATE();
 
-  static void *dispatch[] = {
+  static const void *dispatch[] = {
     [OP_LOAD_CONST] = &&OP_LOAD_CONST,
     [OP_LOAD_VAR] = &&OP_LOAD_VAR,
     [OP_STORE_VAR] = &&OP_STORE_VAR,
@@ -301,10 +311,8 @@ Object *vmRun(VM *vm) {
         PUSH(VAL_INT(((Number*)c)->as.i));
       else if (c->type == OBJ_NUMBER_FLOAT)
         PUSH(VAL_FLOAT(((Number*)c)->as.f));
-      else if (c->type == OBJ_FUNCTION || c->type == OBJ_STRING)
+      else if (c->isStatic || c->type == OBJ_FUNCTION || c->type == OBJ_STRING)
         PUSH(VAL_OBJ(c)); // constants are owned by chunk
-      else if (c->isStatic)
-        PUSH(VAL_OBJ(c));
       else
         PUSH(copyValue(objectToValue(c)));
 
@@ -315,25 +323,20 @@ Object *vmRun(VM *vm) {
       String *name = (String *)READ_CONST();
       Value val = getTable(vars, name->value);
 
-      if (IS_UNDEF(val)) {
+      if (UNLIKELY(IS_UNDEF(val))) {
         char buf[256];
         snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
         VM_ERR(initNameError, buf); 
         HANDLE_ERROR();
       }
-
-      if (IS_OBJ(val) && !AS_OBJ(val)->isStatic)
-        PUSH(copyValue(val));
-      else
-        PUSH(val);
-
+ 
+      PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
       DISPATCH();
     }
       
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
-      Value val = PEEK(0);
-      setTable(vars, name->value, val);
+      setTable(vars, name->value, PEEK(0));
       DISPATCH();
     }
 
@@ -341,16 +344,12 @@ Object *vmRun(VM *vm) {
       uint8_t slot = READ_BYTE();
       Value val = LOCAL(slot);
 
-      if (IS_UNDEF(val)) {
+      if (UNLIKELY(IS_UNDEF(val))) {
         VM_ERR(initNameError, "Variable used before assignment.");
         HANDLE_ERROR();
       }
 
-      if (IS_OBJ(val) && AS_OBJ(val)->isStatic) 
-        PUSH(val);
-      else 
-        PUSH(IS_OBJ(val) ? copyValue(val) : val);
-      
+      PUSH((IS_OBJ(val) && AS_OBJ(val)->isStatic) ? val : IS_OBJ(val) ? copyValue(val) : val); 
       DISPATCH();
     }
 
@@ -369,13 +368,11 @@ Object *vmRun(VM *vm) {
 
       freeValue(LOCAL(slot));
       LOCAL(slot) = IS_OBJ(val) ? copyValue(val) : val;
-
       DISPATCH();
     } 
 
     OP_POP: { 
-      Value val = POP();
-      freeValue(val);
+      freeValue(POP());
       DISPATCH();
     }
 
@@ -385,7 +382,7 @@ Object *vmRun(VM *vm) {
       Value b = POP();
       Value a = POP();
 
-      if (IS_INT(a) && IS_INT(b)) {
+      if (LIKELY(IS_INT(a) && IS_INT(b))) {
         int64_t na = AS_INT(a);
         int64_t nb = AS_INT(b);
 
@@ -394,8 +391,13 @@ Object *vmRun(VM *vm) {
           case OP_SUB: PUSH(VAL_INT(na - nb)); DISPATCH();
           case OP_MUL: PUSH(VAL_INT(na * nb)); DISPATCH();
           case OP_DIV:
-            if (nb == 0) { VM_ERR(initValueError, "Division by zero."); HANDLE_ERROR(); }
-            PUSH(VAL_FLOAT((double)na / nb)); DISPATCH();
+            if (nb == 0) { 
+              VM_ERR(initValueError, "Division by zero.");
+              HANDLE_ERROR();
+            }
+
+            PUSH(VAL_FLOAT((double)na / nb));
+            DISPATCH();
           case OP_POW: PUSH(VAL_FLOAT(pow((double)na, (double)nb))); DISPATCH();
           case OP_EQ:  PUSH(VAL_INT(na == nb)); DISPATCH();
           case OP_NE:  PUSH(VAL_INT(na != nb)); DISPATCH();
@@ -410,7 +412,12 @@ Object *vmRun(VM *vm) {
       }
 
       Value res = doArith(vm, frame, op, a, b);
-      if (*vm->err) { freeValue(res); HANDLE_ERROR(); }
+
+      if (UNLIKELY(*vm->err)) { 
+        freeValue(res);
+        HANDLE_ERROR();
+      }
+
       PUSH(res);
       DISPATCH();
     }
@@ -418,32 +425,32 @@ Object *vmRun(VM *vm) {
     OP_NEG: {
       Value a = POP();
 
-      if (a.type == VAL_INT) 
+      if (LIKELY(a.type == VAL_INT)) 
         PUSH(VAL_INT(-AS_INT(a)));
       else if (a.type == VAL_FLOAT) 
         PUSH(VAL_FLOAT(-AS_FLOAT(a)));
       else { 
+        VM_ERR(initTypeError, "Operand must be a number.");
         freeValue(a); 
         HANDLE_ERROR();
       }
 
-      freeValue(a); 
       DISPATCH();
     }
 
     OP_NOT: {
       Value a = POP();
 
-      if (a.type == VAL_INT) 
+      if (LIKELY(a.type == VAL_INT)) 
         PUSH(VAL_INT(!AS_INT(a)));
       else if (a.type == VAL_FLOAT) 
         PUSH(VAL_INT(!AS_FLOAT(a)));
       else { 
+        VM_ERR(initTypeError, "Operand must be a number.");
         freeValue(a);
         HANDLE_ERROR();
       }
 
-      freeValue(a);
       DISPATCH();
     }
 
@@ -457,7 +464,7 @@ Object *vmRun(VM *vm) {
       int16_t offset = READ_SHORT();
       Value cond = POP();
 
-      if (cond.type != VAL_INT) {
+      if (UNLIKELY(cond.type != VAL_INT)) {
         VM_ERR(initTypeError, "Condition must be an integer.");
         freeValue(cond);
         HANDLE_ERROR();
@@ -466,38 +473,47 @@ Object *vmRun(VM *vm) {
       if (AS_INT(cond) == 0)
         ip += offset;
 
-      freeValue(cond);
       DISPATCH();
     }
 
     OP_FOR_PREP: {
       Value iterVal = POP();
 
-      if (!IS_OBJ(iterVal) || (AS_OBJ(iterVal)->type != OBJ_LIST && AS_OBJ(iterVal)->type != OBJ_STRING)) {
+      if (UNLIKELY(!IS_OBJ(iterVal))) {
         VM_ERR(initTypeError, "Object is not iterable");
-        freeValue(iterVal); HANDLE_ERROR(); 
+        freeValue(iterVal);
+        HANDLE_ERROR();
       }
 
       Object* iterable = AS_OBJ(iterVal);
-      PUSH(iterVal);
-      PUSH(VAL_INT(iterable->type == OBJ_LIST ? ((List *)iterable)->size : ((String *)iterable)->len));
-      PUSH(VAL_INT(0)); // index
+
+      if (UNLIKELY(iterable->type != OBJ_LIST && iterable->type != OBJ_STRING)) {
+        VM_ERR(initTypeError, "Object is not iterable");
+        freeValue(iterVal); 
+        HANDLE_ERROR(); 
+      }
+      
+      int64_t len = (iterable->type == OBJ_LIST) ? (int64_t)((List*)iterable)->size : (int64_t)((String*)iterable)->len;
+
+      PUSH(iterVal); // iterable (sp - 3)
+      PUSH(VAL_INT(len)); // length (sp - 2)
+      PUSH(VAL_INT(0)); // index (sp - 1)
       
       DISPATCH();
     }
 
     OP_FOR_ITER: {
       int16_t offset = READ_SHORT();
-      Value indexVal = PEEK(0);
-      Value lengthVal = PEEK(1);
-      Value iterVal = PEEK(2);
 
-      if (AS_INT(indexVal) < AS_INT(lengthVal)) {
-        Object *iterable = AS_OBJ(iterVal);
+      int64_t index = AS_INT(PEEK(0));
+      int64_t length = AS_INT(PEEK(1));
+      
+      if (LIKELY(index < length)) {
+        Object *iterable = AS_OBJ(PEEK(2));
         Value item;
 
         if (iterable->type == OBJ_LIST) {
-          Object *elem = ((List *)iterable)->objects[AS_INT(indexVal)];
+          Object *elem = ((List *)iterable)->objects[index];
 
           if (elem->type == OBJ_NUMBER_INT)
             item = VAL_INT(((Number*)elem)->as.i);
@@ -506,13 +522,16 @@ Object *vmRun(VM *vm) {
           else
             item = copyValue(objectToValue(elem));
         } else { 
-          char buf[2] = { ((String *)iterable)->value[AS_INT(indexVal)], '\0' };
+          char buf[2] = { ((String *)iterable)->value[index], '\0' };
           item = VAL_OBJ((Object *)initString(buf, 1));
         }
 
         PUSH(item);
         (sp - 2)->as.i++; 
       } else {
+        (void)POP(); // index, primitive 
+        (void)POP(); // length, primitive 
+        freeValue(POP()); // iterVal, owns list/string copy 
         ip += offset;
       }
       
@@ -521,20 +540,20 @@ Object *vmRun(VM *vm) {
 
     OP_BUILD_LIST: {
       uint8_t count = READ_BYTE();
-      Object **items = malloc(sizeof(Object*) * count);
 
-      // Stack: [..., item0, item1, ..., itemN] (itemN is at top/PEEK(0))
-      // Items list should be [item0, item1, ..., itemN]
+      Object* smallBuf[64];
+      Object** items = (count <= 64) ? smallBuf : (Object**)malloc(sizeof(Object*) * count);
+
       for (int i = 0; i < count; i++) 
         items[count - 1 - i] = valueToObject(PEEK(i));
 
       for (int i = 0; i < count; i++) {
-          Value v = POP();
-          freeValue(v);
+        freeValue(POP());
       }
 
       PUSH(VAL_OBJ((Object*)initList(items, count, count)));
-      free(items);
+      if (items != smallBuf) free(items);
+
       DISPATCH();
     }
 
@@ -542,7 +561,7 @@ Object *vmRun(VM *vm) {
       Value idxVal = POP();
       Value targetVal = POP();
 
-      if (!IS_INT(idxVal)) { 
+      if (UNLIKELY(!IS_INT(idxVal))) { 
         VM_ERR(initIndexError, "Index must be an integer."); 
         freeValue(idxVal);
         freeValue(targetVal);
@@ -550,16 +569,12 @@ Object *vmRun(VM *vm) {
       }
 
       int64_t i = AS_INT(idxVal);
-      Object *target = valueToObject(targetVal);
-
-      // Ensure we don't free the target object itself if it's held by the list/variable
-      // valueToObject creates a temporary Object* if idxVal is primitive.
-      // If targetVal is OBJ_LIST, target is a pointer to it.
+      Object *target = AS_OBJ(targetVal); 
       
       if (target->type == OBJ_STRING) {
         String *str = (String *)target;
 
-        if (i < 0 || (uint64_t)i >= str->len) { 
+        if (UNLIKELY(i < 0 || (uint64_t)i >= str->len)) { 
           VM_ERR(initIndexError, "Index out of range."); 
           freeValue(idxVal);
           freeValue(targetVal);
@@ -569,18 +584,17 @@ Object *vmRun(VM *vm) {
         char buf[2] = { str->value[i], '\0' };
         PUSH(VAL_OBJ((Object *)initString(buf, 1)));
 
-      } else if (target->type == OBJ_LIST) {
+      } else if (LIKELY(target->type == OBJ_LIST)) {
         List *list = (List *)target;
 
-        if (i < 0 || (uint64_t)i >= list->size) { 
+        if (UNLIKELY(i < 0 || (uint64_t)i >= list->size)) { 
           VM_ERR(initIndexError, "Index out of range.");
           freeValue(idxVal);
           freeValue(targetVal);
           HANDLE_ERROR(); 
         }
 
-        PUSH(objectToValue(list->objects[i]));
-
+        PUSH(copyValue(objectToValue(list->objects[i])));
       } else { 
         VM_ERR(initTypeError, "Target is not indexable.");
         freeValue(idxVal);
@@ -588,13 +602,7 @@ Object *vmRun(VM *vm) {
         HANDLE_ERROR(); 
       }
       
-      // If targetVal was an object, do not free it here.
-      // But if it was a primitive (e.g. initInt), it wasn't an OBJ_LIST/STRING.
-      // The current logic seems to only reach here if it was OBJ_LIST/STRING.
-      // valueToObject does NOT take ownership, so this is fine.
-      freeValue(idxVal);
-      freeValue(targetVal); // valueToObject doesn't take ownership of targetVal!
-      
+      freeValue(targetVal); 
       DISPATCH();
     }
 
@@ -603,7 +611,7 @@ Object *vmRun(VM *vm) {
       Value idxVal = POP();
       Value targetVal = POP();
 
-      if (!IS_INT(idxVal)) {
+      if (UNLIKELY(!IS_INT(idxVal))) {
         VM_ERR(initTypeError, "Index must be an integer.");
         freeValue(val);
         freeValue(idxVal);
@@ -612,36 +620,35 @@ Object *vmRun(VM *vm) {
       }
 
       int64_t i = AS_INT(idxVal);
-      Object *target = valueToObject(targetVal);
+      Object *target = AS_OBJ(targetVal);
 
-      if (target->type == OBJ_LIST) {
+      if (LIKELY(target->type == OBJ_LIST)) {
         List *list = (List *)target;
 
-        if (i >= 0 && (uint64_t)i < list->size) { 
-          freeObject(list->objects[i]);
-          list->objects[i] = valueToObject(val); 
-        } else {
+        if (UNLIKELY(i < 0 && (uint64_t)i >= list->size)) { 
           VM_ERR(initIndexError, "Index out of range.");
           freeValue(val);
           freeValue(idxVal);
           freeValue(targetVal);
-          HANDLE_ERROR(); 
+          HANDLE_ERROR();  
         }
 
+        freeObject(list->objects[i]);
+        list->objects[i] = valueToObject(val); 
       } else if (target->type == OBJ_STRING) {
         String *str = (String *)target;
         Object *valObj = valueToObject(val);
 
-        if (i >= 0 && (uint64_t)i < str->len && valObj->type == OBJ_STRING && ((String *)valObj)->len == 1) { 
-          str->value[i] = ((String *)valObj)->value[0]; 
-          freeObject(valObj);
-        } else {
+        if (UNLIKELY(i < 0 && (uint64_t)i >= str->len && valObj->type != OBJ_STRING && ((String *)valObj)->len != 1)) {
           VM_ERR(initIndexError, "Index out of range or invalid value.");
           freeObject(valObj);
           freeValue(idxVal);
           freeValue(targetVal);
           HANDLE_ERROR(); 
         }
+
+        str->value[i] = ((String *)valObj)->value[0]; 
+        freeObject(valObj);
       } else {
         VM_ERR(initTypeError, "Target is not indexable.");
         freeValue(val);
@@ -663,51 +670,50 @@ Object *vmRun(VM *vm) {
       Value idxVal = POP();
       Value targetVal = getTable(vars, name->value);
     
-      if (IS_UNDEF(targetVal)) {
-        char buf[256]; snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
+      if (UNLIKELY(IS_UNDEF(targetVal))) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
         VM_ERR(initNameError, buf);
         freeValue(val);
         freeValue(idxVal);
         HANDLE_ERROR();
       }
 
-      Object* target = AS_OBJ(targetVal);
-
-      if (!IS_INT(idxVal)) {
+      if (UNLIKELY(!IS_INT(idxVal))) {
         VM_ERR(initTypeError, "Index must be an integer.");
         freeValue(val);
         freeValue(idxVal);
         HANDLE_ERROR();
       }
-
+      
       int64_t i = AS_INT(idxVal);
+      Object* target = AS_OBJ(targetVal);
 
-      if (target->type == OBJ_LIST) {
+      if (LIKELY(target->type == OBJ_LIST)) {
         List *list = (List *)target;
 
-        if (i >= 0 && (uint64_t)i < list->size) { 
-          freeObject(list->objects[i]);
-          list->objects[i] = valueToObject(copyValue(val));
-        } else {
+        if (UNLIKELY(i >= 0 && (uint64_t)i < list->size)) {
           VM_ERR(initIndexError, "Index out of range.");
           freeValue(val);
           freeValue(idxVal);
           HANDLE_ERROR();
         }
 
+        freeObject(list->objects[i]);
+        list->objects[i] = valueToObject(copyValue(val));
       } else if (target->type == OBJ_STRING) {
         String *str = (String *)target;
         Object *valObj = valueToObject(val);
 
-        if (i >= 0 && (uint64_t)i < str->len && valObj->type == OBJ_STRING && ((String *)valObj)->len == 1) { 
-          str->value[i] = ((String *)valObj)->value[0];
-          freeObject(valObj);
-        } else {
+        if (UNLIKELY(i < 0 && (uint64_t)i >= str->len && valObj->type != OBJ_STRING && ((String *)valObj)->len != 1)) {
           VM_ERR(initIndexError, "Index out of range or invalid value.");
           freeObject(valObj);
           freeValue(idxVal);
           HANDLE_ERROR();
         }
+
+        str->value[i] = ((String *)valObj)->value[0];
+        freeObject(valObj);
       } else {
         VM_ERR(initTypeError, "Target is not indexable.");
         freeValue(val);
@@ -730,74 +736,83 @@ Object *vmRun(VM *vm) {
 
       Value calleeVal = POP();
 
-      if (!IS_OBJ(calleeVal)) {
+      if (UNLIKELY(!IS_OBJ(calleeVal))) {
         VM_ERR(initTypeError, "Object is not callable.");
         HANDLE_ERROR();
       }
 
       Object *callee = AS_OBJ(calleeVal);
 
-      if (callee->type == OBJ_FUNCTION) {
+      if (LIKELY(callee->type == OBJ_FUNCTION)) {
         Function *func = (Function *)callee;
           
-        if (!func->chunk && func->body) {
+        if (UNLIKELY(!func->chunk && func->body)) {
           func->chunk = compileAST(func->body, vm->err, vm->filename, vm->sourcetext);
           if (func->chunk) func->maxLocals = func->chunk->maxLocals;
         }
 
-        if (func->chunk) {
-          if (vm->frameTop >= VM_CALL_STACK_MAX) {
-            VM_ERR(initRuntimeError, "Call stack overflow.");
-            freeValue(calleeVal); HANDLE_ERROR();
-          }
-          
-          SAVE_STATE();
-          
-          CallFrame *newFrame = &vm->frames[vm->frameTop];
-          
-          newFrame->chunk = func->chunk;
-          newFrame->ip = func->chunk->code;
-          newFrame->variables = vars;
-          newFrame->tryStackTop = vm->tryStackTop;
-          newFrame->localsBase = vm->localsTop;
-          newFrame->localCount = func->maxLocals;
-          newFrame->currentInstr = 0;
-
-          for (int i = 0; i < (int)func->paramCount; i++) {
-            Value arg = (i < argCount) ? args[i] : VAL_INT(0);
-
-            if (IS_OBJ(arg)) {
-              Object* o = AS_OBJ(arg);
-
-              if (o->type == OBJ_NUMBER_INT)
-                arg = VAL_INT(((Number*)o)->as.i);
-              else if (o->type == OBJ_NUMBER_FLOAT)
-                arg = VAL_FLOAT(((Number*)o)->as.f);
-            }
-
-            vm->locals[newFrame->localsBase + i] = arg; 
-          }
-
-          for (int i = (int)func->paramCount; i < func->maxLocals; i++)
-            vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
-
-          for (int i = (int)func->paramCount; i < argCount; i++)
-            freeValue(args[i]);
-
-          vm->localsTop += func->maxLocals;
-          vm->frameTop++;
-
-          REFRESH_FRAME();
-
-          if (!IS_OBJ(calleeVal) || !AS_OBJ(calleeVal)->isStatic)
-            freeValue(calleeVal);
-
-          DISPATCH(); 
+        if (UNLIKELY(!func->chunk)) {
+          freeValue(calleeVal);
+          HANDLE_ERROR();
         }
-      } else if (callee->type == OBJ_NATIVE_FUNCTION) {
+
+        if (vm->frameTop >= VM_CALL_STACK_MAX) {
+          VM_ERR(initRuntimeError, "Call stack overflow.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+          
+        SAVE_STATE();
+          
+        CallFrame *newFrame = &vm->frames[vm->frameTop];
+          
+        newFrame->chunk = func->chunk;
+        newFrame->ip = func->chunk->code;
+        newFrame->variables = vars;
+        newFrame->tryStackTop = vm->tryStackTop;
+        newFrame->localsBase = vm->localsTop;
+        newFrame->localCount = func->maxLocals;
+        newFrame->currentInstr = 0;
+      
+        int paramCount = (int)func->paramCount;
+
+        for (int i = 0; i < paramCount; i++) {
+          Value arg = (i < argCount) ? args[i] : VAL_INT(0);
+
+          if (IS_OBJ(arg)) {
+            Object* o = AS_OBJ(arg);
+
+            if (o->type == OBJ_NUMBER_INT)
+              arg = VAL_INT(((Number*)o)->as.i);
+            else if (o->type == OBJ_NUMBER_FLOAT)
+              arg = VAL_FLOAT(((Number*)o)->as.f);
+          }
+
+          vm->locals[newFrame->localsBase + i] = arg; 
+        }
+
+        for (int i = (int)func->paramCount; i < func->maxLocals; i++)
+          vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
+
+        for (int i = (int)func->paramCount; i < argCount; i++)
+          freeValue(args[i]);
+
+        vm->localsTop += func->maxLocals;
+        vm->frameTop++;
+
+        if (!callee->isStatic) freeValue(calleeVal);
+
+        REFRESH_FRAME();
+        DISPATCH(); 
+      }
+
+      if (callee->type == OBJ_NATIVE_FUNCTION) {
         NativeFunction *nf = (NativeFunction *)callee;
+
         Object* objArgs[256];
-        for (int i = 0; i < argCount; i++) objArgs[i] = valueToObject(args[i]);
+
+        for (int i = 0; i < argCount; i++)
+          objArgs[i] = valueToObject(args[i]);
 
         Object *res = nf->function(objArgs, argCount);
 
@@ -808,89 +823,82 @@ Object *vmRun(VM *vm) {
             freeValue(args[i]);
         }
           
-        if (res) {
-          if (res->type == OBJ_ERROR) {
-            VM_ERR(initRuntimeError, ((ProgramError*)res)->details);
-            freeObject(res); 
-            res = NULL;
-          }
-
-          if (res) 
-            PUSH(objectToValue(res));
+        if (UNLIKELY(res && res->type == OBJ_ERROR)) {
+          VM_ERR(initRuntimeError, ((ProgramError*)res)->details);
+          freeObject(res); 
+          res = NULL;
         }
 
-        if (!res) { 
-          freeValue(calleeVal);
-          HANDLE_ERROR();
-        }
-      } else {
         freeValue(calleeVal);
-        HANDLE_ERROR();
-      }
 
+        if (UNLIKELY(!res)) {
+          HANDLE_ERROR()
+        }
+
+        PUSH(objectToValue(res));
+        DISPATCH();
+      }
+      
+      VM_ERR(initTypeError, "Object is not callable.");
       freeValue(calleeVal);
-      DISPATCH();
+      HANDLE_ERROR();
     }
 
     OP_TRY_PUSH: {
       int16_t offset = READ_SHORT();
 
-      if (vm->tryStackTop < VM_TRY_STACK_MAX) 
+      if (LIKELY(vm->tryStackTop < VM_TRY_STACK_MAX)) 
         vm->tryStack[vm->tryStackTop++] = ip + offset;
 
       DISPATCH();
     }
 
     OP_TRY_POP:
-      if (vm->tryStackTop > 0)
-      vm->tryStackTop--;
+      if (vm->tryStackTop > 0) vm->tryStackTop--;
       DISPATCH();
 
     OP_IMPORT: {
       String *pathObj = (String *)READ_CONST();
       char *name = pathObj->value;
-      bool found = false;
 
       for (size_t i = 0; stdlibModules[i]; i++) {
         if (strcmp(stdlibModules[i]->name, name) == 0) {
           stdlibModules[i]->init(vars);
           PUSH(VAL_INT(1));
-          found = true;
-          break;
+          DISPATCH();
         }
       }
-
-      if (found) DISPATCH();
 
       char *resolvedPath = resolveImportPath(vm->filename, name);
       char *fileContent = readFile(resolvedPath);
 
-      if (!fileContent) {
+      if (UNLIKELY(!fileContent)) {
         VM_ERR(initRuntimeError, "Failed to load imported file.");
         HANDLE_ERROR(); 
       }
 
       Lexer *lexer = initLexer(stringDup(name), fileContent);
-      size_t tokenAmount = 0; Token *tokens = makeTokensLexer(lexer, vm->err, &tokenAmount);
+      size_t tokenAmount = 0;
+      Token *tokens = makeTokensLexer(lexer, vm->err, &tokenAmount);
 
-      if (!tokens) { 
+      if (UNLIKELY(!tokens)) {
         HANDLE_ERROR();
       }
 
       Parser *parser = initParser(tokens, tokenAmount, vm->err, fileContent, name);
       ASTNode *ast = parseProgram(parser);
 
-      if (!ast) { 
+      if (UNLIKELY(!ast)) { 
         HANDLE_ERROR();
       }
 
       Chunk *chunk = compileAST(ast, vm->err, name, fileContent);
 
-      if (!chunk) { 
+      if (UNLIKELY(!chunk)) { 
         HANDLE_ERROR();
       }
 
-      if (vm->frameTop >= VM_CALL_STACK_MAX) {
+      if (UNLIKELY(vm->frameTop >= VM_CALL_STACK_MAX)) {
         VM_ERR(initRuntimeError, "Call stack overflow.");
         HANDLE_ERROR();
       }
@@ -914,7 +922,6 @@ Object *vmRun(VM *vm) {
       vm->frameTop++;
 
       REFRESH_FRAME();
-
       DISPATCH();
     }
 
@@ -929,16 +936,14 @@ Object *vmRun(VM *vm) {
 
         vm->localsTop = leavingFrame->localsBase;
 
-        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
+        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
           freeTable(leavingFrame->variables);
-        }
 
         vm->tryStackTop = leavingFrame->tryStackTop;
         
         SAVE_STATE();
         REFRESH_FRAME();
         PUSH(res);
-
         DISPATCH(); 
       }
       
@@ -962,16 +967,14 @@ Object *vmRun(VM *vm) {
 
         vm->localsTop = leavingFrame->localsBase;
 
-        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
-            freeTable(leavingFrame->variables);
-        }
+        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+          freeTable(leavingFrame->variables);
 
         vm->tryStackTop = leavingFrame->tryStackTop;
 
         SAVE_STATE();
         REFRESH_FRAME();
         PUSH(res);
-        
         DISPATCH();
       }
 
@@ -1018,22 +1021,18 @@ void deinitVM(VM *vm) {
   while (vm->frameTop > 1) {
     CallFrame *frame = &vm->frames[--vm->frameTop];
 
-    for (int i = 0; i < frame->localCount; i++) {
+    for (int i = 0; i < frame->localCount; i++)
       freeValue(vm->locals[frame->localsBase + i]);
-    }
 
-    if (frame->variables != vm->frames[vm->frameTop - 1].variables) {
+    if (frame->variables != vm->frames[vm->frameTop - 1].variables)
       freeTable(frame->variables);
-    }
   }
 
-  // Handle frame 0
   if (vm->frameTop == 1) {
     CallFrame *frame = &vm->frames[--vm->frameTop];
-    for (int i = 0; i < frame->localCount; i++) {
+
+    for (int i = 0; i < frame->localCount; i++)
       freeValue(vm->locals[frame->localsBase + i]);
-    }
-    // Note: frame 0's variables is global, freed in main.c
   }
 }
 

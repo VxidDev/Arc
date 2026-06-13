@@ -24,7 +24,6 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
 
   for (uint64_t i = 0; i < listobj->size; i++) {
     listobj->objects[i] = copyObject(list[i]);
-    freeObject(list[i]);
   }
 
   return listobj;
@@ -44,5 +43,11 @@ List* copyList(List* list) {
             newObjects[i] = elem ? copyObject(elem) : NULL;
     }
 
-    return initList(newObjects, list->size, list->capacity);
+    List* newList = initList(newObjects, list->size, list->capacity);
+    for (uint64_t i = 0; i < list->size; i++) {
+        if (newObjects[i] && !newObjects[i]->isStatic)
+            freeObject(newObjects[i]);
+    }
+    free(newObjects);
+    return newList;
 }

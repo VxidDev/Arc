@@ -431,6 +431,7 @@ int main(int argc, char **argv) {
     
     if (_CLEANUP) {
       freeTable(variables);
+      freeObject((Object*)list);
       freeMemPools();
       freeArenas();
     }
