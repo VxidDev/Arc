@@ -11,6 +11,8 @@ ProgramError* initProgramError(char *details) {
   if (!error) return NULL;
 
   error->base.type = OBJ_ERROR;
+  error->base.isStatic = false;
+
   error->details = stringDup(details);
 
   return error;

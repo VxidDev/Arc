@@ -105,6 +105,8 @@ String *initString(char *value, uint64_t len) {
   }
   
   str->base.type = OBJ_STRING;
+  str->base.isStatic = false;
+
   str->len = len;
 
   return str;
@@ -128,19 +130,25 @@ String *copyString(String *str) {
 }
 
 String *addString(const String *dest, const String *src) {
-  if (!dest || !src || !dest->value || !src->value) return NULL;
+  if (!dest || !src) return NULL;
 
-  size_t lenDest = strlen(dest->value);
-  size_t lenSrc  = strlen(src->value);
+  size_t lenDest = dest->len;
+  size_t lenSrc = src->len;
+  size_t total = lenDest + lenSrc;
 
-  char *newStr = arenaAlloc(stringArena, lenDest + lenSrc + 1);
-  if (!newStr) return NULL;
+  String *res = poolAlloc(stringPool);
+  if (!res) return NULL;
 
-  memcpy(newStr, dest->value, lenDest);
-  memcpy(newStr + lenDest, src->value, lenSrc);
-  newStr[lenDest + lenSrc] = '\0';
+  char *buf = arenaAlloc(stringArena, total + 1);
+  if (!buf) return NULL;
 
-  String *res = initString(newStr, lenDest + lenSrc);
+  memcpy(buf, dest->value, lenDest);
+  memcpy(buf + lenDest, src->value, lenSrc);
+  buf[total] = '\0';
+
+  res->value = buf;
+  res->base.type = OBJ_STRING;
+  res->len = total;
 
   return res;
 }
@@ -149,23 +157,27 @@ String *mulString(const String *dest, const Number *src) {
   if (!dest || !src || !dest->value) return NULL;
 
   int64_t times = src->as.i;
-  if (times <= 0) {
-    return initString("", 0);
-  }
+  if (times <= 0) return initString("", 0);
 
-  size_t len = strlen(dest->value);
-  char *newStr = arenaAlloc(stringArena, len * times + 1);
-  if (!newStr) return NULL;
-  char *p = newStr;
+  size_t len = dest->len;
+  size_t total = len * (size_t)times;
 
-  for (long int i = 0; i < times; i++) {
+  String *res = poolAlloc(stringPool);
+  if (!res) return NULL;
+
+  char *buf = arenaAlloc(stringArena, total + 1);
+  if (!buf) return NULL;
+
+  char *p = buf;
+  
+  for (int64_t i = 0; i < times; i++, p += len)
     memcpy(p, dest->value, len);
-    p += len;
-  }
 
   *p = '\0';
 
-  String *res = initString(newStr, len * times);
+  res->value = buf;
+  res->base.type = OBJ_STRING;
+  res->len = total;
 
   return res;
 }

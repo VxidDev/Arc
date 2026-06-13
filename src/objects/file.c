@@ -15,6 +15,7 @@ File* initFile(FILE* file, char* fname, char *fmod) {
   if (!fileObj) return NULL;
   
   fileObj->base.type = OBJ_FILE;
+  fileObj->base.isStatic = false;
 
   fileObj->file = file;
   fileObj->fname = stringDup(fname);

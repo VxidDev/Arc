@@ -21,6 +21,7 @@ Function* copyFunction(Function* func) {
   newFunc->body = func->body;
   newFunc->chunk = func->chunk;
   newFunc->maxLocals = func->maxLocals;
+  newFunc->base.isStatic = false;
 
   newFunc->name = stringDup(func->name);
 
@@ -60,6 +61,8 @@ Function* initFunction(FunctionNode* node) {
   if (!func) return NULL;
 
   func->base.type = OBJ_FUNCTION;
+  func->base.isStatic = false;
+
   func->body = node->body;
   func->chunk = NULL;
   func->maxLocals = (int)node->paramCount;
@@ -102,6 +105,8 @@ NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredA
   }
 
   nativeFunc->base.type = OBJ_NATIVE_FUNCTION;
+  nativeFunc->base.isStatic = false;
+
   nativeFunc->function = func;
   nativeFunc->requiredArgCount = requiredArgCount;
   nativeFunc->isVariadic = isVariadic;

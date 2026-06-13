@@ -8,6 +8,7 @@ Break* initBreak() {
   if (!obj) return NULL;
 
   obj->base.type = OBJ_BREAK;
+  obj->base.isStatic = false;
 
   return obj;
 }

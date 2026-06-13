@@ -10,6 +10,8 @@ Return* initReturn(Object* value) {
   if (!ret) return NULL;
   
   ret->base.type = OBJ_RETURN;
+  ret->base.isStatic = false;
+
   ret->value = value;
 
   return ret;

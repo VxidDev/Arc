@@ -34,6 +34,7 @@ typedef enum ObjType {
 
 typedef struct Object {
   ObjType type;
+  bool isStatic;
 } Object;
 
 typedef Object* (*NativeFunc)(Object** argc, size_t argCount);
@@ -48,8 +49,6 @@ extern const NativeModuleEntry* stdlibModules[];
 
 typedef struct Number {
   Object base;
-
-  bool isStatic;
 
   union {
     int64_t i;

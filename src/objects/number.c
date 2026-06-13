@@ -14,7 +14,7 @@ static void _ensureIntCache() {
   for (int i = 0; i < 256; i++) {
     _intCache[i].base.type = OBJ_NUMBER_INT;
     _intCache[i].as.i = i - 128;
-    _intCache[i].isStatic = true;
+    _intCache[i].base.isStatic = true;
   }
 
   _intCacheInit = true;
@@ -60,7 +60,7 @@ Number *initInt(int64_t value) {
 
   number->as.i = value;
   number->base.type = OBJ_NUMBER_INT;
-  number->isStatic = false;
+  number->base.isStatic = false;
 
   return number;
 }
@@ -72,7 +72,7 @@ Number *initFloat(double value) {
 
   number->as.f = value;
   number->base.type = OBJ_NUMBER_FLOAT;
-  number->isStatic = false;
+  number->base.isStatic = false;
 
   return number;
 }
@@ -84,7 +84,7 @@ Number *copyNumber(Number *num) {
   if (!n) return NULL;
 
   *n = *num;
-  n->isStatic = false;
+  n->base.isStatic = false;
   return n;
 }
 

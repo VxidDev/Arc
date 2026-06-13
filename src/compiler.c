@@ -178,6 +178,8 @@ void chunkWrite(Chunk *chunk, uint8_t byte) {
 
 int chunkAddConst(Chunk *chunk, Object *obj) {
   if (!chunk || !obj) return -1;
+  
+  obj->isStatic = true;
 
   if (chunk->constCount >= chunk->constCapacity) {
     size_t oldCap = chunk->constCapacity;
@@ -186,7 +188,8 @@ int chunkAddConst(Chunk *chunk, Object *obj) {
     Object **grown = arenaRealloc(objectArena, chunk->constants, oldCap * sizeof(Object *), newCap * sizeof(Object *));
     if (!grown) return -1;
 
-    chunk->constants = grown; chunk->constCapacity = newCap;
+    chunk->constants = grown;
+    chunk->constCapacity = newCap;
   }
 
   int idx = (int)chunk->constCount;

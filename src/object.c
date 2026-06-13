@@ -17,10 +17,10 @@ const NativeModuleEntry* stdlibModules[] = {
 
 Object* copyObject(Object* obj) {
   if (!obj) return NULL;
+  if (obj->isStatic) return obj;
   
   switch (obj->type) {
     case OBJ_NUMBER_INT:
-      return (Object*)copyNumber((Number*)obj);
     case OBJ_NUMBER_FLOAT:
       return (Object*)copyNumber((Number*)obj);
     case OBJ_LIST:
@@ -43,16 +43,10 @@ Object* copyObject(Object* obj) {
 }
 
 void freeObject(Object* obj) {
-  if (!obj) return;
+  if (!obj || obj->isStatic) return;
 
   switch (obj->type) {
     case OBJ_NUMBER_INT:
-      Number* n = (Number*)obj;
-
-      if (n->isStatic) return;
-
-      poolFree(numberPool, obj); break;
-    
     case OBJ_NUMBER_FLOAT:
       poolFree(numberPool, obj); break;
 

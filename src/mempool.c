@@ -2,6 +2,7 @@
 #include "../include/repl/repl.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 MemPool* initPool(size_t objSize) {
   if (objSize == 0) return NULL;
@@ -15,6 +16,8 @@ MemPool* initPool(size_t objSize) {
     free(pool);
     return NULL;
   }
+
+  memset(pool->slab, 0, objSize * POOL_SIZE);
 
   pool->slots = malloc(sizeof(void*) * POOL_SIZE);
 

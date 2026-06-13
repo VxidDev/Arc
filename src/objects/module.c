@@ -10,6 +10,7 @@ Module* initModule(ASTNode* astTree, Lexer* lexer, Parser* parser, char *fileCon
   if (!module) return NULL;
 
   module->base.type = OBJ_MODULE;
+  module->base.isStatic = false;
 
   module->astTree = astTree;
   module->lexer = lexer;

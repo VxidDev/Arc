@@ -8,6 +8,7 @@ Continue* initContinue() {
   if (!obj) return NULL;
 
   obj->base.type = OBJ_CONTINUE;
+  obj->base.isStatic = false;
 
   return obj;
 }

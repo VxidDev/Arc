@@ -62,17 +62,12 @@ static inline void freeValue(Value v) {
 }
 
 static inline Value copyValue(Value v) {
-  if (IS_OBJ(v)) {
-    Object* obj = AS_OBJ(v);
+  if (!IS_OBJ(v)) return v;
 
-    if (obj->type == OBJ_NUMBER_INT || obj->type == OBJ_NUMBER_FLOAT) {
-      Number* n = (Number*)obj;
-      if (n->isStatic) return v;
-    }
+  Object* obj = AS_OBJ(v);
+  if (obj->isStatic) return v;
 
-    return VAL_OBJ(copyObject(obj));
-  }
-  return v; 
+  return VAL_OBJ(copyObject(obj));
 }
 
 static inline Value objectToValue(Object *o) {
@@ -296,6 +291,10 @@ Object *vmRun(VM *vm) {
         PUSH(VAL_INT(((Number*)c)->as.i));
       else if (c->type == OBJ_NUMBER_FLOAT)
         PUSH(VAL_FLOAT(((Number*)c)->as.f));
+      else if (c->type == OBJ_FUNCTION || c->type == OBJ_STRING)
+        PUSH(VAL_OBJ(c)); // constants are owned by chunk
+      else if (c->isStatic)
+        PUSH(VAL_OBJ(c));
       else
         PUSH(copyValue(objectToValue(c)));
 
@@ -326,9 +325,15 @@ Object *vmRun(VM *vm) {
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
       Value val = PEEK(0);
-      Object *obj = valueToObject(val);
-      setTable(vars, name->value, obj, true);
-      if (!IS_OBJ(val)) freeObject(obj); 
+
+      if (IS_INT(val)) {
+        setTable(vars, name->value, (Object*)initInt(AS_INT(val)), false);
+      } else if (IS_FLOAT(val)) {
+        setTable(vars, name->value, (Object*)initFloat(AS_FLOAT(val)), false);
+      } else {
+        setTable(vars, name->value, AS_OBJ(val), true);
+      }
+
       DISPATCH();
     }
 
@@ -340,25 +345,30 @@ Object *vmRun(VM *vm) {
         VM_ERR(initNameError, "Variable used before assignment.");
         HANDLE_ERROR();
       }
+
+      if (IS_OBJ(val) && AS_OBJ(val)->isStatic) 
+        PUSH(val);
+      else 
+        PUSH(IS_OBJ(val) ? copyValue(val) : val);
       
-      PUSH(IS_OBJ(val) ? copyValue(val) : val);
       DISPATCH();
     }
 
     OP_STORE_LOCAL: {
       uint8_t slot = READ_BYTE();
       Value val = PEEK(0);
-      Value *dest = &LOCAL(slot);
 
-      if (!IS_OBJ(val)) {
-        freeValue(*dest);
-        *dest = val;
-      } else {
-        if (!IS_OBJ(*dest) || AS_OBJ(*dest) != AS_OBJ(val)) {
-          freeValue(*dest);
-          *dest = copyValue(val);
-        }
+      if (IS_OBJ(val)) {
+        Object* o = AS_OBJ(val);
+
+        if (o->type == OBJ_NUMBER_INT)
+          val = VAL_INT(((Number*)o)->as.i);
+        else if (o->type == OBJ_NUMBER_FLOAT)
+          val = VAL_FLOAT(((Number*)o)->as.f);
       }
+
+      freeValue(LOCAL(slot));
+      LOCAL(slot) = IS_OBJ(val) ? copyValue(val) : val;
 
       DISPATCH();
     } 
@@ -752,9 +762,20 @@ Object *vmRun(VM *vm) {
           newFrame->currentInstr = 0;
 
           for (int i = 0; i < func->maxLocals; i++)
-            if (i < (int)func->paramCount)
-              vm->locals[newFrame->localsBase + i] = (i < argCount) ? args[i] : VAL_INT(0);
-            else 
+            if (i < (int)func->paramCount) {
+              Value arg = (i < argCount) ? args[i] : VAL_INT(0);
+
+              if (IS_OBJ(arg)) {
+                Object* o = AS_OBJ(arg);
+
+                if (o->type == OBJ_NUMBER_INT)
+                  arg = VAL_INT(((Number*)o)->as.i);
+                else if (o->type == OBJ_NUMBER_FLOAT)
+                  arg = VAL_FLOAT(((Number*)o)->as.f);
+              }
+
+              vm->locals[newFrame->localsBase + i] = arg;
+            } else 
               vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
           
           for (int i = (int)func->paramCount; i < argCount; i++)
