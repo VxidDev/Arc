@@ -752,6 +752,44 @@ static void compileProgram(ASTNode *node, Compiler *c) {
   }
 }
 
+static void compileClass(ASTNode *node, Compiler *c) {
+  ClassNode *cn = (ClassNode *)node;
+  Class *class = initClass(cn);
+
+  Compiler cc = {
+    .chunk = initChunk(),
+    .err = c->err,
+    .filename = c->filename,
+    .sourcetext = c->sourcetext,
+    .isFunction = false,
+  };
+
+  cc.chunk->filename = c->filename;
+  cc.chunk->sourcetext = c->sourcetext;
+
+  setPosFromNode(&cc, cn->body);
+
+  if (cn->body->type == NODE_PROGRAM)
+    compileProgram(cn->body, &cc);
+  else
+    compileNode(cn->body, &cc);
+
+  setPosFromNode(&cc, node);
+  emitByte(&cc, OP_HALT);
+
+  class->chunk = cc.chunk;
+  class->maxLocals = cc.maxLocalCount;
+
+  setPosFromNode(c, node);
+  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)class));
+
+  emitBytes(c, OP_STORE_VAR, internString(c, class->name, strlen(class->name)));
+  emitByte(c, OP_POP);
+
+  setPosFromNode(c, node);
+  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
+}
+
 static void compileNode(ASTNode *node, Compiler *c) {
   if (!node || *c->err) return;
 
@@ -773,6 +811,7 @@ static void compileNode(ASTNode *node, Compiler *c) {
     case NODE_TRYCATCH: compileTryCatch(node, c); break;
     case NODE_IMPORT: compileImport(node, c); break;
     case NODE_RETURN: compileReturn(node, c); break;
+    case NODE_CLASS: compileClass(node, c); break;
     case NODE_BREAK:
       if (c->loop) {
         setPosFromNode(c, node);

@@ -34,6 +34,7 @@ typedef enum OpCode {
   OP_TRY_POP,
   OP_IMPORT,
   OP_STORE_INDEX,
+  OP_BUILD_INSTANCE,
   OP_HALT,
 } OpCode;
 

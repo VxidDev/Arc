@@ -20,6 +20,7 @@ MemPool* functionCallPool = NULL;
 MemPool* symbolPool = NULL;
 MemPool* symbolTablePool = NULL;
 MemPool* functionPool = NULL;
+MemPool* instancePool = NULL;
 
 Arena* parseArena = NULL;
 Arena* stringArena = NULL;
@@ -34,6 +35,7 @@ void initMemPools() {
   symbolPool = initPool(sizeof(Symbol));
   symbolTablePool = initPool(sizeof(SymbolTable));
   functionPool = initPool(sizeof(Function));
+  instancePool = initPool(sizeof(Instance));
 }
 
 void initArenas() {
@@ -58,6 +60,7 @@ void freeMemPools() {
   freePool(symbolPool);
   freePool(symbolTablePool);
   freePool(functionPool);
+  freePool(instancePool);
 }
 
 void registerBuiltins(SymbolTable* table) {

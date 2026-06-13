@@ -473,6 +473,42 @@ ASTNode* __exprParser(Parser* parser) {
     return NULL;
   }
 
+  if (parser->currentToken.type == TOK_CLASS) {
+    Token tok = parser->currentToken; // safe copy for errors 
+    Position start = tok.start;
+
+    advanceParser(parser);
+
+    if (parser->currentToken.type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(start, tok.end, parser->filename, "Expected identifier after keyword 'CLASS'.", parser->sourcetext);
+      return NULL;
+    }
+
+    Token identifier = parser->currentToken;
+    
+    advanceParser(parser);
+
+    if (parser->currentToken.type == TOK_EOF) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(identifier.start, identifier.end, parser->filename, "Expected expression after identifier.", parser->sourcetext);
+      return NULL;
+    }
+
+    ASTNode* body = blockParser(parser);
+
+    if (!body) { // error is already set 
+      return NULL;
+    }
+
+    if (parser->currentToken.type != TOK_END) {
+      if (*parser->error == NULL) *parser->error = initSyntaxError(identifier.start, identifier.end, parser->filename, "Expected 'END'.", parser->sourcetext);
+      return NULL;
+    }
+
+    advanceParser(parser);
+
+    return (ASTNode*)initClassNode(identifier, body, start, identifier.end);
+  }
+
   if (parser->currentToken.type == TOK_FOR) {
     Token forTok = parser->currentToken;
 

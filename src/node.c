@@ -330,6 +330,20 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
   return node;
 }
 
+ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Position end) {
+  if (!body) return NULL;
+
+  ClassNode* node = arenaAlloc(parseArena, sizeof(ClassNode));
+
+  node->base.type = NODE_CLASS;
+  node->body = body;
+  node->identifier = identifier;
+  node->start = start;
+  node->end = end;
+
+  return node;
+}
+
 Position getNodeStart(ASTNode *node) {
   if (!node) return (Position){0,0,0};
 
@@ -353,6 +367,7 @@ Position getNodeStart(ASTNode *node) {
     case NODE_CONTINUE: return ((ContinueNode*)node)->tok.start;
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
     case NODE_FOR: return ((ForNode*)node)->forTok.start;
+    case NODE_CLASS: return ((ClassNode*)node)->start;
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
       return p->count > 0 ? getNodeStart(p->statements[0]) : (Position){0,0,0};
@@ -385,6 +400,7 @@ Position getNodeEnd(ASTNode *node) {
     case NODE_CONTINUE: return ((ContinueNode*)node)->tok.end;
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->end;
     case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
+    case NODE_CLASS: return ((ClassNode*)node)->end;
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
       return p->count > 0 ? getNodeEnd(p->statements[p->count-1]) : (Position){0,0,0};

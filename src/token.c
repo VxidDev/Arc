@@ -8,7 +8,7 @@ const char *KEYWORDS[] = {
   "VAR", "AND", "OR", "NOT",
   "IF", "THEN", "ELIF", "ELSE",
   "WHILE", "TRY", "CATCH", "IN", "FOR",
-  "FN", "END", "BREAK", "CONTINUE", NULL
+  "FN", "END", "BREAK", "CONTINUE", "CLASS", NULL
 };
 
 const char* binOpStr[] = {

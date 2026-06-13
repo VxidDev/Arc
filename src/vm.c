@@ -773,6 +773,7 @@ Object *vmRun(VM *vm) {
         newFrame->localsBase = vm->localsTop;
         newFrame->localCount = func->maxLocals;
         newFrame->currentInstr = 0;
+        newFrame->instance = NULL;
       
         int paramCount = (int)func->paramCount;
 
@@ -836,6 +837,58 @@ Object *vmRun(VM *vm) {
         }
 
         PUSH(objectToValue(res));
+        DISPATCH();
+      }
+
+      if (callee->type == OBJ_CLASS) {
+        Class* class = (Class*)callee;
+
+        for (int i = 0; i < argCount; i++) {
+          freeValue(args[i]);
+        }
+
+        if (UNLIKELY(!class->chunk)) {
+          VM_ERR(initRuntimeError, "Class has no body.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+        
+        if (UNLIKELY(vm->frameTop >= VM_CALL_STACK_MAX)) {
+          VM_ERR(initRuntimeError, "Call stack overflow.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+
+        Instance* instance = initInstance(class, vars);
+
+        if (UNLIKELY(!instance)) {
+          VM_ERR(initRuntimeError, "Out of memory.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+        
+        CallFrame* newFrame = &vm->frames[vm->frameTop];
+        
+        SAVE_STATE();
+
+        newFrame->chunk = class->chunk;
+        newFrame->ip = class->chunk->code;
+        newFrame->variables = instance->fields;
+        newFrame->tryStackTop = vm->tryStackTop;
+        newFrame->localsBase = vm->localsTop;
+        newFrame->localCount = 0;
+        newFrame->currentInstr = 0;
+        newFrame->instance = (Object*)instance;
+
+        for (int i = 0; i < class->maxLocals; i++)
+          vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
+
+        vm->localsTop += class->maxLocals;
+        vm->frameTop++;
+
+        if (!callee->isStatic) freeValue(calleeVal);
+
+        REFRESH_FRAME();
         DISPATCH();
       }
       
@@ -914,6 +967,7 @@ Object *vmRun(VM *vm) {
       newFrame->localsBase = vm->localsTop;
       newFrame->localCount = chunk->maxLocals;
       newFrame->currentInstr = 0;
+      newFrame->instance = NULL;
 
       for (int i = 0; i < chunk->maxLocals; i++)
         vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -935,8 +989,8 @@ Object *vmRun(VM *vm) {
           freeValue(vm->locals[leavingFrame->localsBase + i]);
 
         vm->localsTop = leavingFrame->localsBase;
-
-        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+        
+        if (!leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
           freeTable(leavingFrame->variables);
 
         vm->tryStackTop = leavingFrame->tryStackTop;
@@ -966,9 +1020,13 @@ Object *vmRun(VM *vm) {
           freeValue(vm->locals[leavingFrame->localsBase + i]);
 
         vm->localsTop = leavingFrame->localsBase;
-
-        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+        
+        if (leavingFrame->instance) {
+          freeValue(res);
+          res = VAL_OBJ(leavingFrame->instance);
+        } else if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
           freeTable(leavingFrame->variables);
+        }
 
         vm->tryStackTop = leavingFrame->tryStackTop;
 
@@ -996,7 +1054,8 @@ VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, ch
     .variables = variables,
     .tryStackTop = 0,
     .localsBase = 0,
-    .localCount = chunk->maxLocals
+    .localCount = chunk->maxLocals,
+    .instance = NULL
   };
 
   vm->localsTop = chunk->maxLocals;

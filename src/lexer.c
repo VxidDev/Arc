@@ -154,6 +154,9 @@ static TokType keywordType(const char *s) {
       if (strcasecmp("CONTINUE", s) == 0)
         return TOK_CONTINUE;
 
+      if (strcasecmp("CLASS", s) == 0)
+        return TOK_CLASS;
+
       break;
 
     case 'N':

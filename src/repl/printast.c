@@ -235,6 +235,15 @@ void printAST(ASTNode* node) {
 
       break;
     }
+
+    case NODE_CLASS: {
+      ClassNode* classNode = (ClassNode*)node;
+
+      printf("%sCLASS::%s%s:", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_YELLOW_FG), classNode->identifier.val.s);
+      printAST(classNode->body);
+
+      break;
+    }
   }
 }
 

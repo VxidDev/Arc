@@ -114,7 +114,14 @@ static void printObjInternal(Object* obj) {
   } else if (obj->type == OBJ_FILE) {
     File* file = (File*)obj;
     printf("FILE:%s|%s", file->fname, file->fmod);
-  } 
+  } else if (obj->type == OBJ_CLASS) {
+    Class* class = (Class*)obj;
+    printf("CLASS:%s", class->name);
+  } else if (obj->type == OBJ_INSTANCE) {
+    Instance* instance = (Instance*)obj;
+    printf("INSTANCE::");
+    printObjInternal((Object*)instance->klass);
+  }
 }
 
 void printObj(Object* obj) {

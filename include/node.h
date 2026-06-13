@@ -25,7 +25,8 @@ typedef enum {
   NODE_BREAK,
   NODE_CONTINUE,
   NODE_INDEXASSIGN,
-  NODE_FOR
+  NODE_FOR,
+  NODE_CLASS
 } NodeType;
 
 typedef struct Interpretator Interpretator;
@@ -179,8 +180,18 @@ typedef struct ForNode {
   ASTNode* body;
 } ForNode;
 
+typedef struct ClassNode {
+  ASTNode base;
+
+  Token identifier;
+  ASTNode* body;
+
+  Position start, end;
+} ClassNode;
+
 NumberNode* initNumberNode(Token token);
 StringNode* initStringNode(Token token);
+ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Position end);
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode);
 UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node);
 VarAccessNode* initVarAccessNode(Token token);
