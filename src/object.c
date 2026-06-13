@@ -103,7 +103,7 @@ void freeObject(Object* obj) {
     }
 
     case OBJ_FUNCTION_CALL: {
-      FunctionCall* fncall = (FunctionCall*)obj;
+      // FunctionCall* fncall = (FunctionCall*)obj;
       
       /*
       if (fncall->args) {
@@ -113,7 +113,7 @@ void freeObject(Object* obj) {
       }
       */
 
-      if (fncall->env) freeTable(fncall->env);
+      // if (fncall->env) freeTable(fncall->env);
       poolFree(functionCallPool, obj);
 
       break;

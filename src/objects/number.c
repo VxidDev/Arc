@@ -48,7 +48,7 @@ static inline bool isValid(const Object* a, const Object* b) {
 }
 */
 
-Number *initInt(int32_t value) {
+Number *initInt(int64_t value) {
   _ensureIntCache();
 
   if (value >= -128 && value < 128)

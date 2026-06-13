@@ -64,6 +64,8 @@ typedef struct Chunk {
 
   char* filename;
   char* sourcetext;
+
+  int maxLocals;
 } Chunk;
 
 typedef struct JumpList {
@@ -105,9 +107,14 @@ typedef struct Compiler {
   bool isFunction; // false = top-level, no locals
   InternTable intern;
 
+  int maxLocalCount;  
+
   Position posStart;
   Position posEnd;
   bool posDirty;
+
+  const char* funcName;
+  Object* funcObj;
 } Compiler;
 
 Chunk* initChunk(void);

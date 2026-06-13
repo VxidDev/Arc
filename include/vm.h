@@ -5,11 +5,13 @@
 #include "object.h"
 #include "symbol-table.h"
 #include "error.h"
+#include "value.h"
 
 #define VM_STACK_MAX 4096
 #define VM_TRY_STACK_MAX 256
 #define VM_CALL_STACK_MAX 8192
 
+#define VM_LOCALS_MAX 65536
 
 typedef struct {
   Chunk *chunk;
@@ -17,7 +19,7 @@ typedef struct {
   SymbolTable *variables;
   int tryStackTop;
 
-  Object* locals[256];
+  int localsBase;
   int localCount;
 
   uint32_t currentInstr;
@@ -27,8 +29,11 @@ typedef struct VM {
   CallFrame frames[VM_CALL_STACK_MAX];
   int frameTop;
 
-  Object *stack[VM_STACK_MAX];
+  Value stack[VM_STACK_MAX];
   int stackTop;
+
+  Value locals[VM_LOCALS_MAX];
+  int localsTop;
 
   uint8_t *tryStack[VM_TRY_STACK_MAX];
   int tryStackTop;

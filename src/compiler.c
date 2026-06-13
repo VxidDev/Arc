@@ -155,6 +155,8 @@ Chunk *initChunk(void) {
   chunk->filename = NULL;
   chunk->sourcetext = NULL;
 
+  chunk->maxLocals = 0;
+
   return chunk;
 }
 
@@ -219,6 +221,10 @@ static int addLocal(Compiler *c, const char *name) {
   l->slot = c->localCount;
 
   c->localCount++;
+
+  if (c->localCount > c->maxLocalCount) {
+    c->maxLocalCount = c->localCount;
+  }
 
   return l->slot;
 }
@@ -306,6 +312,11 @@ static void compileVarAccess(ASTNode *node, Compiler *c) {
 
     if (slot >= 0) {
       emitBytes(c, OP_LOAD_LOCAL, (uint8_t)slot);
+      return;
+    }
+
+    if (c->funcName && strcmp(va->token.val.s, c->funcName) == 0 && c->funcObj) {
+      emitBytes(c, OP_LOAD_CONST, addConst(c, c->funcObj));
       return;
     }
   }
@@ -565,7 +576,10 @@ static void compileFunction(ASTNode *node, Compiler *c) {
     .sourcetext = c->sourcetext,
     .loop = NULL,
     .localCount = 0,
-    .isFunction = true
+    .maxLocalCount = 0,
+    .isFunction = true,
+    .funcName = fn->name,
+    .funcObj = (Object*)func
   };
 
   fc.chunk->filename = c->filename;
@@ -584,8 +598,11 @@ static void compileFunction(ASTNode *node, Compiler *c) {
   
   setPosFromNode(&fc, node);
   emitByte(&fc, OP_HALT);
+
   func->chunk = fc.chunk;
-  
+  func->chunk->maxLocals = fc.maxLocalCount;
+  func->maxLocals = fc.maxLocalCount;
+
   setPosFromNode(c, node);
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)func));
   emitBytes(c, OP_STORE_VAR, internString(c, fn->name, strlen(fn->name)));
@@ -781,6 +798,7 @@ Chunk *compileAST(ASTNode *ast, Error **err, char *filename, char *sourcetext) {
     .err = err,
     .filename = filename,
     .sourcetext = sourcetext,
+    .maxLocalCount = 0,
     .loop = NULL
   };
 
@@ -796,6 +814,8 @@ Chunk *compileAST(ASTNode *ast, Error **err, char *filename, char *sourcetext) {
   
   setPos(&c, getNodeStart(ast), getNodeEnd(ast));
   emitByte(&c, OP_HALT);
+
+  c.chunk->maxLocals = c.maxLocalCount;
 
   if (*err) { 
     freeChunk(c.chunk);

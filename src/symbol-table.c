@@ -23,6 +23,7 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   if (!table) return NULL; 
 
   table->capacity = capacity;
+  table->count = 0;
   table->parent = parent;
   table->buckets = calloc(capacity, sizeof(Symbol*)); 
 
@@ -54,18 +55,30 @@ void setTable(SymbolTable *table, char *name, Object *value, bool copyObj) {
 
   newSym->next = table->buckets[index];
   table->buckets[index] = newSym;
+  table->count++;
 }
 
 Object *getTable(SymbolTable *table, const char *name) {
   unsigned long hash = hashPointer(name);
 
   for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
-    Symbol *sym = currTable->buckets[hash & (currTable->capacity - 1)];
+    if (currTable->count == 0) continue;
+
+    unsigned long index = hash & (currTable->capacity - 1);
+    Symbol *sym = currTable->buckets[index];
+    Symbol *prev = NULL;
 
     while (sym) {
-      if (sym->name == name)
+      if (sym->name == name) {
+        if (prev) {
+          prev->next = sym->next;
+          sym->next = currTable->buckets[index];
+          currTable->buckets[index] = sym;
+        }
         return sym->value;
+      }
 
+      prev = sym;
       sym = sym->next;
     }
   }
@@ -74,6 +87,8 @@ Object *getTable(SymbolTable *table, const char *name) {
 }
 
 void removeSymbol(SymbolTable *table, const char *name) {
+  if (table->count == 0) return;
+
   unsigned long index = hashPointer(name) & (table->capacity - 1);
 
   Symbol *curr = table->buckets[index];
@@ -88,6 +103,7 @@ void removeSymbol(SymbolTable *table, const char *name) {
 
       freeObject(curr->value);
       poolFree(symbolPool, curr);
+      table->count--;
 
       return;
     }
@@ -99,16 +115,18 @@ void removeSymbol(SymbolTable *table, const char *name) {
 void freeTable(SymbolTable *table) {
   if (!table) return;
 
-  for (size_t i = 0; i < table->capacity; i++) {
-    Symbol *sym = table->buckets[i];
+  if (table->count > 0) {
+    for (size_t i = 0; i < table->capacity; i++) {
+      Symbol *sym = table->buckets[i];
 
-    while (sym) {
-      Symbol *next = sym->next;
+      while (sym) {
+        Symbol *next = sym->next;
 
-      freeObject(sym->value);
-      poolFree(symbolPool, sym);
+        freeObject(sym->value);
+        poolFree(symbolPool, sym);
 
-      sym = next;
+        sym = next;
+      }
     }
   }
 
@@ -117,6 +135,7 @@ void freeTable(SymbolTable *table) {
   table->parent = NULL;  
   table->buckets = NULL;  
   table->capacity = 0;   
+  table->count = 0;
 
   poolFree(symbolTablePool, table);
 }

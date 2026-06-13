@@ -20,6 +20,7 @@ Function* copyFunction(Function* func) {
   newFunc->base.type = OBJ_FUNCTION;
   newFunc->body = func->body;
   newFunc->chunk = func->chunk;
+  newFunc->maxLocals = func->maxLocals;
 
   newFunc->name = stringDup(func->name);
 
@@ -61,6 +62,7 @@ Function* initFunction(FunctionNode* node) {
   func->base.type = OBJ_FUNCTION;
   func->body = node->body;
   func->chunk = NULL;
+  func->maxLocals = (int)node->paramCount;
   
   func->name = stringDup(node->name);
 

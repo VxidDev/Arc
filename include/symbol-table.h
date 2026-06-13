@@ -12,6 +12,7 @@ typedef struct Symbol {
 typedef struct SymbolTable {
   Symbol **buckets;
   unsigned long capacity;
+  unsigned long count;
   struct SymbolTable *parent;
 } SymbolTable;
 

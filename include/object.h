@@ -80,6 +80,8 @@ typedef struct Function {
 
   ASTNode* body;
   struct Chunk* chunk;
+
+  int maxLocals;
 } Function;
 
 typedef struct FunctionCall {
@@ -146,7 +148,7 @@ typedef struct Continue {
   Object base; 
 } Continue;
 
-Number* initInt(int32_t value);
+Number* initInt(int64_t value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
 
