@@ -154,6 +154,9 @@ static TokType keywordType(const char *s) {
       if (strcasecmp("CONTINUE", s) == 0)
         return TOK_CONTINUE;
 
+      if (strcasecmp("CLASS", s) == 0)
+        return TOK_CLASS;
+
       break;
 
     case 'N':
@@ -540,6 +543,11 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
     if (lexer->currChar == '#') {
       while (lexer->currChar != '\n' && lexer->currChar != '\0') advanceLexer(lexer);
+      continue;
+    }
+
+    if (lexer->currChar == '.') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DOT)) return NULL;
       continue;
     }
 

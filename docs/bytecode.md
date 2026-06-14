@@ -89,8 +89,19 @@ This document lists all opcodes used by the Arc Virtual Machine, their stack eff
 - **Stack**: `..., result -> (caller stack)`
 - **Description**: Returns from the current function frame with the top stack value.
 
-### OP_HALT
-- **Description**: Gracefully stops execution of the current chunk.
+### OP_BUILD_INSTANCE
+- **Stack**: `... -> ..., instance`
+- **Description**: Creates a new object instance for a class.
+
+### OP_PROPERTY_ACCESS
+- **Stack**: `..., instance -> ..., value`
+- **Operand**: 1-byte index to interned string (property name).
+- **Description**: Accesses a property value from an instance.
+
+### OP_PROPERTY_SET
+- **Stack**: `..., instance, value -> ..., value`
+- **Operand**: 1-byte index to interned string (property name).
+- **Description**: Sets a property value on an instance.
 
 ## Collections & Indexing
 

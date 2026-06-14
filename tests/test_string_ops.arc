@@ -31,3 +31,5 @@ print("String * 1: ", (d * 1) == "Arc")
 var list = ["a", "b", "c"]
 var joined = list[0] + list[1] + list[2]
 print("Joined list elements: ", joined == "abc")
+
+print("\ntest_string_ops.arc passed")

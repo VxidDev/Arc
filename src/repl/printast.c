@@ -61,8 +61,12 @@ void printAST(ASTNode* node) {
     case NODE_INDEXASSIGN: {
       IndexAssignNode* ia = (IndexAssignNode*)node;
 
-      printf("%s[%s[", COLOR(ANSI_BRIGHT_MAGENTA_FG), ia->targetIdent.val.s);
+      printf("%s[", COLOR(ANSI_BRIGHT_MAGENTA_FG));
       
+      printAST(ia->target);
+
+      putchar('[');
+
       printAST(ia->index);
 
       printf("] = ");
@@ -232,6 +236,37 @@ void printAST(ASTNode* node) {
       printAST(forNode->iterable);
       printf("%sTHEN:", COLOR(ANSI_CYAN_FG));
       printAST(forNode->body);
+
+      break;
+    }
+
+    case NODE_CLASS: {
+      ClassNode* classNode = (ClassNode*)node;
+
+      printf("%sCLASS::%s%s:", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_YELLOW_FG), classNode->identifier.val.s);
+      printAST(classNode->body);
+
+      break;
+    }
+
+    case NODE_PROPERTYACCESS: {
+      PropertyAccessNode* pa = (PropertyAccessNode*)node;
+
+      printf("%s%sPROPERTYACCESS:", COLOR(ANSI_MAGENTA_FG), COLOR(ANSI_ITALIC));
+      printAST(pa->target);
+      printf("%s::%s%s", COLOR(ANSI_BRIGHT_CYAN_FG), pa->field.val.s, COLOR(ANSI_RESET));
+
+      break;
+    }
+
+    case NODE_PROPERTYASSIGN: {
+      PropertyAssignNode* pa = (PropertyAssignNode*)node;
+
+      printf("%s%sPROPERTYASSIGN:[", COLOR(ANSI_MAGENTA_FG), COLOR(ANSI_ITALIC));
+      printAST(pa->target);
+      putchar(':');
+      printAST(pa->value);
+      printf("]%s", COLOR(ANSI_RESET));
 
       break;
     }

@@ -63,15 +63,38 @@ x = 20      # Re-assignment
 VAR x = 30  # Re-declaration (also valid)
 ```
 
-## Functions
-Functions are defined using the `FN` keyword. A `RETURN` keyword can be used to return a value from a function.
+## Classes
 
+Arc supports a class-based abstraction layer for grouping data and functions. Classes are defined using the `CLASS` keyword and do not use a `this` or `self` binding.
+
+### Class Syntax
 ```arc
-FN add(a, b) THEN
-    RETURN a + b
-END
+CLASS name
+    VAR field = "abc"
 
-VAR result = add(5, 3)
+    FN func(instance, ...) THEN
+        ...
+    END
+END
+```
+
+### Instances
+Classes are instantiated using function-call syntax:
+```arc
+VAR instance = name()
+```
+
+### Field Access
+Instance fields are accessed using dot notation and can be modified dynamically:
+```arc
+instance.field        # reads field value
+instance.field = 123  # modifies field value
+```
+
+### Method Calls
+Methods are encapsulated functions. Because they are **not implicitly bound** to the instance, instance data must be accessed by passing the instance explicitly:
+```arc
+instance.func(instance, ...)
 ```
 
 ## Lists

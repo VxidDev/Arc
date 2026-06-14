@@ -33,8 +33,9 @@ typedef enum OpCode {
   OP_TRY_PUSH,
   OP_TRY_POP,
   OP_IMPORT,
-  OP_STORE_INDEX,
-  OP_HALT,
+  OP_PROPERTY_ACCESS,
+  OP_PROPERTY_SET,
+  OP_HALT
 } OpCode;
 
 #define MAX_LOCALS 256 // TODO: add flag for this 

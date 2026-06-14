@@ -103,8 +103,19 @@ Value copyValue(Value v) {
 
 static inline Value objectToValue(Object *o) {
   if (UNLIKELY(!o)) return VAL_INT(0);
-  if (o->type == OBJ_NUMBER_INT) return VAL_INT(((Number*)o)->as.i);
-  if (o->type == OBJ_NUMBER_FLOAT) return VAL_FLOAT(((Number*)o)->as.f);
+
+  if (o->type == OBJ_NUMBER_INT) { 
+    Value v = VAL_INT(((Number*)o)->as.i);
+    freeObject(o);
+    return v;
+  }
+
+  if (o->type == OBJ_NUMBER_FLOAT) { 
+    Value v = VAL_FLOAT(((Number*)o)->as.f);
+    freeObject(o);
+    return v;
+  }
+
   return VAL_OBJ(o);
 }
 
@@ -283,7 +294,6 @@ Object *vmRun(VM *vm) {
 
     [OP_INDEX_GET] = &&OP_INDEX_GET,
     [OP_INDEX_SET] = &&OP_INDEX_SET,
-    [OP_STORE_INDEX] = &&OP_STORE_INDEX,
 
     [OP_CALL] = &&OP_CALL,
 
@@ -298,7 +308,10 @@ Object *vmRun(VM *vm) {
     [OP_HALT] = &&OP_HALT,
 
     [OP_LOAD_LOCAL] = &&OP_LOAD_LOCAL,
-    [OP_STORE_LOCAL] = &&OP_STORE_LOCAL
+    [OP_STORE_LOCAL] = &&OP_STORE_LOCAL,
+
+    [OP_PROPERTY_ACCESS] = &&OP_PROPERTY_ACCESS,
+    [OP_PROPERTY_SET] = &&OP_PROPERTY_SET
   };
 
   for (;;) {
@@ -331,6 +344,54 @@ Object *vmRun(VM *vm) {
       }
  
       PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
+      DISPATCH();
+    }
+
+    OP_PROPERTY_ACCESS: {
+      String* name = (String*)READ_CONST();
+      Value targetVal = POP();
+
+      if (UNLIKELY(!IS_OBJ(targetVal) || AS_OBJ(targetVal)->type != OBJ_INSTANCE)) {
+        VM_ERR(initTypeError, "Only instances have properties.");
+        freeValue(targetVal);
+        HANDLE_ERROR();
+      }
+
+      Instance* target = (Instance*)AS_OBJ(targetVal);
+      Value val = getTable(target->fields, name->value);
+
+      if (UNLIKELY(IS_UNDEF(val))) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Instance has no property \"%s\".", name->value);
+        VM_ERR(initNameError, buf);
+        freeValue(targetVal);
+        HANDLE_ERROR();
+      }
+
+      PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
+      freeValue(targetVal);
+      DISPATCH();
+    }
+
+    OP_PROPERTY_SET: {
+      String* name = (String*)READ_CONST();
+      
+      Value val = POP();
+      Value targetVal = POP();
+
+      if (UNLIKELY(!IS_OBJ(targetVal) || AS_OBJ(targetVal)->type != OBJ_INSTANCE)) {
+        VM_ERR(initTypeError, "Only instances have properties.");
+        freeValue(targetVal);
+        freeValue(val);
+        HANDLE_ERROR();
+      }
+
+      Instance* target = (Instance*)AS_OBJ(targetVal);
+      setTable(target->fields, name->value, val);
+
+      PUSH(val);
+      freeValue(targetVal);
+
       DISPATCH();
     }
       
@@ -664,69 +725,6 @@ Object *vmRun(VM *vm) {
       DISPATCH();
     }
 
-    OP_STORE_INDEX: {
-      String *name = (String *)READ_CONST();
-      Value val = POP();
-      Value idxVal = POP();
-      Value targetVal = getTable(vars, name->value);
-    
-      if (UNLIKELY(IS_UNDEF(targetVal))) {
-        char buf[256];
-        snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
-        VM_ERR(initNameError, buf);
-        freeValue(val);
-        freeValue(idxVal);
-        HANDLE_ERROR();
-      }
-
-      if (UNLIKELY(!IS_INT(idxVal))) {
-        VM_ERR(initTypeError, "Index must be an integer.");
-        freeValue(val);
-        freeValue(idxVal);
-        HANDLE_ERROR();
-      }
-      
-      int64_t i = AS_INT(idxVal);
-      Object* target = AS_OBJ(targetVal);
-
-      if (LIKELY(target->type == OBJ_LIST)) {
-        List *list = (List *)target;
-
-        if (UNLIKELY(i >= 0 && (uint64_t)i < list->size)) {
-          VM_ERR(initIndexError, "Index out of range.");
-          freeValue(val);
-          freeValue(idxVal);
-          HANDLE_ERROR();
-        }
-
-        freeObject(list->objects[i]);
-        list->objects[i] = valueToObject(copyValue(val));
-      } else if (target->type == OBJ_STRING) {
-        String *str = (String *)target;
-        Object *valObj = valueToObject(val);
-
-        if (UNLIKELY(i < 0 && (uint64_t)i >= str->len && valObj->type != OBJ_STRING && ((String *)valObj)->len != 1)) {
-          VM_ERR(initIndexError, "Index out of range or invalid value.");
-          freeObject(valObj);
-          freeValue(idxVal);
-          HANDLE_ERROR();
-        }
-
-        str->value[i] = ((String *)valObj)->value[0];
-        freeObject(valObj);
-      } else {
-        VM_ERR(initTypeError, "Target is not indexable.");
-        freeValue(val);
-        freeValue(idxVal);
-        HANDLE_ERROR();
-      }
-
-      PUSH(VAL_INT(1));
-      freeValue(val);
-      freeValue(idxVal);
-      DISPATCH();
-    }
-
     OP_CALL: {
       uint8_t argCount = READ_BYTE();
       Value args[256];
@@ -773,6 +771,7 @@ Object *vmRun(VM *vm) {
         newFrame->localsBase = vm->localsTop;
         newFrame->localCount = func->maxLocals;
         newFrame->currentInstr = 0;
+        newFrame->instance = NULL;
       
         int paramCount = (int)func->paramCount;
 
@@ -836,6 +835,58 @@ Object *vmRun(VM *vm) {
         }
 
         PUSH(objectToValue(res));
+        DISPATCH();
+      }
+
+      if (callee->type == OBJ_CLASS) {
+        Class* class = (Class*)callee;
+
+        for (int i = 0; i < argCount; i++) {
+          freeValue(args[i]);
+        }
+
+        if (UNLIKELY(!class->chunk)) {
+          VM_ERR(initRuntimeError, "Class has no body.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+        
+        if (UNLIKELY(vm->frameTop >= VM_CALL_STACK_MAX)) {
+          VM_ERR(initRuntimeError, "Call stack overflow.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+
+        Instance* instance = initInstance(class, vars);
+
+        if (UNLIKELY(!instance)) {
+          VM_ERR(initRuntimeError, "Out of memory.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+        
+        CallFrame* newFrame = &vm->frames[vm->frameTop];
+        
+        SAVE_STATE();
+
+        newFrame->chunk = class->chunk;
+        newFrame->ip = class->chunk->code;
+        newFrame->variables = instance->fields;
+        newFrame->tryStackTop = vm->tryStackTop;
+        newFrame->localsBase = vm->localsTop;
+        newFrame->localCount = 0;
+        newFrame->currentInstr = 0;
+        newFrame->instance = (Object*)instance;
+
+        for (int i = 0; i < class->maxLocals; i++)
+          vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
+
+        vm->localsTop += class->maxLocals;
+        vm->frameTop++;
+
+        if (!callee->isStatic) freeValue(calleeVal);
+
+        REFRESH_FRAME();
         DISPATCH();
       }
       
@@ -914,6 +965,7 @@ Object *vmRun(VM *vm) {
       newFrame->localsBase = vm->localsTop;
       newFrame->localCount = chunk->maxLocals;
       newFrame->currentInstr = 0;
+      newFrame->instance = NULL;
 
       for (int i = 0; i < chunk->maxLocals; i++)
         vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -935,8 +987,8 @@ Object *vmRun(VM *vm) {
           freeValue(vm->locals[leavingFrame->localsBase + i]);
 
         vm->localsTop = leavingFrame->localsBase;
-
-        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+        
+        if (!leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
           freeTable(leavingFrame->variables);
 
         vm->tryStackTop = leavingFrame->tryStackTop;
@@ -966,9 +1018,13 @@ Object *vmRun(VM *vm) {
           freeValue(vm->locals[leavingFrame->localsBase + i]);
 
         vm->localsTop = leavingFrame->localsBase;
-
-        if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+        
+        if (leavingFrame->instance) {
+          freeValue(res);
+          res = VAL_OBJ(leavingFrame->instance);
+        } else if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
           freeTable(leavingFrame->variables);
+        }
 
         vm->tryStackTop = leavingFrame->tryStackTop;
 
@@ -996,7 +1052,8 @@ VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, ch
     .variables = variables,
     .tryStackTop = 0,
     .localsBase = 0,
-    .localCount = chunk->maxLocals
+    .localCount = chunk->maxLocals,
+    .instance = NULL
   };
 
   vm->localsTop = chunk->maxLocals;

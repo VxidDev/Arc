@@ -1,5 +1,6 @@
 #include "../include/object.h"
 #include "../include/symbol-table.h"
+#include "../include/vm.h"
 
 #include "../include/token.h"
 
@@ -34,11 +35,12 @@ Object* copyObject(Object* obj) {
     case OBJ_ERROR:
     case OBJ_CONTINUE:
     case OBJ_BREAK:
+    case OBJ_CLASS:
+    case OBJ_INSTANCE:
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
-    default:
-      return NULL;
+    default: return NULL;
   }
 }
 
@@ -76,6 +78,12 @@ void freeObject(Object* obj) {
       break;
 
     case OBJ_FUNCTION:
+      Function* func = (Function*)obj;
+
+      if (!func->chunk && !func->body) break;
+
+      if (func->chunk) freeChunk(func->chunk);
+
       poolFree(functionPool, obj);
       break;
 
@@ -131,6 +139,20 @@ void freeObject(Object* obj) {
       free(obj);
 
       break;
+    }
+
+    case OBJ_INSTANCE: {
+      Instance* instance = (Instance*)obj;
+
+      freeTable(instance->fields);
+
+      poolFree(instancePool, instance);
+
+      break;
+    }
+
+    case OBJ_CLASS: {
+       break;
     }
   }
 

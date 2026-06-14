@@ -15,6 +15,7 @@ typedef struct FunctionNode FunctionNode;
 typedef struct FunctionCallNode FunctionCallNode;
 
 typedef struct SymbolTable SymbolTable;
+typedef struct Chunk Chunk;
 
 typedef enum ObjType {
   OBJ_NUMBER_INT,
@@ -29,7 +30,9 @@ typedef enum ObjType {
   OBJ_RETURN,
   OBJ_FILE,
   OBJ_BREAK,
-  OBJ_CONTINUE
+  OBJ_CONTINUE,
+  OBJ_CLASS,
+  OBJ_INSTANCE
 } ObjType;
 
 typedef struct Object {
@@ -147,6 +150,22 @@ typedef struct Continue {
   Object base; 
 } Continue;
 
+typedef struct Class {
+  Object base;
+
+  char *name;
+
+  Chunk* chunk;
+  int maxLocals;
+} Class;
+
+typedef struct Instance {
+  Object base;
+  
+  Class* klass;
+  SymbolTable* fields;
+} Instance;
+
 Number* initInt(int64_t value);
 Number* initFloat(double value);
 Number* copyNumber(Number *num);
@@ -172,6 +191,9 @@ ProgramError* initProgramError(char *details);
 Return* initReturn(Object* value);
 Break* initBreak();
 Continue* initContinue();
+
+Class* initClass(ClassNode* node);
+Instance* initInstance(Class* klass, SymbolTable* globals);
 
 FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, Interpretator* ctx);
 

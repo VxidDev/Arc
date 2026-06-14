@@ -23,6 +23,7 @@ typedef struct {
   int localCount;
 
   uint32_t currentInstr;
+  Object* instance;
 } CallFrame;
 
 typedef struct VM {

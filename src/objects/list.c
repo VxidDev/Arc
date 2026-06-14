@@ -30,24 +30,6 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
 }
 
 List* copyList(List* list) {
-    if (!list) return NULL;
-    Object **newObjects = malloc(sizeof(Object*) * list->capacity);
-    if (!newObjects) return NULL;
-
-    for (uint64_t i = 0; i < list->size; i++) {
-        Object *elem = list->objects[i];
-
-        if (elem && elem->isStatic)
-            newObjects[i] = elem;
-        else
-            newObjects[i] = elem ? copyObject(elem) : NULL;
-    }
-
-    List* newList = initList(newObjects, list->size, list->capacity);
-    for (uint64_t i = 0; i < list->size; i++) {
-        if (newObjects[i] && !newObjects[i]->isStatic)
-            freeObject(newObjects[i]);
-    }
-    free(newObjects);
-    return newList;
+  if (!list) return NULL;
+  return initList(list->objects, list->size, list->capacity);
 }

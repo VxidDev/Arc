@@ -100,7 +100,7 @@ NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredA
   nativeFunc->name = stringDup(name);
 
   if (!nativeFunc->name) {
-    free(nativeFunc);
+    poolFree(nativeFuncPool, nativeFunc);
     return NULL;
   }
 

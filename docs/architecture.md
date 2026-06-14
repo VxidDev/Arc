@@ -15,7 +15,7 @@ Arc is a stack-based virtual machine and compiler designed for simplicity and pe
 - **Dispatch**: Uses a labels-as-values jump table for opcode dispatch, significantly faster than a traditional `switch` statement in C.
 - **Call Stack**: Managed by `CallFrame` structures. Each function call or module import creates a new frame with its own Instruction Pointer (`ip`) and local variable array.
 - **Symbol Tables**: Global variables and module-level symbols are stored in hash tables (`SymbolTable`).
-- **Data Stack**: A fixed-size array of `Object*` pointers (default limit is 4096).
+- **Data Stack**: A fixed-size array of `Value` structures (default limit is 4096).
 
 ## Memory Management
 
@@ -23,13 +23,15 @@ Arc employs a hybrid memory management strategy focused on performance and low f
 
 - **Arena Allocation (`src/memarena.c`)**: Used for persistent data structures that live for the duration of a phase (like the AST during parsing).
 - **Memory Pools (`src/mempool.c`)**: Used for frequently allocated runtime objects like `Number` and `String`. This reduces the overhead of `malloc` and `free`.
-- **Manual Reference Management**: The VM handles object lifecycles using `copyObject` and `freeObject`. There is currently no automated generational garbage collector; instead, the stack and symbol tables own references to objects.
+- **Manual Reference Management**: The VM handles object lifecycles using `copyValue` and `freeValue`. There is currently no automated generational garbage collector; instead, the stack and symbol tables own references to values.
 
 ## Object System
 
-Every value in Arc is an `Object` with a specific `ObjType`:
-- **Numbers**: Supports 64-bit integers and double-precision floats. Small integers (-128 to 127) are cached and statically allocated.
+Every value in Arc is represented by a `Value` structure, which uses a tagged union to represent different data types:
+- **Value**: The primary unit of data for the VM stack and runtime operations. Contains a `ValueType` tag (`VAL_INT`, `VAL_FLOAT`, `VAL_OBJ`) and a union containing the actual data (`int64_t`, `double`, or `Object*`).
+- **Numbers**: Supported via `VAL_INT` and `VAL_FLOAT` types.
+- **Objects**: `VAL_OBJ` points to heap-allocated `Object` structures.
 - **Strings**: Stored in a dedicated string arena. Identifiers (variable names) are interned to allow for fast pointer-comparison lookups.
-- **Lists**: Dynamically sized arrays of `Object` pointers.
+- **Lists**: Dynamically sized arrays of `Object*` pointers.
 - **Functions**: First-class objects containing a reference to their compiled bytecode `Chunk`.
 - **Native Functions**: C function pointers wrapped as Arc objects for standard library integration.
