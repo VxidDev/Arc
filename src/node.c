@@ -344,6 +344,20 @@ ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Positi
   return node;
 }
 
+PropertyAccessNode* initPropertyAccessNode(ASTNode* target, Token field, Position start, Position end) {
+  if (!target) return NULL;
+
+  PropertyAccessNode* node = arenaAlloc(parseArena, sizeof(PropertyAccessNode));
+
+  node->base.type = NODE_PROPERTYACCESS;
+  node->target = target;
+  node->field = field;
+  node->start = start;
+  node->end = end;
+
+  return node;
+} 
+
 Position getNodeStart(ASTNode *node) {
   if (!node) return (Position){0,0,0};
 
@@ -368,6 +382,7 @@ Position getNodeStart(ASTNode *node) {
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
     case NODE_FOR: return ((ForNode*)node)->forTok.start;
     case NODE_CLASS: return ((ClassNode*)node)->start;
+    case NODE_PROPERTYACCESS: return getNodeStart(((PropertyAccessNode*)node)->target);
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
       return p->count > 0 ? getNodeStart(p->statements[0]) : (Position){0,0,0};
@@ -401,6 +416,7 @@ Position getNodeEnd(ASTNode *node) {
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->end;
     case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
     case NODE_CLASS: return ((ClassNode*)node)->end;
+    case NODE_PROPERTYACCESS: return ((PropertyAccessNode*)node)->end;
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
       return p->count > 0 ? getNodeEnd(p->statements[p->count-1]) : (Position){0,0,0};

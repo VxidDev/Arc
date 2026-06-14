@@ -24,7 +24,7 @@ Instance* initInstance(Class* klass, SymbolTable* globals) {
   if (!instance) return NULL;
 
   instance->base.type = OBJ_INSTANCE;
-  instance->base.isStatic = false;
+  instance->base.isStatic = true;
 
   instance->klass = klass;
 

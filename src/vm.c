@@ -298,7 +298,9 @@ Object *vmRun(VM *vm) {
     [OP_HALT] = &&OP_HALT,
 
     [OP_LOAD_LOCAL] = &&OP_LOAD_LOCAL,
-    [OP_STORE_LOCAL] = &&OP_STORE_LOCAL
+    [OP_STORE_LOCAL] = &&OP_STORE_LOCAL,
+
+    [OP_PROPERTY_ACCESS] = &&OP_PROPERTY_ACCESS
   };
 
   for (;;) {
@@ -331,6 +333,32 @@ Object *vmRun(VM *vm) {
       }
  
       PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
+      DISPATCH();
+    }
+
+    OP_PROPERTY_ACCESS: {
+      String* name = (String*)READ_CONST();
+      Value targetVal = POP();
+
+      if (UNLIKELY(!IS_OBJ(targetVal) || AS_OBJ(targetVal)->type != OBJ_INSTANCE)) {
+        VM_ERR(initTypeError, "Only instances have properties.");
+        freeValue(targetVal);
+        HANDLE_ERROR();
+      }
+
+      Instance* target = (Instance*)AS_OBJ(targetVal);
+      Value val = getTable(target->fields, name->value);
+
+      if (UNLIKELY(IS_UNDEF(val))) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Instance has no property \"%s\".", name->value);
+        VM_ERR(initNameError, buf);
+        freeValue(targetVal);
+        HANDLE_ERROR();
+      }
+
+      PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
+      freeValue(targetVal);
       DISPATCH();
     }
       

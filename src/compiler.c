@@ -790,6 +790,16 @@ static void compileClass(ASTNode *node, Compiler *c) {
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
 }
 
+static void compilePropertyAccessNode(ASTNode* node, Compiler* c) {
+  PropertyAccessNode* pa = (PropertyAccessNode*)node;
+
+  setPosFromNode(c, pa->target);
+  compileNode(pa->target, c);
+  
+  setPosFromNode(c, node);
+  emitBytes(c, OP_PROPERTY_ACCESS, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
+}
+
 static void compileNode(ASTNode *node, Compiler *c) {
   if (!node || *c->err) return;
 
@@ -812,6 +822,7 @@ static void compileNode(ASTNode *node, Compiler *c) {
     case NODE_IMPORT: compileImport(node, c); break;
     case NODE_RETURN: compileReturn(node, c); break;
     case NODE_CLASS: compileClass(node, c); break;
+    case NODE_PROPERTYACCESS: compilePropertyAccessNode(node, c); break;
     case NODE_BREAK:
       if (c->loop) {
         setPosFromNode(c, node);
@@ -937,6 +948,7 @@ void disassembleChunk(Chunk *chunk, const char *name) {
       case OP_HALT: printf("OP_HALT\n"); break;
       case OP_LOAD_LOCAL:  printf("OP_LOAD_LOCAL  %u\n", chunk->code[++i]); break;
       case OP_STORE_LOCAL: printf("OP_STORE_LOCAL %u\n", chunk->code[++i]); break;
+      case OP_PROPERTY_ACCESS: printf("OP_PROPERTY_ACCESS"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
 
       case OP_JUMP: {
         uint8_t hi = chunk->code[++i], lo = chunk->code[++i];

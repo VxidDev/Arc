@@ -35,6 +35,7 @@ typedef enum OpCode {
   OP_IMPORT,
   OP_STORE_INDEX,
   OP_BUILD_INSTANCE,
+  OP_PROPERTY_ACCESS,
   OP_HALT,
 } OpCode;
 

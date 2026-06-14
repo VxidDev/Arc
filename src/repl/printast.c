@@ -244,6 +244,16 @@ void printAST(ASTNode* node) {
 
       break;
     }
+
+    case NODE_PROPERTYACCESS: {
+      PropertyAccessNode* pa = (PropertyAccessNode*)node;
+
+      printf("%s%sPROPERTYACCESS:", COLOR(ANSI_MAGENTA_FG), COLOR(ANSI_ITALIC));
+      printAST(pa->target);
+      printf("%s::%s%s", COLOR(ANSI_BRIGHT_CYAN_FG), pa->field.val.s, COLOR(ANSI_RESET));
+
+      break;
+    }
   }
 }
 

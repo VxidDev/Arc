@@ -35,6 +35,7 @@ Object* copyObject(Object* obj) {
     case OBJ_CONTINUE:
     case OBJ_BREAK:
     case OBJ_CLASS:
+    case OBJ_INSTANCE:
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);

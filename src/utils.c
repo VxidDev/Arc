@@ -103,6 +103,8 @@ char* tokToString(const TokType type) {
     case TOK_IN: return "IN";
 
     case TOK_CLASS: return "CLASS";
+    case TOK_DOT: return "DOT";
+
     case TOK_EOF: return "EOF";
     case TOK_INVALID: return "INVALID";
 

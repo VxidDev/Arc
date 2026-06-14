@@ -546,6 +546,11 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       continue;
     }
 
+    if (lexer->currChar == '.') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DOT)) return NULL;
+      continue;
+    }
+
     char details[4] = {'\'', lexer->currChar, '\'', '\0'};
     Position start = lexer->pos;
     advanceLexer(lexer);

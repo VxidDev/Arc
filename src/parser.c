@@ -408,6 +408,25 @@ ASTNode* postfixParser(Parser* parser) {
     node = (ASTNode*)initIndexNode(node, index, start, end);
   }
 
+  while (parser->currentToken.type != TOK_EOF && parser->currentToken.type == TOK_DOT) {
+    Position start = parser->currentToken.start;
+
+    advanceParser(parser); // skip '.'
+
+    if (parser->currentToken.type != TOK_IDENTIFIER) {
+      if (*parser->error == NULL)
+        *parser->error = initSyntaxError(start, parser->currentToken.end, parser->filename, "Expected identifier after '.'.", parser->sourcetext);
+      return NULL;
+    }
+
+    Token field = parser->currentToken;
+    Position end = field.end;
+
+    advanceParser(parser); // skip identifier
+
+    node = (ASTNode*)initPropertyAccessNode(node, field, start, end);
+  }
+
   return node;
 }
 

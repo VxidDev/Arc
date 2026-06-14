@@ -26,7 +26,8 @@ typedef enum {
   NODE_CONTINUE,
   NODE_INDEXASSIGN,
   NODE_FOR,
-  NODE_CLASS
+  NODE_CLASS,
+  NODE_PROPERTYACCESS
 } NodeType;
 
 typedef struct Interpretator Interpretator;
@@ -189,6 +190,13 @@ typedef struct ClassNode {
   Position start, end;
 } ClassNode;
 
+typedef struct PropertyAccessNode {
+  ASTNode base;
+  ASTNode* target;
+  Token field;
+  Position start, end;
+} PropertyAccessNode;
+
 NumberNode* initNumberNode(Token token);
 StringNode* initStringNode(Token token);
 ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Position end);
@@ -210,6 +218,7 @@ ContinueNode* initContinueNode(Token tok);
 IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode* value, Position start, Position end);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 ForNode* initForNode(Token forTok, Token ident, ASTNode* iterable, ASTNode* body);
+PropertyAccessNode* initPropertyAccessNode(ASTNode* target, Token field, Position start, Position end);
 
 Position getNodeStart(ASTNode* node);
 Position getNodeEnd(ASTNode* node);
