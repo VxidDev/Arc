@@ -235,6 +235,9 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     deinitVM(vm);
 
     if (!result) {
+      freeChunk(chunk);
+      freeTokens(tokens, *size);
+
       if (*error && (*error)->details[0] != '@') { 
         char *errStr = errorAsString(*error);
         printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
@@ -383,8 +386,8 @@ int main(int argc, char **argv) {
 
   parseArguments(argc, argv);
   
-  initMemPools();
   initArenas();
+  initMemPools();
 
   variables = createTable(1024, NULL);
 
@@ -406,6 +409,8 @@ int main(int argc, char **argv) {
   free(argVect);
 
   setTable(variables, internIdentifier("argv", 4), VAL_OBJ((Object*)list));
+
+  freeObject((Object*)list);
 
   registerBuiltins(variables);
 
@@ -438,7 +443,6 @@ int main(int argc, char **argv) {
     
     if (_CLEANUP) {
       freeTable(variables);
-      freeObject((Object*)list);
       freeMemPools();
       freeArenas();
     }
@@ -461,6 +465,7 @@ int main(int argc, char **argv) {
         freeTable(variables);
         freeArenas();
         freeMemPools();
+        free(userInput);
       }
 
       break;

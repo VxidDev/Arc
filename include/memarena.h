@@ -20,6 +20,7 @@ extern Arena* parseArena;
 extern Arena* stringArena;
 extern Arena* objectArena;
 extern Arena* symbolPtrArena;
+extern Arena* poolArena;
 
 Arena* arenaCreate(void);
 

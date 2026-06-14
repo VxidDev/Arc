@@ -1,5 +1,6 @@
 #include "../include/mempool.h"
 #include "../include/repl/repl.h"
+#include "../include/memarena.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,7 @@ MemPool* initPool(size_t objSize) {
   MemPool* pool = malloc(sizeof(MemPool));
   if (!pool) return NULL;
 
-  pool->slab = malloc(objSize * POOL_SIZE);
+  pool->slab = arenaAlloc(poolArena, objSize * POOL_SIZE);
 
   if (!pool->slab) {
     free(pool);
@@ -19,7 +20,7 @@ MemPool* initPool(size_t objSize) {
 
   memset(pool->slab, 0, objSize * POOL_SIZE);
 
-  pool->slots = malloc(sizeof(void*) * POOL_SIZE);
+  pool->slots = arenaAlloc(poolArena, POOL_SIZE * sizeof(void*));
 
   if (!pool->slots) { 
     free(pool->slab);
@@ -51,7 +52,7 @@ void* poolAlloc(MemPool* pool) {
   if (pool->top > 0)
     return pool->slots[--pool->top];
 
-  return malloc(pool->objSize);
+  return calloc(pool->objSize, 1);
 }
 
 void poolFree(MemPool* pool, void* obj) {
@@ -73,7 +74,5 @@ void freePool(MemPool* pool) {
       free(pool->slots[i]);
   }
 
-  free(pool->slots);
-  free(pool->slab);
   free(pool);
 }

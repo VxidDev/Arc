@@ -3,6 +3,9 @@
 #include "../include/node.h"
 #include "../include/object.h"
 #include "../include/utils.h"
+
+#include "../include/mempool.h"
+
 #include <string.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -201,10 +204,24 @@ int chunkAddConst(Chunk *chunk, Object *obj) {
 void freeChunk(Chunk *chunk) {
   if (!chunk) return;
 
-  for (size_t i = 0; i < chunk->constCount; i++) 
-    freeObject(chunk->constants[i]);
+  for (size_t i = 0; i < chunk->constCount; i++) {
+    Object *obj = chunk->constants[i];
+    if (!obj) continue;
 
-  chunk->count = 0; chunk->constCount = 0;
+    if (obj->type == OBJ_FUNCTION) {
+      Function *func = (Function *)obj;
+      Chunk *subChunk = func->chunk;
+      func->chunk = NULL;
+      if (subChunk) freeChunk(subChunk);
+    } else if (obj->type == OBJ_STRING) {
+      poolFree(stringPool, obj);
+    } else if (!obj->isStatic) {
+      freeObject(obj);
+    }
+  }
+
+  chunk->count = 0;
+  chunk->constCount = 0;
 }
 
 static int resolveLocal(Compiler *c, const char *name) {

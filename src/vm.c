@@ -103,8 +103,19 @@ Value copyValue(Value v) {
 
 static inline Value objectToValue(Object *o) {
   if (UNLIKELY(!o)) return VAL_INT(0);
-  if (o->type == OBJ_NUMBER_INT) return VAL_INT(((Number*)o)->as.i);
-  if (o->type == OBJ_NUMBER_FLOAT) return VAL_FLOAT(((Number*)o)->as.f);
+
+  if (o->type == OBJ_NUMBER_INT) { 
+    Value v = VAL_INT(((Number*)o)->as.i);
+    freeObject(o);
+    return v;
+  }
+
+  if (o->type == OBJ_NUMBER_FLOAT) { 
+    Value v = VAL_FLOAT(((Number*)o)->as.f);
+    freeObject(o);
+    return v;
+  }
+
   return VAL_OBJ(o);
 }
 
