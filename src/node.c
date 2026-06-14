@@ -187,7 +187,25 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
   return node;
 }
 
-IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode* value, Position start, Position end) {
+PropertyAssignNode* initPropertyAssignNode(ASTNode* target, Token field, ASTNode* value, Position start, Position end) {
+  if (!target || !value) return NULL;
+
+  PropertyAssignNode* node = arenaAlloc(parseArena, sizeof(PropertyAssignNode));
+
+  if (!node) return NULL;
+  
+  node->base.type = NODE_PROPERTYASSIGN;
+
+  node->target = target;
+  node->field = field;
+  node->value = value;
+  node->start = start;
+  node->end = end;
+
+  return node;
+}
+
+IndexAssignNode* initIndexAssignNode(ASTNode* target, ASTNode* index, ASTNode* value, Position start, Position end) {
   if (!index || !value) return NULL;
 
   IndexAssignNode* node = arenaAlloc(parseArena, sizeof(IndexAssignNode));
@@ -196,7 +214,7 @@ IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode*
 
   node->base.type = NODE_INDEXASSIGN;
   
-  node->targetIdent = targetIdent;
+  node->target = target;
   node->index = index;
   node->value = value;
   node->start = start;
@@ -382,6 +400,7 @@ Position getNodeStart(ASTNode *node) {
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
     case NODE_FOR: return ((ForNode*)node)->forTok.start;
     case NODE_CLASS: return ((ClassNode*)node)->start;
+    case NODE_PROPERTYASSIGN: return ((PropertyAccessNode*)node)->start;
     case NODE_PROPERTYACCESS: return getNodeStart(((PropertyAccessNode*)node)->target);
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
@@ -417,6 +436,7 @@ Position getNodeEnd(ASTNode *node) {
     case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
     case NODE_CLASS: return ((ClassNode*)node)->end;
     case NODE_PROPERTYACCESS: return ((PropertyAccessNode*)node)->end;
+    case NODE_PROPERTYASSIGN: return ((PropertyAccessNode*)node)->end;
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
       return p->count > 0 ? getNodeEnd(p->statements[p->count-1]) : (Position){0,0,0};

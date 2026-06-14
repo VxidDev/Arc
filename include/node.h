@@ -27,7 +27,8 @@ typedef enum {
   NODE_INDEXASSIGN,
   NODE_FOR,
   NODE_CLASS,
-  NODE_PROPERTYACCESS
+  NODE_PROPERTYACCESS,
+  NODE_PROPERTYASSIGN
 } NodeType;
 
 typedef struct Interpretator Interpretator;
@@ -165,7 +166,7 @@ typedef struct ContinueNode {
 
 typedef struct IndexAssignNode {
   ASTNode base;
-  Token targetIdent; 
+  ASTNode* target; 
   ASTNode* value;
   ASTNode* index;
 
@@ -197,6 +198,15 @@ typedef struct PropertyAccessNode {
   Position start, end;
 } PropertyAccessNode;
 
+typedef struct PropertyAssignNode {
+  ASTNode base; 
+  ASTNode* target;
+  Token field;
+  ASTNode* value;
+  Position start, end;
+} PropertyAssignNode;
+
+PropertyAssignNode* initPropertyAssignNode(ASTNode* target, Token field, ASTNode* value, Position start, Position end);
 NumberNode* initNumberNode(Token token);
 StringNode* initStringNode(Token token);
 ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Position end);
@@ -215,7 +225,7 @@ TryCatchNode* initTryCatchNode(Position tryStart, Position catchEnd, Token errId
 ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr);
 BreakNode* initBreakNode(Token tok);
 ContinueNode* initContinueNode(Token tok);
-IndexAssignNode* initIndexAssignNode(Token targetIdent, ASTNode* index, ASTNode* value, Position start, Position end);
+IndexAssignNode* initIndexAssignNode(ASTNode* target, ASTNode* index, ASTNode* value, Position start, Position end);
 WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Position end);
 ForNode* initForNode(Token forTok, Token ident, ASTNode* iterable, ASTNode* body);
 PropertyAccessNode* initPropertyAccessNode(ASTNode* target, Token field, Position start, Position end);

@@ -383,8 +383,9 @@ static void compileBinOp(ASTNode *node, Compiler *c) {
 static void compileUnaryOp(ASTNode *node, Compiler *c) {
   UnaryOpNode *un = (UnaryOpNode *)node;
 
-  setPosFromNode(c, node);
+  setPosFromNode(c, un->node);
   compileNode(un->node, c);
+
   setPosFromNode(c, node);
 
   switch (un->operTok.type) {
@@ -418,23 +419,31 @@ static void compileIf(ASTNode *node, Compiler *c) {
   compileNode(n->condition, c);
   setPosFromNode(c, node);
   int toNext = emitJump(c, OP_JUMP_IF_FALSE);
-
+  
+  setPosFromNode(c, n->thenExpr);
   compileNode(n->thenExpr, c);
+
   setPosFromNode(c, node);
   endJumps[endJumpCount++] = emitJump(c, OP_JUMP);
   patchJump(c, toNext);
 
   for (size_t i = 0; i < n->elifCount; i++) {
+    setPosFromNode(c, n->elifConds[i]);
     compileNode(n->elifConds[i], c);
+
     setPosFromNode(c, node);
     toNext = emitJump(c, OP_JUMP_IF_FALSE);
+
+    setPosFromNode(c, n->elifExprs[i]);
     compileNode(n->elifExprs[i], c);
+
     setPosFromNode(c, node);
     endJumps[endJumpCount++] = emitJump(c, OP_JUMP);
     patchJump(c, toNext);
   }
 
   if (n->elseExpr) {
+    setPosFromNode(c, n->elseExpr);
     compileNode(n->elseExpr, c);
   } else {
     setPosFromNode(c, node);
@@ -462,15 +471,18 @@ static void compileWhile(ASTNode *node, Compiler *c) {
 
   int loopStart = (int)c->chunk->count;
   
-  setPosFromNode(c, node);
+  setPosFromNode(c, wn->condition);
   compileNode(wn->condition, c);
+
   setPosFromNode(c, node);
   int exitJump = emitJump(c, OP_JUMP_IF_FALSE);
 
   LoopInfo info = { .start = loopStart, .breaks = NULL, .continues = NULL, .next = c->loop };
   c->loop = &info;
-
+  
+  setPosFromNode(c, wn->body);
   compileNode(wn->body, c);
+
   setPosFromNode(c, node);
   emitByte(c, OP_POP);
 
@@ -515,8 +527,10 @@ static void compileWhile(ASTNode *node, Compiler *c) {
  */
 static void compileFor(ASTNode *node, Compiler *c) {
   ForNode *fn = (ForNode *)node;
-
+  
+  setPosFromNode(c, fn->iterable);
   compileNode(fn->iterable, c);
+
   setPosFromNode(c, node);
   emitByte(c, OP_FOR_PREP);
 
@@ -633,8 +647,10 @@ static void compileTryCatch(ASTNode *node, Compiler *c) {
   
   setPosFromNode(c, node);
   int catchJump = emitJump(c, OP_TRY_PUSH);
-
+  
+  setPosFromNode(c, tn->body);
   compileNode(tn->body, c);
+
   setPosFromNode(c, node);
   emitByte(c, OP_TRY_POP);
   
@@ -649,7 +665,8 @@ static void compileTryCatch(ASTNode *node, Compiler *c) {
 
   setPosFromNode(c, node);
   emitByte(c, OP_POP);
-
+  
+  setPosFromNode(c, tn->errHandler);
   compileNode(tn->errHandler, c);
   
   setPosFromNode(c, node);
@@ -665,8 +682,9 @@ static void compileImport(ASTNode *node, Compiler *c) {
 static void compileReturn(ASTNode *node, Compiler *c) {
   ReturnNode *ret = (ReturnNode *)node;
 
-  setPosFromNode(c, node);
+  setPosFromNode(c, ret->expr);
   compileNode(ret->expr, c);
+
   setPosFromNode(c, node);
 
   emitByte(c, OP_RETURN);
@@ -688,12 +706,14 @@ static void compileList(ASTNode *node, Compiler *c) {
 static void compileIndex(ASTNode *node, Compiler *c) {
   IndexNode *in = (IndexNode *)node;
 
-  setPosFromNode(c, node);
+  setPosFromNode(c, in->target);
   compileNode(in->target, c);
   
   setPosFromNode(c, node);
-
+  
+  setPosFromNode(c, in->index);
   compileNode(in->index, c);
+
   setPosFromNode(c, node);
 
   emitByte(c, OP_INDEX_GET);
@@ -701,22 +721,24 @@ static void compileIndex(ASTNode *node, Compiler *c) {
 
 static void compileIndexAssign(ASTNode *node, Compiler *c) {
   IndexAssignNode *ia = (IndexAssignNode *)node;
+  
+  setPosFromNode(c, ia->target);
+  compileNode(ia->target, c);
 
-  setPosFromNode(c, node);
+  setPosFromNode(c, ia->index);
   compileNode(ia->index, c);
   
-  setPosFromNode(c, node);
-
+  setPosFromNode(c, ia->value);
   compileNode(ia->value, c);
-  setPosFromNode(c, node);
 
-  emitBytes(c, OP_STORE_INDEX, internString(c, ia->targetIdent.val.s, strlen(ia->targetIdent.val.s)));
+  setPosFromNode(c, node);
+  emitByte(c, OP_INDEX_SET);
 }
 
 static void compileFunctionCall(ASTNode *node, Compiler *c) {
   FunctionCallNode *fc = (FunctionCallNode *)node;
 
-  setPosFromNode(c, node);
+  setPosFromNode(c, fc->callee);
   compileNode(fc->callee, c);
 
   for (size_t i = 0; i < fc->argCount; i++) {
@@ -726,6 +748,19 @@ static void compileFunctionCall(ASTNode *node, Compiler *c) {
   
   setPosFromNode(c, node);
   emitBytes(c, OP_CALL, (uint8_t)fc->argCount);
+}
+
+static void compilePropertyAssignNode(ASTNode* node, Compiler* c) {
+  PropertyAssignNode* pa = (PropertyAssignNode*)node;
+
+  setPosFromNode(c, pa->target);
+  compileNode(pa->target, c);   
+
+  setPosFromNode(c, pa->value);
+  compileNode(pa->value, c);
+
+  setPosFromNode(c, node);
+  emitBytes(c, OP_PROPERTY_SET, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
 }
 
 /*
@@ -823,6 +858,7 @@ static void compileNode(ASTNode *node, Compiler *c) {
     case NODE_RETURN: compileReturn(node, c); break;
     case NODE_CLASS: compileClass(node, c); break;
     case NODE_PROPERTYACCESS: compilePropertyAccessNode(node, c); break;
+    case NODE_PROPERTYASSIGN: compilePropertyAssignNode(node, c); break;
     case NODE_BREAK:
       if (c->loop) {
         setPosFromNode(c, node);
@@ -940,7 +976,6 @@ void disassembleChunk(Chunk *chunk, const char *name) {
 
       case OP_TRY_POP: printf("OP_TRY_POP\n"); break;
       case OP_IMPORT: printf("OP_IMPORT"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
-      case OP_STORE_INDEX: printf("OP_STORE_INDEX"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
       case OP_CALL: printf("OP_CALL %u\n", chunk->code[++i]); break;
       case OP_BREAK: printf("OP_BREAK\n"); break;
       case OP_CONTINUE: printf("OP_CONTINUE\n"); break;
@@ -949,6 +984,7 @@ void disassembleChunk(Chunk *chunk, const char *name) {
       case OP_LOAD_LOCAL:  printf("OP_LOAD_LOCAL  %u\n", chunk->code[++i]); break;
       case OP_STORE_LOCAL: printf("OP_STORE_LOCAL %u\n", chunk->code[++i]); break;
       case OP_PROPERTY_ACCESS: printf("OP_PROPERTY_ACCESS"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
+      case OP_PROPERTY_SET: printf("OP_PROPERTY_ASSIGN"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
 
       case OP_JUMP: {
         uint8_t hi = chunk->code[++i], lo = chunk->code[++i];

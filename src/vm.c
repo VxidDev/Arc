@@ -283,7 +283,6 @@ Object *vmRun(VM *vm) {
 
     [OP_INDEX_GET] = &&OP_INDEX_GET,
     [OP_INDEX_SET] = &&OP_INDEX_SET,
-    [OP_STORE_INDEX] = &&OP_STORE_INDEX,
 
     [OP_CALL] = &&OP_CALL,
 
@@ -300,7 +299,8 @@ Object *vmRun(VM *vm) {
     [OP_LOAD_LOCAL] = &&OP_LOAD_LOCAL,
     [OP_STORE_LOCAL] = &&OP_STORE_LOCAL,
 
-    [OP_PROPERTY_ACCESS] = &&OP_PROPERTY_ACCESS
+    [OP_PROPERTY_ACCESS] = &&OP_PROPERTY_ACCESS,
+    [OP_PROPERTY_SET] = &&OP_PROPERTY_SET
   };
 
   for (;;) {
@@ -359,6 +359,28 @@ Object *vmRun(VM *vm) {
 
       PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
       freeValue(targetVal);
+      DISPATCH();
+    }
+
+    OP_PROPERTY_SET: {
+      String* name = (String*)READ_CONST();
+      
+      Value val = POP();
+      Value targetVal = POP();
+
+      if (UNLIKELY(!IS_OBJ(targetVal) || AS_OBJ(targetVal)->type != OBJ_INSTANCE)) {
+        VM_ERR(initTypeError, "Only instances have properties.");
+        freeValue(targetVal);
+        freeValue(val);
+        HANDLE_ERROR();
+      }
+
+      Instance* target = (Instance*)AS_OBJ(targetVal);
+      setTable(target->fields, name->value, val);
+
+      PUSH(val);
+      freeValue(targetVal);
+
       DISPATCH();
     }
       
@@ -689,69 +711,6 @@ Object *vmRun(VM *vm) {
       freeValue(idxVal);
       freeValue(targetVal);
       
-      DISPATCH();
-    }
-
-    OP_STORE_INDEX: {
-      String *name = (String *)READ_CONST();
-      Value val = POP();
-      Value idxVal = POP();
-      Value targetVal = getTable(vars, name->value);
-    
-      if (UNLIKELY(IS_UNDEF(targetVal))) {
-        char buf[256];
-        snprintf(buf, sizeof(buf), "Undefined variable \"%s\".", name->value);
-        VM_ERR(initNameError, buf);
-        freeValue(val);
-        freeValue(idxVal);
-        HANDLE_ERROR();
-      }
-
-      if (UNLIKELY(!IS_INT(idxVal))) {
-        VM_ERR(initTypeError, "Index must be an integer.");
-        freeValue(val);
-        freeValue(idxVal);
-        HANDLE_ERROR();
-      }
-      
-      int64_t i = AS_INT(idxVal);
-      Object* target = AS_OBJ(targetVal);
-
-      if (LIKELY(target->type == OBJ_LIST)) {
-        List *list = (List *)target;
-
-        if (UNLIKELY(i >= 0 && (uint64_t)i < list->size)) {
-          VM_ERR(initIndexError, "Index out of range.");
-          freeValue(val);
-          freeValue(idxVal);
-          HANDLE_ERROR();
-        }
-
-        freeObject(list->objects[i]);
-        list->objects[i] = valueToObject(copyValue(val));
-      } else if (target->type == OBJ_STRING) {
-        String *str = (String *)target;
-        Object *valObj = valueToObject(val);
-
-        if (UNLIKELY(i < 0 && (uint64_t)i >= str->len && valObj->type != OBJ_STRING && ((String *)valObj)->len != 1)) {
-          VM_ERR(initIndexError, "Index out of range or invalid value.");
-          freeObject(valObj);
-          freeValue(idxVal);
-          HANDLE_ERROR();
-        }
-
-        str->value[i] = ((String *)valObj)->value[0];
-        freeObject(valObj);
-      } else {
-        VM_ERR(initTypeError, "Target is not indexable.");
-        freeValue(val);
-        freeValue(idxVal);
-        HANDLE_ERROR();
-      }
-
-      PUSH(VAL_INT(1));
-      freeValue(val);
-      freeValue(idxVal);
       DISPATCH();
     }
 
