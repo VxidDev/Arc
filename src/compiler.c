@@ -133,6 +133,34 @@ oom:
   return 0;
 }
 
+static uint8_t addStringConst(Compiler *c, char *str, size_t len) {
+  if (c->chunk->constCount >= 256) {
+    if (c->err && !*c->err)
+      *c->err = initRuntimeError(
+        (Position){0,0,0}, (Position){0,0,0},
+        c->filename,
+        "Too many constants in chunk (max 256).",
+        c->sourcetext);
+
+    return 0;
+  }
+
+  Object *obj = (Object *)initString(str, len);
+  if (!obj) {
+    if (c->err && !*c->err)
+      *c->err = initRuntimeError(
+      (Position){0,0,0}, (Position){0,0,0},
+      c->filename, "Out of memory.", c->sourcetext);
+    return 0;
+  }
+
+  int raw = chunkAddConst(c->chunk, obj);
+  if (raw < 0) return 0;
+
+  return (uint8_t)raw;
+}
+
+
 #define CHUNK_INIT_CAP 256 // TODO: add flag for this 
 #define CONST_INIT_CAP 64 // TODO: add flag for this 
 
@@ -319,7 +347,7 @@ static void compileNumber(ASTNode *node, Compiler *c) {
 static void compileString(ASTNode *node, Compiler *c) {
   StringNode *str = (StringNode *)node;
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, internString(c, str->token.val.s, str->len));
+  emitBytes(c, OP_LOAD_CONST, addStringConst(c, str->token.val.s, str->len));
 }
 
 static void compileVarAccess(ASTNode *node, Compiler *c) {

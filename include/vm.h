@@ -22,6 +22,8 @@ typedef struct {
   int localsBase;
   int localCount;
 
+  char *filename;
+
   uint32_t currentInstr;
   Object* instance;
 } CallFrame;

@@ -19,7 +19,7 @@
 
 #define LOAD_STATE() \
   CallFrame *frame = &vm->frames[vm->frameTop - 1]; \
-  register uint8_t *ip = frame->ip; \
+  uint8_t *ip = frame->ip; \
   SymbolTable* vars = frame->variables; \
   register Value *sp = vm->stack + vm->stackTop; \
   Object** constants = frame->chunk->constants;
@@ -44,7 +44,16 @@
 
 #define READ_BYTE()  (*ip++)
 #define READ_CONST() (constants[*ip++])
-#define READ_SHORT() (ip += 2, (int16_t)((ip[-2] << 8) | ip[-1]))
+
+
+static inline int16_t _read_short(uint8_t **ipp) {
+  uint16_t v;
+  __builtin_memcpy(&v, *ipp, 2);
+  *ipp += 2;
+  return (int16_t)__builtin_bswap16(v);
+}
+
+#define READ_SHORT() _read_short(&ip)
 
 #define LOCAL(slot) (vm->locals[frame->localsBase + (slot)])
 
@@ -437,51 +446,84 @@ Object *vmRun(VM *vm) {
       DISPATCH();
     }
 
-    OP_ADD: OP_SUB: OP_MUL: OP_DIV:
-    OP_POW: OP_EQ:  OP_NE:  OP_LT:
-    OP_GT: OP_LTE: OP_GTE: OP_AND: OP_OR: {
-      Value b = POP();
-      Value a = POP();
-
-      if (LIKELY(IS_INT(a) && IS_INT(b))) {
-        int64_t na = AS_INT(a);
-        int64_t nb = AS_INT(b);
-
-        switch (op) {
-          case OP_ADD: PUSH(VAL_INT(na + nb)); DISPATCH();
-          case OP_SUB: PUSH(VAL_INT(na - nb)); DISPATCH();
-          case OP_MUL: PUSH(VAL_INT(na * nb)); DISPATCH();
-          case OP_DIV:
-            if (nb == 0) { 
-              VM_ERR(initValueError, "Division by zero.");
-              HANDLE_ERROR();
-            }
-
-            PUSH(VAL_FLOAT((double)na / nb));
-            DISPATCH();
-          case OP_POW: PUSH(VAL_FLOAT(pow((double)na, (double)nb))); DISPATCH();
-          case OP_EQ:  PUSH(VAL_INT(na == nb)); DISPATCH();
-          case OP_NE:  PUSH(VAL_INT(na != nb)); DISPATCH();
-          case OP_LT:  PUSH(VAL_INT(na < nb));  DISPATCH();
-          case OP_GT:  PUSH(VAL_INT(na > nb));  DISPATCH();
-          case OP_LTE: PUSH(VAL_INT(na <= nb)); DISPATCH();
-          case OP_GTE: PUSH(VAL_INT(na >= nb)); DISPATCH();
-          case OP_AND: PUSH(VAL_INT(na && nb)); DISPATCH();
-          case OP_OR:  PUSH(VAL_INT(na || nb)); DISPATCH();
-          default: break;
-        }
-      }
-
-      Value res = doArith(vm, frame, op, a, b);
-
-      if (UNLIKELY(*vm->err)) { 
-        freeValue(res);
-        HANDLE_ERROR();
-      }
-
-      PUSH(res);
-      DISPATCH();
+    
+  #define ARITH_SLOW(OP_ENUM) \
+    { Value res = doArith(vm, frame, OP_ENUM, a, b); \
+      if (UNLIKELY(*vm->err)) { freeValue(res); HANDLE_ERROR(); } \
+      PUSH(res); DISPATCH(); }
+ 
+    OP_ADD: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) + AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_ADD);
     }
+    OP_SUB: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) - AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_SUB);
+    }
+    OP_MUL: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) * AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_MUL);
+    }
+    OP_DIV: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) {
+        int64_t nb = AS_INT(b);
+        if (UNLIKELY(nb == 0)) { VM_ERR(initValueError, "Division by zero."); HANDLE_ERROR(); }
+        PUSH(VAL_FLOAT((double)AS_INT(a) / nb)); DISPATCH();
+      }
+      ARITH_SLOW(OP_DIV);
+    }
+    OP_POW: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) {
+        PUSH(VAL_FLOAT(pow((double)AS_INT(a), (double)AS_INT(b)))); DISPATCH();
+      }
+      ARITH_SLOW(OP_POW);
+    }
+    OP_EQ: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) == AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_EQ);
+    }
+    OP_NE: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) != AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_NE);
+    }
+    OP_LT: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) < AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_LT);
+    }
+    OP_GT: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) > AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_GT);
+    }
+    OP_LTE: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) <= AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_LTE);
+    }
+    OP_GTE: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) >= AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_GTE);
+    }
+    OP_AND: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) && AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_AND);
+    }
+    OP_OR: {
+      Value b = POP(); Value a = POP();
+      if (LIKELY(IS_INT(a) && IS_INT(b))) { PUSH(VAL_INT(AS_INT(a) || AS_INT(b))); DISPATCH(); }
+      ARITH_SLOW(OP_OR);
+    }
+  #undef ARITH_SLOW
 
     OP_NEG: {
       Value a = POP();
@@ -588,7 +630,7 @@ Object *vmRun(VM *vm) {
         }
 
         PUSH(item);
-        (sp - 2)->as.i++; 
+        (sp - 1)->as.i = index + 1; 
       } else {
         (void)POP(); // index, primitive 
         (void)POP(); // length, primitive 
@@ -700,7 +742,7 @@ Object *vmRun(VM *vm) {
         String *str = (String *)target;
         Object *valObj = valueToObject(val);
 
-        if (UNLIKELY(i < 0 && (uint64_t)i >= str->len && valObj->type != OBJ_STRING && ((String *)valObj)->len != 1)) {
+        if (UNLIKELY(i < 0 || (uint64_t)i >= str->len || valObj->type != OBJ_STRING || ((String *)valObj)->len != 1)) {
           VM_ERR(initIndexError, "Index out of range or invalid value.");
           freeObject(valObj);
           freeValue(idxVal);
@@ -727,10 +769,8 @@ Object *vmRun(VM *vm) {
 
     OP_CALL: {
       uint8_t argCount = READ_BYTE();
-      Value args[256];
-
-      for (int i = argCount - 1; i >= 0; i--) 
-        args[i] = POP();
+      Value *args = sp - argCount;
+      sp -= argCount;
 
       Value calleeVal = POP();
 
@@ -747,6 +787,7 @@ Object *vmRun(VM *vm) {
         if (UNLIKELY(!func->chunk && func->body)) {
           func->chunk = compileAST(func->body, vm->err, vm->filename, vm->sourcetext);
           if (func->chunk) func->maxLocals = func->chunk->maxLocals;
+          func->body = NULL;
         }
 
         if (UNLIKELY(!func->chunk)) {
@@ -772,25 +813,17 @@ Object *vmRun(VM *vm) {
         newFrame->localCount = func->maxLocals;
         newFrame->currentInstr = 0;
         newFrame->instance = NULL;
-      
+        newFrame->filename = frame->filename;
+        
         int paramCount = (int)func->paramCount;
+        int base = newFrame->localsBase;
+        int i = 0;
 
-        for (int i = 0; i < paramCount; i++) {
-          Value arg = (i < argCount) ? args[i] : VAL_INT(0);
+        for (; i < paramCount && i < argCount; i++) {
+          vm->locals[base + i] = args[i];
+        } 
 
-          if (IS_OBJ(arg)) {
-            Object* o = AS_OBJ(arg);
-
-            if (o->type == OBJ_NUMBER_INT)
-              arg = VAL_INT(((Number*)o)->as.i);
-            else if (o->type == OBJ_NUMBER_FLOAT)
-              arg = VAL_FLOAT(((Number*)o)->as.f);
-          }
-
-          vm->locals[newFrame->localsBase + i] = arg; 
-        }
-
-        for (int i = (int)func->paramCount; i < func->maxLocals; i++)
+        for (; i < func->maxLocals; i++)
           vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
 
         for (int i = (int)func->paramCount; i < argCount; i++)
@@ -807,8 +840,9 @@ Object *vmRun(VM *vm) {
 
       if (callee->type == OBJ_NATIVE_FUNCTION) {
         NativeFunction *nf = (NativeFunction *)callee;
-
-        Object* objArgs[256];
+        
+        Object* objArgsBuf[16];
+        Object** objArgs = (argCount <= 16) ? objArgsBuf : (Object**)malloc(sizeof(Object*) * argCount);
 
         for (int i = 0; i < argCount; i++)
           objArgs[i] = valueToObject(args[i]);
@@ -821,6 +855,8 @@ Object *vmRun(VM *vm) {
           else if (objArgs[i] != res) 
             freeValue(args[i]);
         }
+
+        if (objArgs != objArgsBuf) free(objArgs);
           
         if (UNLIKELY(res && res->type == OBJ_ERROR)) {
           VM_ERR(initRuntimeError, ((ProgramError*)res)->details);
@@ -877,6 +913,7 @@ Object *vmRun(VM *vm) {
         newFrame->localCount = 0;
         newFrame->currentInstr = 0;
         newFrame->instance = (Object*)instance;
+        newFrame->filename = frame->filename;
 
         for (int i = 0; i < class->maxLocals; i++)
           vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -889,7 +926,7 @@ Object *vmRun(VM *vm) {
         REFRESH_FRAME();
         DISPATCH();
       }
-      
+
       VM_ERR(initTypeError, "Object is not callable.");
       freeValue(calleeVal);
       HANDLE_ERROR();
@@ -920,7 +957,15 @@ Object *vmRun(VM *vm) {
         }
       }
 
-      char *resolvedPath = resolveImportPath(vm->filename, name);
+      char *resolvedPath = resolveImportPath(frame->filename, name);
+      
+      if (_DEBUG) { 
+        printf("[debug] vm->filename: %s\n", vm->filename);
+        printf("[debug] frame->filename: %s\n", frame->filename);
+        printf("[debug] name: %s\n", name);
+        printf("[debug] Resolved import path: %s\n", resolvedPath);
+      }
+
       char *fileContent = readFile(resolvedPath);
 
       if (UNLIKELY(!fileContent)) {
@@ -966,6 +1011,7 @@ Object *vmRun(VM *vm) {
       newFrame->localCount = chunk->maxLocals;
       newFrame->currentInstr = 0;
       newFrame->instance = NULL;
+      newFrame->filename = resolvedPath;
 
       for (int i = 0; i < chunk->maxLocals; i++)
         vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -995,6 +1041,9 @@ Object *vmRun(VM *vm) {
         
         SAVE_STATE();
         REFRESH_FRAME();
+
+        vm->filename = frame->filename;
+
         PUSH(res);
         DISPATCH(); 
       }
@@ -1053,7 +1102,8 @@ VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, ch
     .tryStackTop = 0,
     .localsBase = 0,
     .localCount = chunk->maxLocals,
-    .instance = NULL
+    .instance = NULL,
+    .filename = filename
   };
 
   vm->localsTop = chunk->maxLocals;

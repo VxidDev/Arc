@@ -1,5 +1,5 @@
-IMPORT "math.arc"
-IMPORT "assert.arc"
+IMPORT "../stdlib/math.arc"
+IMPORT "../stdlib/assert.arc"
 
 VAR caught = 0
 

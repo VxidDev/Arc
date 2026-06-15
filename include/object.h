@@ -64,6 +64,7 @@ typedef struct String {
   Object base;
   char *value;
   uint64_t len;
+  long hash;
 } String;
 
 typedef struct List {

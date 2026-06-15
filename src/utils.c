@@ -149,7 +149,6 @@ static int hasExtension(const char* path) {
 char* resolveImportPath(const char* currentFile, const char* importPath) {
   if (importPath[0] == '@') {
     const char *path = importPath + 1;
-
     char buffer[4096];
 
     if (hasExtension(path)) {
@@ -157,11 +156,10 @@ char* resolveImportPath(const char* currentFile, const char* importPath) {
     } else {
       snprintf(buffer, sizeof(buffer), "%s/%s.arc", ARC_LIB_DIR, path);
     }
-
     return stringDup(buffer);
-  } 
+  }
 
-  if (importPath[0] == '/' || hasExtension(importPath)) {
+  if (importPath[0] == '/') {
     return stringDup(importPath);
   }
 
@@ -169,7 +167,12 @@ char* resolveImportPath(const char* currentFile, const char* importPath) {
   getDirectory(currentFile, dir);
 
   char buffer[4096];
-  snprintf(buffer, sizeof(buffer), "%s/%s.arc", dir, importPath);
+
+  if (hasExtension(importPath)) {
+    snprintf(buffer, sizeof(buffer), "%s/%s", dir, importPath);
+  } else {
+    snprintf(buffer, sizeof(buffer), "%s/%s.arc", dir, importPath);
+  }
 
   return stringDup(buffer);
 }
