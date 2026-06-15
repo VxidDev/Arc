@@ -1,15 +1,14 @@
 # benchmarking
 gen.py
 gen_py.py
+py.py 
+fib.py
 test.arc 
 test.py
 calc.arc
 arc.arc
-*.py 
 vgcore.*
 
-benchmark.py
-benchmark.arc
 fib.arc
 profile.txt
 # Prerequisites
