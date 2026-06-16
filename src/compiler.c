@@ -3,6 +3,7 @@
 #include "../include/node.h"
 #include "../include/object.h"
 #include "../include/utils.h"
+#include "../include/repl/repl.h"
 
 #include "../include/mempool.h"
 
@@ -45,6 +46,8 @@ static inline void setPosFromNode(Compiler *c, ASTNode *node) {
 }
 
 static bool internTableResize(InternTable *t, size_t oldCap, size_t newCap) {
+  if (_DEBUG) printf("[debug] Resizing intern table.\n");
+
   InternEntry *newEntries = arenaRealloc(objectArena, t->entries, oldCap * sizeof(InternEntry), newCap * sizeof(InternEntry));
   if (!newEntries) return false;
 
@@ -168,14 +171,20 @@ Chunk *initChunk(void) {
   Chunk *chunk = arenaNew(objectArena, Chunk);
   if (!chunk) return NULL;
 
+  memset(chunk, 0, sizeof(Chunk));
+
   chunk->code = arenaAlloc(objectArena, CHUNK_INIT_CAP * sizeof(uint8_t));
   if (!chunk->code) return NULL;
+  
+  memset(chunk->code, 0, CHUNK_INIT_CAP * sizeof(uint8_t));
 
   chunk->count = 0; 
   chunk->capacity = CHUNK_INIT_CAP;
 
   chunk->constants = arenaAlloc(objectArena, CONST_INIT_CAP * sizeof(Object *));
   if (!chunk->constants) return NULL;
+
+  memset(chunk->constants, 0, CONST_INIT_CAP * sizeof(Object*));
 
   chunk->constCount = 0; 
   chunk->constCapacity = CONST_INIT_CAP;

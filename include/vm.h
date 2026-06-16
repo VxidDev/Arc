@@ -28,6 +28,12 @@ typedef struct {
   Object* instance;
 } CallFrame;
 
+typedef struct {
+  uint8_t *ip;
+  int frameTop;
+  int stackTop;
+} TryFrame;
+
 typedef struct VM {
   CallFrame frames[VM_CALL_STACK_MAX];
   int frameTop;
@@ -38,7 +44,7 @@ typedef struct VM {
   Value locals[VM_LOCALS_MAX];
   int localsTop;
 
-  uint8_t *tryStack[VM_TRY_STACK_MAX];
+  TryFrame tryStack[VM_TRY_STACK_MAX];
   int tryStackTop;
 
   Error **err;

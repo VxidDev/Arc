@@ -53,6 +53,34 @@ static inline int16_t _read_short(uint8_t **ipp) {
   return (int16_t)__builtin_bswap16(v);
 }
 
+static inline bool isTruthy(Value v) {
+  if (IS_INT(v)) return AS_INT(v) != 0;
+  if (IS_FLOAT(v)) return AS_FLOAT(v) != 0.0;
+
+  if (IS_UNDEF(v)) return false;
+
+  if (!IS_OBJ(v)) return true;
+
+  Object *o = AS_OBJ(v);
+
+  switch (o->type) {
+    case OBJ_STRING:
+      return ((String*)o)->len > 0;
+
+    case OBJ_LIST:
+      return ((List*)o)->size > 0;
+
+    case OBJ_NUMBER_INT:
+      return ((Number*)o)->as.i != 0;
+
+    case OBJ_NUMBER_FLOAT:
+      return ((Number*)o)->as.f != 0.0;
+
+    default:
+      return true;
+  }
+}
+
 #define READ_SHORT() _read_short(&ip)
 
 #define LOCAL(slot) (vm->locals[frame->localsBase + (slot)])
@@ -81,7 +109,19 @@ static inline int16_t _read_short(uint8_t **ipp) {
 
 #define HANDLE_ERROR() \
   if (LIKELY(vm->tryStackTop > 0)) { \
-    ip = vm->tryStack[--vm->tryStackTop]; \
+    TryFrame tf = vm->tryStack[--vm->tryStackTop]; \
+    while (vm->frameTop > tf.frameTop) { \
+      CallFrame *leavingFrame = &vm->frames[--vm->frameTop]; \
+      for (int i = 0; i < leavingFrame->localCount; i++) \
+        freeValue(vm->locals[leavingFrame->localsBase + i]); \
+      vm->localsTop = leavingFrame->localsBase; \
+      if (!leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) \
+        freeTable(leavingFrame->variables); \
+    } \
+    REFRESH_FRAME(); \
+    ip = tf.ip; \
+    vm->stackTop = tf.stackTop; \
+    sp = vm->stack + vm->stackTop; \
     if (*vm->err) { \
       Object *errStr = (Object *)initString((*vm->err)->details, strlen((*vm->err)->details)); \
       PUSH(objectToValue(errStr)); \
@@ -406,6 +446,11 @@ Object *vmRun(VM *vm) {
       
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
+  
+      if (UNLIKELY(_DEBUG)) {
+        printf("[debug] OP_STORE_VAR: name = %p | name->value = %p\n", name, name ? name->value : (void*)0);
+      }
+
       setTable(vars, name->value, PEEK(0));
       DISPATCH();
     }
@@ -527,7 +572,7 @@ Object *vmRun(VM *vm) {
 
     OP_NEG: {
       Value a = POP();
-
+      
       if (LIKELY(a.type == VAL_INT)) 
         PUSH(VAL_INT(-AS_INT(a)));
       else if (a.type == VAL_FLOAT) 
@@ -567,13 +612,7 @@ Object *vmRun(VM *vm) {
       int16_t offset = READ_SHORT();
       Value cond = POP();
 
-      if (UNLIKELY(cond.type != VAL_INT)) {
-        VM_ERR(initTypeError, "Condition must be an integer.");
-        freeValue(cond);
-        HANDLE_ERROR();
-      }
-
-      if (AS_INT(cond) == 0)
+      if (!isTruthy(cond))
         ip += offset;
 
       DISPATCH();
@@ -630,7 +669,7 @@ Object *vmRun(VM *vm) {
         }
 
         PUSH(item);
-        (sp - 1)->as.i = index + 1; 
+        (sp - 2)->as.i = index + 1; 
       } else {
         (void)POP(); // index, primitive 
         (void)POP(); // length, primitive 
@@ -783,6 +822,14 @@ Object *vmRun(VM *vm) {
 
       if (LIKELY(callee->type == OBJ_FUNCTION)) {
         Function *func = (Function *)callee;
+
+        if (UNLIKELY(argCount != func->paramCount)) {
+          char buf[256];
+          snprintf(buf, sizeof(buf), "Function \"%s\" expects %zu arguments, got %d.", func->name, func->paramCount, argCount);
+          VM_ERR(initRuntimeError, buf);
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
           
         if (UNLIKELY(!func->chunk && func->body)) {
           func->chunk = compileAST(func->body, vm->err, vm->filename, vm->sourcetext);
@@ -935,8 +982,13 @@ Object *vmRun(VM *vm) {
     OP_TRY_PUSH: {
       int16_t offset = READ_SHORT();
 
-      if (LIKELY(vm->tryStackTop < VM_TRY_STACK_MAX)) 
-        vm->tryStack[vm->tryStackTop++] = ip + offset;
+      if (LIKELY(vm->tryStackTop < VM_TRY_STACK_MAX)) {
+        vm->tryStack[vm->tryStackTop++] = (TryFrame){
+          .ip = ip + offset,
+          .frameTop = vm->frameTop,
+          .stackTop = (int)(sp - vm->stack)
+        };
+      }
 
       DISPATCH();
     }
@@ -1034,7 +1086,7 @@ Object *vmRun(VM *vm) {
 
         vm->localsTop = leavingFrame->localsBase;
         
-        if (!leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+        if (!leavingFrame->instance && !leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
           freeTable(leavingFrame->variables);
 
         vm->tryStackTop = leavingFrame->tryStackTop;

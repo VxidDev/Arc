@@ -295,6 +295,23 @@ Token makeIdentifierLexer(Lexer *lexer) {
   }
 
   idStr[size] = '\0';
+
+  if (strcmp(idStr, "true") == 0) {
+    int64_t *val = arenaAlloc(stringArena, sizeof(int64_t));
+    if (!val) return (Token){.type = TOK_INVALID};
+    *val = 1;
+
+    return initToken(TOK_INT, val, false, start, lexer->pos);
+  }
+
+  if (strcmp(idStr, "false") == 0) {
+    int64_t *val = arenaAlloc(stringArena, sizeof(int64_t));
+    if (!val) return (Token){.type = TOK_INVALID};
+    *val = 0;
+
+    return initToken(TOK_INT, val, false, start, lexer->pos);
+  }
+
   TokType type = keywordType(idStr);
 
   if (type == TOK_IDENTIFIER) {
@@ -461,7 +478,7 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       continue;
     }
 
-    if (_is_letter(lexer->currChar)) {
+    if (_is_letter(lexer->currChar) || lexer->currChar == '_') {
       if (!_appendToken(makeIdentifierLexer(lexer), &tokens, &size, &capacity)) return NULL;
       continue;
     }

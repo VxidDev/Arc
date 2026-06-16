@@ -42,6 +42,9 @@ char* typeofobj(const Object* obj) {
     case OBJ_ERROR: return "error"; 
     case OBJ_LIST: return "list";
     case OBJ_FUNCTION: return "function"; 
+    case OBJ_FILE: return "file";
+    case OBJ_INSTANCE: return "instance";
+    case OBJ_CLASS: return "class";
     default: return "object"; 
   }
 }

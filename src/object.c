@@ -3,6 +3,8 @@
 #include "../include/vm.h"
 
 #include "../include/token.h"
+#include "../include/utils.h"
+#include "../include/repl/repl.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -45,7 +47,10 @@ Object* copyObject(Object* obj) {
 }
 
 void freeObject(Object* obj) {
-  if (!obj || obj->isStatic) return;
+  if (!obj || obj->isStatic) {
+    if (_DEBUG) printf("[debug] skipping freeing object. Reason: %s%s\n", !obj ? "object is null" : "object is static, type of object: ", !obj ? "" : typeofobj(obj));
+    return;
+  }
 
   switch (obj->type) {
     case OBJ_NUMBER_INT:
@@ -79,6 +84,7 @@ void freeObject(Object* obj) {
 
     case OBJ_FUNCTION:
       Function* func = (Function*)obj;
+      if (_DEBUG) printf("[debug] freeing function. | name = %s\n", func->name);
 
       if (!func->chunk && !func->body) break;
 

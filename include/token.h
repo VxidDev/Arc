@@ -27,6 +27,9 @@ typedef enum TokType {
   TOK_CLASS,
   TOK_DOT,
 
+  TOK_TRUE,
+  TOK_FALSE,
+
   TOK_EOF,
   TOK_INVALID
 } TokType;
