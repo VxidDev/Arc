@@ -808,6 +808,8 @@ Object *vmRun(VM *vm) {
 
     OP_CALL: {
       uint8_t argCount = READ_BYTE();
+
+      frame->currentInstr = (uint32_t)(ip - frame->chunk->code - 2);
       Value *args = sp - argCount;
       sp -= argCount;
 
@@ -906,6 +908,18 @@ Object *vmRun(VM *vm) {
         if (objArgs != objArgsBuf) free(objArgs);
           
         if (UNLIKELY(res && res->type == OBJ_ERROR)) {
+          if (_DEBUG) {
+            fprintf(stderr, "[debug] currentInstr=%u, chunk->count=%zu\n", 
+              frame->currentInstr, frame->chunk->count);
+            for (size_t i = 0; i < frame->chunk->posCount; i++) {
+              fprintf(stderr, "  pos[%zu] offset=%u line=%lu col=%lu\n",
+                i,
+                frame->chunk->positions[i].offset,
+                frame->chunk->positions[i].start.line + 1,
+                frame->chunk->positions[i].start.column + 1);
+            }
+          }
+
           VM_ERR(initRuntimeError, ((ProgramError*)res)->details);
           freeObject(res); 
           res = NULL;

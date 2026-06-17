@@ -400,7 +400,7 @@ Position getNodeStart(ASTNode *node) {
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
     case NODE_FOR: return ((ForNode*)node)->forTok.start;
     case NODE_CLASS: return ((ClassNode*)node)->start;
-    case NODE_PROPERTYASSIGN: return ((PropertyAccessNode*)node)->start;
+    case NODE_PROPERTYASSIGN: return ((PropertyAssignNode*)node)->start;
     case NODE_PROPERTYACCESS: return getNodeStart(((PropertyAccessNode*)node)->target);
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
@@ -436,7 +436,7 @@ Position getNodeEnd(ASTNode *node) {
     case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
     case NODE_CLASS: return ((ClassNode*)node)->end;
     case NODE_PROPERTYACCESS: return ((PropertyAccessNode*)node)->end;
-    case NODE_PROPERTYASSIGN: return ((PropertyAccessNode*)node)->end;
+    case NODE_PROPERTYASSIGN: return ((PropertyAssignNode*)node)->end;
     case NODE_PROGRAM: {
       ProgramNode *p = (ProgramNode*)node;
       return p->count > 0 ? getNodeEnd(p->statements[p->count-1]) : (Position){0,0,0};

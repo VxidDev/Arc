@@ -3,8 +3,7 @@ gen.py
 gen_py.py
 py.py 
 fib.py
-test.arc 
-test.py
+text.*
 calc.arc
 arc.arc
 vgcore.*

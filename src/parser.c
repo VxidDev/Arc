@@ -118,7 +118,7 @@ ASTNode* atomParser(Parser* parser) {
 
     advanceParser(parser);
 
-    ASTNode* expr = atomParser(parser);
+    ASTNode* expr = postfixParser(parser);
 
     if (!expr) {
       if (*parser->error == NULL) *parser->error = initSyntaxError(start, end, parser->filename, "Expression expected", parser->sourcetext);

@@ -42,7 +42,13 @@ static inline void setPos(Compiler *c, Position start, Position end) {
 }
 
 static inline void setPosFromNode(Compiler *c, ASTNode *node) {
-  setPos(c, getNodeStart(node), getNodeEnd(node));
+  Position s = getNodeStart(node);
+  Position e = getNodeEnd(node);
+  if (s.line > 200) {
+    fprintf(stderr, "[debug] suspicious position: line=%lu col=%lu node->type=%d\n",
+      s.line + 1, s.column + 1, node->type);
+  }
+  setPos(c, s, e);
 }
 
 static bool internTableResize(InternTable *t, size_t oldCap, size_t newCap) {
@@ -640,18 +646,14 @@ static void compileFunction(ASTNode *node, Compiler *c) {
   Function *func = initFunction(fn);
 
   // compile body with a fresh compiler marked as function scope
-  Compiler fc = {
-    .chunk = initChunk(),
-    .err = c->err,
-    .filename = c->filename,
-    .sourcetext = c->sourcetext,
-    .loop = NULL,
-    .localCount = 0,
-    .maxLocalCount = 0,
-    .isFunction = true,
-    .funcName = fn->name,
-    .funcObj = (Object*)func
-  };
+  Compiler fc = {0};
+  fc.chunk = initChunk();
+  fc.err = c->err;
+  fc.filename = c->filename;
+  fc.sourcetext = c->sourcetext;
+  fc.isFunction = true;
+  fc.funcName = fn->name;
+  fc.funcObj = (Object*)func;
 
   fc.chunk->filename = c->filename;
   fc.chunk->sourcetext = c->sourcetext;
@@ -845,13 +847,12 @@ static void compileClass(ASTNode *node, Compiler *c) {
   ClassNode *cn = (ClassNode *)node;
   Class *class = initClass(cn);
 
-  Compiler cc = {
-    .chunk = initChunk(),
-    .err = c->err,
-    .filename = c->filename,
-    .sourcetext = c->sourcetext,
-    .isFunction = false,
-  };
+  Compiler cc = {0};
+
+  cc.chunk = initChunk(),
+  cc.err = c->err,
+  cc.filename = c->filename,
+  cc.sourcetext = c->sourcetext,
 
   cc.chunk->filename = c->filename;
   cc.chunk->sourcetext = c->sourcetext;

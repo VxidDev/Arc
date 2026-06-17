@@ -76,11 +76,42 @@ Error *initRuntimeError(Position start, Position end, char *filename, char* deta
 }
 
 char* errorAsString(const Error* error) {
-  if (!error || !error->name || !error->details || !error->filename)
+  if (!error || !error->name || !error->details || !error->filename || !error->filetext)
     return NULL;
+  
+  if (!error->filetext || !*error->filetext) {
+    int needed = snprintf(NULL, 0, "%s: %s\nFile %s, line %lu, column %lu\n",
+      error->name, error->details, error->filename,
+      error->start.line + 1, error->start.column + 1);
+
+    char *out = malloc(needed + 1);
+    if (!out) return NULL;
+
+    snprintf(out, needed + 1, "%s: %s\nFile %s, line %lu, column %lu\n",
+      error->name, error->details, error->filename,
+      error->start.line + 1, error->start.column + 1);
+
+    return out;
+  }
 
   const char *text = error->filetext;
   unsigned long startIdx = error->start.index;
+  size_t textLen = strlen(text); 
+  
+  if (startIdx >= textLen) {
+    int needed = snprintf(NULL, 0, "%s: %s\nFile %s, line %lu, column %lu\n",
+      error->name, error->details, error->filename,
+      error->start.line + 1, error->start.column + 1);
+
+    char *out = malloc(needed + 1);
+    if (!out) return NULL;
+
+    snprintf(out, needed + 1, "%s: %s\nFile %s, line %lu, column %lu\n",
+      error->name, error->details, error->filename,
+      error->start.line + 1, error->start.column + 1);
+
+    return out;
+  }
 
   unsigned long lineStart = startIdx;
   while (lineStart > 0 && text[lineStart - 1] != '\n')

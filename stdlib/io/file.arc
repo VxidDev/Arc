@@ -41,7 +41,9 @@ class File
     end 
 
     close_file(self._file_obj)
+
     self.is_open = false
+    self._file_obj = -1
 
     return self
   end

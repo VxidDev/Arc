@@ -59,7 +59,7 @@ end
 
 print("\nFile() functions correctly check whether file is initialized")
 
-f.init(f, "test.txt", "r")
+f.init(f, "test.txt", "w")
 
 print("\ninitialized instance:\n ")
 analyze_file_object(f)
