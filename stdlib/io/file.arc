@@ -1,3 +1,7 @@
+FILE_SEEK_SET = 0
+FILE_SEEK_CUR = 1
+FILE_SEEK_END = 2
+
 class File 
   var filename = ""
   var mode = ""
@@ -84,5 +88,39 @@ class File
     end 
 
     return stream_read_char(self._file_obj)
+  end
+
+  fn seek(self, offset, whence) then
+    if not self.is_initialized(self) then
+      RuntimeError("File is not initialized")
+    end 
+
+    if not self.is_open then
+      RuntimeError("File is not opened.")
+    end
+
+    return stream_seek(self._file_obj, offset, whence) 
+  end
+
+  fn tell(self) then
+    if not self.is_initialized(self) then
+      RuntimeError("File is not initialized")
+    end 
+
+    if not self.is_open then
+      RuntimeError("File is not opened.")
+    end 
+
+    return stream_tell(self._file_obj) 
+  end
+
+  fn get_size(self) then 
+    var curr_pos = self.tell(self)
+
+    self.seek(self, 0, FILE_SEEK_END)
+    var size = self.tell(self)
+    self.seek(self, curr_pos, FILE_SEEK_SET)
+
+    return size
   end 
 end 

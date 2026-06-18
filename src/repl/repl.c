@@ -96,6 +96,14 @@ void registerBuiltins(SymbolTable* table) {
   NativeFunction* stream_read_charFn = initNativeFunction("stream_read_char", builtIn_stream_read_char, 1, false);
   setTable(table, internIdentifier("stream_read_char", 16), VAL_OBJ((Object*)stream_read_charFn));
   freeObject((Object*)stream_read_charFn);
+  
+  NativeFunction* stream_tellFn = initNativeFunction("stream_tell", builtIn_stream_tell, 1, false);
+  setTable(table, internIdentifier("stream_tell", 11), VAL_OBJ((Object*)stream_tellFn));
+  freeObject((Object*)stream_tellFn);
+
+  NativeFunction* stream_seekFn = initNativeFunction("stream_seek", builtIn_stream_seek, 3, false);
+  setTable(table, internIdentifier("stream_seek", 1), VAL_OBJ((Object*)stream_seekFn));
+  freeObject((Object*)stream_seekFn);
 
   // Errors
 

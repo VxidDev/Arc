@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 static void printInternal(Object* obj) {
   switch (obj->type) {
@@ -285,13 +286,96 @@ Object* builtIn_stream_read_char(Object** args, size_t argCount) {
 
   File* f = (File*)src;
 
+  if (!f->file) {
+    return (Object*)initProgramError("File stream is closed.");
+  }
+
   int c = getc(f->file);
 
-  if (c == -1) {
-    return (Object*)initProgramError("Encountered EOF.");
+  if (c == EOF) {
+    return (Object*)initInt(-1);
   }
 
   char s[] = {c, 0};
 
   return (Object*)initString(s, 1);
+}
+
+Object* builtIn_stream_seek(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* stream = args[0];
+  Object* offset = args[1];
+  Object* whence = args[2];
+
+  if (stream->type != OBJ_FILE) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'file', received '%s'.", typeofobj(stream));
+    return (Object*)initProgramError(buf);
+  }
+
+  if (offset->type != OBJ_NUMBER_INT) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 2 to be object of type 'int', received '%s'.", typeofobj(offset));
+    return (Object*)initProgramError(buf);
+  }
+
+  if (whence->type != OBJ_NUMBER_INT) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 3 to be object of type 'int', received '%s'.", typeofobj(whence));
+    return (Object*)initProgramError(buf);
+  }
+
+  File* f = (File*)stream;
+
+  if (!f->file) {
+    return (Object*)initProgramError("File stream is closed.");
+  }
+
+  Number* w = (Number*)whence;
+  Number* o = (Number*)offset;
+
+  if (w->as.i != SEEK_SET && w->as.i != SEEK_CUR && w->as.i != SEEK_END) {
+    return (Object*)initProgramError("Invalid whence.");
+  }
+
+  if (o->as.i < 0 && w->as.i == SEEK_SET) {
+    return (Object*)initProgramError("Negative offset is not allowed with SEEK_SET.");
+  }
+
+  if (fseek(f->file, o->as.i, w->as.i) != 0) {
+    char buf[512];
+    snprintf(buf, sizeof(buf), "fseek error: %s", strerror(errno));
+    return (Object*)initProgramError(buf);
+  }
+  
+  return (Object*)initInt(1);
+}
+
+Object* builtIn_stream_tell(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* stream = args[0];
+
+  if (stream->type != OBJ_FILE) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'file', received '%s'.", typeofobj(stream));
+    return (Object*)initProgramError(buf);
+  }
+
+  File* f = (File*)stream;
+
+  if (!f->file) {
+    return (Object*)initProgramError("File stream is closed.");
+  }
+  
+  long pos = ftell(f->file);
+
+  if (pos == -1L) {
+    char buf[512];
+    snprintf(buf, sizeof(buf), "ftell error: %s", strerror(errno));
+    return (Object*)initProgramError(buf);
+  }
+
+  return (Object*)initInt(pos);
 }
