@@ -13,6 +13,12 @@ void initSysModule(SymbolTable* table) {
   NativeFunction* exitFn = initNativeFunction("exit", builtIn_exit, 1, false);
   setTable(table, internIdentifier("exit", 4), VAL_OBJ((Object*)exitFn));
   freeObject((Object*)exitFn);
+  
+  #ifndef _WIN32
+    NativeFunction* accessFn = initNativeFunction("access", builtIn_access, 2, false);
+    setTable(table, internIdentifier("access", 6), VAL_OBJ((Object*)accessFn));
+    freeObject((Object*)accessFn);
+  #endif
 }
 
 void initTimeModule(SymbolTable* table) {
