@@ -271,3 +271,27 @@ Object* builtIn_write_file(Object** args, size_t argCount) {
 
   return (Object*)initInt(1);
 }
+
+Object* builtIn_stream_read_char(Object** args, size_t argCount) {
+  (void)argCount;
+  
+  Object* src = args[0];
+
+  if (src->type != OBJ_FILE) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'file', received '%s'.", typeofobj(src));
+    return (Object*)initProgramError(buf);
+  }
+
+  File* f = (File*)src;
+
+  int c = getc(f->file);
+
+  if (c == -1) {
+    return (Object*)initProgramError("Encountered EOF.");
+  }
+
+  char s[] = {c, 0};
+
+  return (Object*)initString(s, 1);
+}

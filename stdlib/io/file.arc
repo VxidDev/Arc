@@ -28,7 +28,7 @@ class File
     if not self.is_initialized(self) then 
       RuntimeError("File is not initialized.")
     end 
-
+    
     self._file_obj = open_file(self.filename, self.mode)
     self.is_open = true
 
@@ -69,8 +69,20 @@ class File
 
     if not self.is_open then 
       RuntimeError("File is not opened.")
-    end 
+    end
 
     return read_file(self._file_obj)
+  end
+
+  fn read_char(self) then
+    if not self.is_initialized(self) then
+      RuntimeError("File is not initialized.")
+    end 
+
+    if not self.is_open then 
+      RuntimeError("File is not opened.")
+    end 
+
+    return stream_read_char(self._file_obj)
   end 
 end 

@@ -890,6 +890,14 @@ Object *vmRun(VM *vm) {
       if (callee->type == OBJ_NATIVE_FUNCTION) {
         NativeFunction *nf = (NativeFunction *)callee;
         
+        if (argCount < nf->requiredArgCount) {
+          char buf[256];
+          snprintf(buf, sizeof(buf), "Function \"%s\" expects atleast %zu arguments, got %d.", nf->name, nf->requiredArgCount, argCount);
+          VM_ERR(initRuntimeError, buf);
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+
         Object* objArgsBuf[16];
         Object** objArgs = (argCount <= 16) ? objArgsBuf : (Object**)malloc(sizeof(Object*) * argCount);
 

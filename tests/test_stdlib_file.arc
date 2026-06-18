@@ -55,6 +55,15 @@ try
   end 
 catch e then 
   # pass 
+end
+
+try 
+  if f.read_char(f) then 
+    print("f.read_char(f)")
+    exit(1)
+  end 
+catch e then 
+  # pass 
 end 
 
 print("\nFile() functions correctly check whether file is initialized")
@@ -120,6 +129,15 @@ end
 try 
   f.read(f)
   print("ERROR: read after close succeeded")
+  exit(1)
+catch e then 
+  # expected
+end
+
+
+try 
+  f.read_char(f)
+  print("ERROR: read_char after close succeeded")
   exit(1)
 catch e then 
   # expected

@@ -14,9 +14,14 @@ char* input(const char *prompt) {
 
   if (!buf) return NULL; 
 
-  int c = 0; 
+  int c = getchar();
+  
+  if (c == EOF) {
+    free(buf);
+    return NULL;
+  }
 
-  while ((c = getchar()) != EOF && c != '\n') {
+  while (c != EOF && c != '\n') {
     if (size >= capacity - 1) {
       capacity *= 2;
       void *tmp = realloc(buf, sizeof(char) * capacity);
@@ -30,6 +35,7 @@ char* input(const char *prompt) {
     }
 
     buf[size++] = c;
+    c = getchar();
   }
 
   buf[size] = '\0';

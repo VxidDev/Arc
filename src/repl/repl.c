@@ -92,6 +92,10 @@ void registerBuiltins(SymbolTable* table) {
   NativeFunction* write_fileFn = initNativeFunction("write_file", builtIn_write_file, 2, false);
   setTable(table, internIdentifier("write_file", 10), VAL_OBJ((Object*)write_fileFn));
   freeObject((Object*)write_fileFn);
+    
+  NativeFunction* stream_read_charFn = initNativeFunction("stream_read_char", builtIn_stream_read_char, 1, false);
+  setTable(table, internIdentifier("stream_read_char", 16), VAL_OBJ((Object*)stream_read_charFn));
+  freeObject((Object*)stream_read_charFn);
 
   // Errors
 
