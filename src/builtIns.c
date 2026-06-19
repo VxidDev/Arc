@@ -18,6 +18,10 @@ void initSysModule(SymbolTable* table) {
     NativeFunction* accessFn = initNativeFunction("access", builtIn_access, 2, false);
     setTable(table, internIdentifier("access", 6), VAL_OBJ((Object*)accessFn));
     freeObject((Object*)accessFn);
+
+    NativeFunction* unlinkFn = initNativeFunction("unlink", builtIn_unlink, 1, false);
+    setTable(table, internIdentifier("unlink", 6), VAL_OBJ((Object*)unlinkFn));
+    freeObject((Object*)unlinkFn);
   #endif
 }
 

@@ -44,10 +44,6 @@ static inline void setPos(Compiler *c, Position start, Position end) {
 static inline void setPosFromNode(Compiler *c, ASTNode *node) {
   Position s = getNodeStart(node);
   Position e = getNodeEnd(node);
-  if (s.line > 200) {
-    fprintf(stderr, "[debug] suspicious position: line=%lu col=%lu node->type=%d\n",
-      s.line + 1, s.column + 1, node->type);
-  }
   setPos(c, s, e);
 }
 

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <errno.h>
 
 #ifndef _WIN32 
   #include <unistd.h> // TODO: windows support 
@@ -53,6 +54,36 @@ Object* builtIn_access(Object** args, size_t argCount) {
   Number* m = (Number*)mode;
 
   return (Object*)initInt(access(p->value, m->as.i));
+}
+
+Object* builtIn_unlink(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* path = args[0];
+
+  if (path->type != OBJ_STRING) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected object of type 'string', received '%s'.", typeofobj(path));
+    return (Object*)initProgramError(buf);
+  }
+
+  String* p = (String*)path;
+  
+  if (unlink(p->value) == 0) {
+    return (Object*)initInt(FS_OK); 
+  }
+  
+  switch (errno) {
+    case ENOENT: 
+      return (Object*)initInt(FS_NOTFOUND);
+
+    case EACCES: 
+    case EPERM: 
+      return (Object*)initInt(FS_PERM);
+
+    default: 
+      return (Object*)initInt(FS_UNKNOWN);
+  }
 }
 
 #endif 

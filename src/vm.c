@@ -841,6 +841,7 @@ Object *vmRun(VM *vm) {
 
         if (UNLIKELY(!func->chunk)) {
           freeValue(calleeVal);
+          VM_ERR(initRuntimeError, "Bytecode chunk is null. (internal error)");
           HANDLE_ERROR();
         }
 
@@ -916,18 +917,6 @@ Object *vmRun(VM *vm) {
         if (objArgs != objArgsBuf) free(objArgs);
           
         if (UNLIKELY(res && res->type == OBJ_ERROR)) {
-          if (_DEBUG) {
-            fprintf(stderr, "[debug] currentInstr=%u, chunk->count=%zu\n", 
-              frame->currentInstr, frame->chunk->count);
-            for (size_t i = 0; i < frame->chunk->posCount; i++) {
-              fprintf(stderr, "  pos[%zu] offset=%u line=%lu col=%lu\n",
-                i,
-                frame->chunk->positions[i].offset,
-                frame->chunk->positions[i].start.line + 1,
-                frame->chunk->positions[i].start.column + 1);
-            }
-          }
-
           VM_ERR(initRuntimeError, ((ProgramError*)res)->details);
           freeObject(res); 
           res = NULL;
@@ -936,6 +925,7 @@ Object *vmRun(VM *vm) {
         freeValue(calleeVal);
 
         if (UNLIKELY(!res)) {
+          VM_ERR(initRuntimeError, "Native function returned null.");
           HANDLE_ERROR()
         }
 
