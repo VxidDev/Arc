@@ -42,7 +42,7 @@ class JSONToken
 end 
 
 fn json_make_string_token(json_str, json_len, idx) then 
-  var str = ""
+  var buf = string_buffer()
 
   while idx < json_len then
     c = json_str[idx]
@@ -52,28 +52,30 @@ fn json_make_string_token(json_str, json_len, idx) then
       break
     end 
 
-    str = str + c 
+    append_char(buf, c) 
   end 
   
+  var str = string_finish(buf)
   var token = JSONToken()
   
   return [token.init(token, JSON_TOK_STRING, str), idx]
 end
 
 fn json_make_digit_token(json_str, json_len, idx) then 
-  var str = ""
+  var buf = string_buffer()
 
   while idx < json_len then
     c = json_str[idx]
 
-    if not is_int(c) then 
+    if not is_digit(c) then 
       break
     end 
 
-    str = str + c
+    append_char(buf, c)
     idx = idx + 1
   end 
-  
+    
+  var str = string_finish(buf)
   var token = JSONToken()
 
   return [token.init(token, JSON_TOK_INT, to_int(str)), idx]
@@ -86,6 +88,8 @@ fn json_lexer(json_str) then
   var tokens = []
 
   while idx < len then
+    print(idx)
+
     c = json_str[idx]
     idx = idx + 1
 
@@ -126,7 +130,7 @@ fn json_lexer(json_str) then
       continue 
     end 
 
-    if is_int(c) then 
+    if is_digit(c) then 
       res = json_make_digit_token(json_str, len, idx - 1)
       token = res[0]
       idx = res[1]

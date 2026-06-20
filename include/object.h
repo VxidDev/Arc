@@ -66,6 +66,7 @@ typedef struct String {
   char *value;
   uint64_t len, capacity;
   long hash;
+  bool isBuffer;
 } String;
 
 typedef struct List {
@@ -178,6 +179,7 @@ File* copyFile(File* file);
 String* initString(char *value, uint64_t len);
 String* noCopyInitString(char *value, uint64_t len);
 String* initStringConst(char *value, uint64_t len);
+String* initStringBuffer(size_t initialCapacity);
 String* copyString(String *str);
 char* internIdentifier(const char* value, uint64_t len);
 

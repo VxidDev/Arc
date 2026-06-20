@@ -131,11 +131,27 @@ void registerBuiltins(SymbolTable* table) {
   setTable(table, internIdentifier("len_of", 6), VAL_OBJ((Object*)len_ofFn));
   freeObject((Object*)len_ofFn);
 
+  NativeFunction* is_digitFn = initNativeFunction("is_digit", builtIn_is_digit, 1, false);
+  setTable(table, internIdentifier("is_digit", 8), VAL_OBJ((Object*)is_digitFn));
+  freeObject((Object*)is_digitFn);
+
   // String 
   
   NativeFunction* split_stringFn = initNativeFunction("split_string", builtIn_split_string, 2, false);
   setTable(table, internIdentifier("split_string", 12), VAL_OBJ((Object*)split_stringFn));
   freeObject((Object*)split_stringFn);
+
+  NativeFunction* append_charFn = initNativeFunction("append_char", builtIn_append_char, 2, false);
+  setTable(table, internIdentifier("append_char", 11), VAL_OBJ((Object*)append_charFn));
+  freeObject((Object*)append_charFn);
+
+  NativeFunction* string_bufferFn = initNativeFunction("string_buffer", builtIn_string_buffer, 0, false);
+  setTable(table, internIdentifier("string_buffer", 13), VAL_OBJ((Object*)string_bufferFn));
+  freeObject((Object*)string_bufferFn);
+
+  NativeFunction* string_finishFn = initNativeFunction("string_finish", builtIn_string_finish, 1, false);
+  setTable(table, internIdentifier("string_finish", 13), VAL_OBJ((Object*)string_finishFn));
+  freeObject((Object*)string_finishFn);
 
   // List 
   

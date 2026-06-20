@@ -93,6 +93,28 @@ char* internIdentifier(const char* value, uint64_t len) {
   return identifier;
 }
 
+String *initStringBuffer(size_t initialCapacity) {
+  String* str = poolAlloc(stringPool);
+  if (!str) return NULL;
+
+  size_t cap = initialCapacity ? initialCapacity : 16;
+  str->value = malloc(cap + 1);
+
+  if (!str->value) {
+    poolFree(stringPool, str);
+    return NULL;
+  }
+
+  str->value[0] = '\0';
+  str->base.type = OBJ_STRING;
+  str->base.isStatic = true;  
+  str->len = 0;
+  str->capacity = cap;
+  str->isBuffer = true;
+
+  return str;
+}
+
 String *initString(char *value, uint64_t len) {
   String* str = poolAlloc(stringPool);
 
@@ -113,6 +135,7 @@ String *initString(char *value, uint64_t len) {
 
   str->len = len;
   str->capacity = len;
+  str->isBuffer = false;
 
   return str;
 }
@@ -122,6 +145,7 @@ String *noCopyInitString(char *value, uint64_t len) {
 
   if (!str) {
     free(value);
+    return NULL;
   }
 
   str->value = value;
@@ -131,6 +155,7 @@ String *noCopyInitString(char *value, uint64_t len) {
 
   str->len = len;
   str->capacity = len;
+  str->isBuffer = false;
 
   return str;
 }
@@ -142,8 +167,11 @@ String *initStringConst(char *value, uint64_t len) {
 
   str->value = value;
   str->base.type = OBJ_STRING;
+  str->base.isStatic = true;
+
   str->len = len;
   str->capacity = len;
+  str->isBuffer = false;
 
   return str;
 }
@@ -178,8 +206,10 @@ String *addString(String *dest, const String *src) {
 
     res->value = buf;
     res->base.type = OBJ_STRING;
+    res->base.isStatic = false;
     res->len = total;
     res->capacity = newCap;
+    res->isBuffer = false;
 
     return res;
   }
@@ -222,8 +252,10 @@ String *mulString(String *dest, const Number *src) {
 
     res->value = buf;
     res->base.type = OBJ_STRING;
+    res->base.isStatic = false;
     res->len = total;
     res->capacity = newCap;
+    res->isBuffer = false;
 
     return res;
   }

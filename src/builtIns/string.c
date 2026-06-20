@@ -1,6 +1,8 @@
 #include "../../include/builtIns/string.h"
 #include "../../include/utils.h"
 
+#include "../../include/mempool.h"
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -24,7 +26,6 @@ static void __freeSplit_internal(char **arr, int n) {
 
   free(arr);
 }
-
 
 Object* builtIn_split_string(Object** args, size_t argCount) {
   (void)argCount;
@@ -113,4 +114,79 @@ Object* builtIn_split_string(Object** args, size_t argCount) {
   free(res);
 
   return list;
+}
+
+Object* builtIn_append_char(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* obj = args[0];
+  Object* cObj = args[1];
+
+  if (obj->type != OBJ_STRING) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'string', received '%s'.", typeofobj(obj));
+    return (Object*)initProgramError(buf);
+  }
+
+  if (cObj->type != OBJ_STRING) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 2 to be object of type 'string', received '%s'.", typeofobj(cObj));
+    return (Object*)initProgramError(buf);
+  }
+
+  String* s = (String*)obj; 
+  String* cStr = (String*)cObj;
+
+  if (cStr->len != 1) {
+    return (Object*)initProgramError("Expected 2nd argument's length to be 1.");
+  }
+
+  char c = cStr->value[0];
+  
+  if (s->base.isStatic && !s->isBuffer) {
+    String* fresh = initString(s->value, s->len);
+    if (!fresh) return (Object*)initProgramError("Failed to append character (Memory error)");
+    s = fresh;
+  }
+
+  if (s->len + 1 >= s->capacity) {
+    size_t newCap = s->capacity ? s->capacity * 2 : 8;
+
+    char *buf = realloc(s->value, newCap);
+
+    if (!buf) return (Object*)initProgramError("Failed to append character (Memory error)");
+
+    s->value = buf;
+    s->capacity = newCap;
+  }
+
+  s->value[s->len++] = c;
+  s->value[s->len] = '\0';
+
+  return (Object*)s;
+}
+
+Object* builtIn_string_buffer(Object** args, size_t argCount) {
+  (void)args;
+  (void)argCount;
+  String *s = initStringBuffer(16);
+  if (!s) return (Object*)initProgramError("Failed to create string buffer.");
+  return (Object*)s;
+}
+
+Object* builtIn_string_finish(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* obj = args[0];
+
+  if (obj->type != OBJ_STRING) {
+    return (Object*)initProgramError("Expected argument 1 to be object of type 'string'.");
+  }
+
+  String* buf = (String*)obj;
+
+  String* result = noCopyInitString(buf->value, buf->len);
+  if (!result) return (Object*)initProgramError("Failed to finalize string buffer.");
+
+  return (Object*)result;
 }
