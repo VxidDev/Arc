@@ -88,8 +88,6 @@ fn json_lexer(json_str) then
   var tokens = []
 
   while idx < len then
-    print(idx)
-
     c = json_str[idx]
     idx = idx + 1
 
