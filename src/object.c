@@ -18,6 +18,12 @@ const NativeModuleEntry* stdlibModules[] = {
   &(NativeModuleEntry){ "__time", initTimeModule }, NULL 
 };
 
+static Object nullSingleton = { .type = OBJ_NULL, .isStatic = true };
+
+Object* initNull(void) {
+  return &nullSingleton;
+}
+
 Object* copyObject(Object* obj) {
   if (!obj) return NULL;
   if (obj->isStatic) return obj;
@@ -39,6 +45,7 @@ Object* copyObject(Object* obj) {
     case OBJ_BREAK:
     case OBJ_CLASS:
     case OBJ_INSTANCE:
+    case OBJ_NULL:
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
@@ -156,7 +163,8 @@ void freeObject(Object* obj) {
 
       break;
     }
-
+    
+    case OBJ_NULL: // unreachable
     case OBJ_CLASS: {
        break;
     }

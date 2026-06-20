@@ -57,7 +57,7 @@ static inline bool isTruthy(Value v) {
   if (IS_INT(v)) return AS_INT(v) != 0;
   if (IS_FLOAT(v)) return AS_FLOAT(v) != 0.0;
 
-  if (IS_UNDEF(v)) return false;
+  if (IS_UNDEF(v) || IS_NULL(v)) return false;
 
   if (!IS_OBJ(v)) return true;
 
@@ -153,6 +153,8 @@ Value copyValue(Value v) {
 static inline Value objectToValue(Object *o) {
   if (UNLIKELY(!o)) return VAL_INT(0);
 
+  if (o->type == OBJ_NULL) return VAL_NULL();
+
   if (o->type == OBJ_NUMBER_INT) { 
     Value v = VAL_INT(((Number*)o)->as.i);
     freeObject(o);
@@ -171,6 +173,7 @@ static inline Value objectToValue(Object *o) {
 static inline Object *valueToObject(Value v) {
   if (IS_INT(v)) return (Object*)initInt(AS_INT(v));
   if (IS_FLOAT(v)) return (Object*)initFloat(AS_FLOAT(v));
+  if (IS_NULL(v)) return (Object*)initNull();
   return AS_OBJ(v);
 }
 
@@ -224,6 +227,16 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
       case OP_OR: return VAL_INT((int)(na) || (int)(nb)); 
       default: break;
     }
+  }
+
+  if (IS_NULL(a) || IS_NULL(b)) {
+    if (op == OP_EQ) return VAL_INT(IS_NULL(a) && IS_NULL(b));
+    if (op == OP_NE) return VAL_INT(!(IS_NULL(a) && IS_NULL(b)));
+
+    VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
+    freeValue(a);
+    freeValue(b);
+    return VAL_UNDEF();
   }
 
   // Handle strings
@@ -368,8 +381,10 @@ Object *vmRun(VM *vm) {
 
     OP_LOAD_CONST: {
       Object *c = READ_CONST();
-
-      if (c->type == OBJ_NUMBER_INT)
+      
+      if (c->type == OBJ_NULL) {
+        PUSH(VAL_NULL());
+      } else if (c->type == OBJ_NUMBER_INT)
         PUSH(VAL_INT(((Number*)c)->as.i));
       else if (c->type == OBJ_NUMBER_FLOAT)
         PUSH(VAL_FLOAT(((Number*)c)->as.f));

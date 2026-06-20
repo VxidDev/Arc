@@ -728,6 +728,11 @@ static void compileImport(ASTNode *node, Compiler *c) {
   emitBytes(c, OP_IMPORT, internString(c, in->filePath.val.s, strlen(in->filePath.val.s)));
 }
 
+static void compileNull(ASTNode *node, Compiler *c) {
+  setPosFromNode(c, node);
+  emitBytes(c, OP_LOAD_CONST, addConst(c, initNull()));
+}
+
 static void compileReturn(ASTNode *node, Compiler *c) {
   ReturnNode *ret = (ReturnNode *)node;
 
@@ -905,6 +910,7 @@ static void compileNode(ASTNode *node, Compiler *c) {
     case NODE_IMPORT: compileImport(node, c); break;
     case NODE_RETURN: compileReturn(node, c); break;
     case NODE_CLASS: compileClass(node, c); break;
+    case NODE_NULL: compileNull(node, c); break;
     case NODE_PROPERTYACCESS: compilePropertyAccessNode(node, c); break;
     case NODE_PROPERTYASSIGN: compilePropertyAssignNode(node, c); break;
     case NODE_BREAK:

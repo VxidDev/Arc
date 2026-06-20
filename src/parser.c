@@ -133,6 +133,11 @@ ASTNode* atomParser(Parser* parser) {
     return (ASTNode*)initStringNode(token);
   }
 
+  if (token.type == TOK_NULL) {
+    advanceParser(parser);
+    return (ASTNode*)initNullNode(token);
+  }
+
   if ((token.type == TOK_INT) || (token.type == TOK_FLOAT)) {
     advanceParser(parser);
     return (ASTNode*)initNumberNode(token);

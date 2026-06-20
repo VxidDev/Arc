@@ -270,6 +270,11 @@ void printAST(ASTNode* node) {
 
       break;
     }
+
+    case NODE_NULL: {
+      printf("%s%sNULL%s", COLOR(ANSI_BOLD), COLOR(ANSI_CYAN_FG), COLOR(ANSI_RESET));
+      break;
+    }
   }
 }
 

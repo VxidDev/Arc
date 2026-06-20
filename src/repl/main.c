@@ -121,6 +121,8 @@ static void printObjInternal(Object* obj) {
     Instance* instance = (Instance*)obj;
     printf("INSTANCE::");
     printObjInternal((Object*)instance->klass);
+  } else if (obj->type == OBJ_NULL) {
+    printf("NULL");
   }
 }
 

@@ -32,7 +32,8 @@ typedef enum ObjType {
   OBJ_BREAK,
   OBJ_CONTINUE,
   OBJ_CLASS,
-  OBJ_INSTANCE
+  OBJ_INSTANCE,
+  OBJ_NULL
 } ObjType;
 
 typedef struct Object {
@@ -190,8 +191,10 @@ Function* copyFunction(Function* func);
 NativeFunction* copyNativeFunction(NativeFunction* func);
 ProgramError* initProgramError(char *details);
 Return* initReturn(Object* value);
-Break* initBreak();
-Continue* initContinue();
+
+Break* initBreak(void);
+Continue* initContinue(void);
+Object* initNull(void);
 
 Class* initClass(ClassNode* node);
 Instance* initInstance(Class* klass, SymbolTable* globals);

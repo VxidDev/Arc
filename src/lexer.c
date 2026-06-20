@@ -163,6 +163,9 @@ static TokType keywordType(const char *s) {
       if (strcasecmp("NOT", s) == 0)
         return TOK_NOT;
 
+      if (strcasecmp("NULL", s) == 0)
+        return TOK_NULL;
+
       break;
   }
 

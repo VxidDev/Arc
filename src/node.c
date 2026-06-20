@@ -20,6 +20,19 @@ NumberNode* initNumberNode(Token token) {
   return node;
 }
 
+NullNode* initNullNode(Token tok) {
+  if (tok.type == TOK_EOF) return NULL;
+
+  NullNode* node = arenaAlloc(parseArena, sizeof(NullNode));
+
+  if (!node) return NULL;
+
+  node->base.type = NODE_NULL;
+  node->tok = tok;
+
+  return node;
+}
+
 ForNode* initForNode(Token forTok, Token identifier, ASTNode* iterable, ASTNode *body) {
   if (!body || !iterable) return NULL;
 
@@ -396,6 +409,7 @@ Position getNodeStart(ASTNode *node) {
     case NODE_RETURN: return ((ReturnNode*)node)->start;
     case NODE_TRYCATCH: return ((TryCatchNode*)node)->tryStart;
     case NODE_BREAK: return ((BreakNode*)node)->tok.start;
+    case NODE_NULL: return ((NullNode*)node)->tok.start;
     case NODE_CONTINUE: return ((ContinueNode*)node)->tok.start;
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
     case NODE_FOR: return ((ForNode*)node)->forTok.start;
@@ -431,6 +445,7 @@ Position getNodeEnd(ASTNode *node) {
     case NODE_RETURN: return ((ReturnNode*)node)->end;
     case NODE_TRYCATCH: return ((TryCatchNode*)node)->catchEnd;
     case NODE_BREAK: return ((BreakNode*)node)->tok.end;
+    case NODE_NULL: return ((NullNode*)node)->tok.end;
     case NODE_CONTINUE: return ((ContinueNode*)node)->tok.end;
     case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->end;
     case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
