@@ -848,6 +848,12 @@ Object *vmRun(VM *vm) {
           freeValue(calleeVal);
           HANDLE_ERROR();
         }
+
+        if (UNLIKELY(vm->localsTop + (int)func->maxLocals > VM_LOCALS_MAX)) {
+          VM_ERR(initRuntimeError, "Locals stack overflow.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
           
         SAVE_STATE();
           
@@ -946,6 +952,12 @@ Object *vmRun(VM *vm) {
         
         if (UNLIKELY(vm->frameTop >= VM_CALL_STACK_MAX)) {
           VM_ERR(initRuntimeError, "Call stack overflow.");
+          freeValue(calleeVal);
+          HANDLE_ERROR();
+        }
+
+        if (UNLIKELY(vm->localsTop + (int)class->maxLocals > VM_LOCALS_MAX)) {
+          VM_ERR(initRuntimeError, "Locals stack overflow.");
           freeValue(calleeVal);
           HANDLE_ERROR();
         }

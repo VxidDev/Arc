@@ -622,9 +622,6 @@ static void compileFor(ASTNode *node, Compiler *c) {
     bl = bl->next;
   }
 
-  emitByte(c, OP_POP);   /* index    */
-  emitByte(c, OP_POP);   /* length   */
-  emitByte(c, OP_POP);   /* iterable */
 
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
 }

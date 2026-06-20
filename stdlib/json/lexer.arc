@@ -3,8 +3,9 @@ import "../properties.arc"
 var JSON_TOK_LCURLBRACK = 0
 var JSON_TOK_RCURLBRACK = 1
 var JSON_TOK_COLON = 2
-var JSON_TOK_INT = 3 
-var JSON_TOK_STRING = 4
+var JSON_TOK_COMMA = 3
+var JSON_TOK_INT = 4 
+var JSON_TOK_STRING = 5
 
 class JSONToken 
   var type = -1 
@@ -32,7 +33,9 @@ class JSONToken
       typestr = "COLON"
     elif self.type == JSON_TOK_INT then 
       typestr = "INT"
-    end
+    elif self.type == JSON_TOK_COMMA then 
+      typestr = "COMMA"
+    end 
 
     return typestr + "(" + to_string(self.content) + ")" 
   end 
@@ -113,6 +116,12 @@ fn json_lexer(json_str) then
     if c == ":" then 
       token = JSONToken()
       tokens = append_list(tokens, token.init(token, JSON_TOK_COLON, 0))
+      continue 
+    end
+
+    if c == "," then 
+      token = JSONToken()
+      tokens = append_list(tokens, token.init(token, JSON_TOK_COMMA, 0))
       continue 
     end 
 
