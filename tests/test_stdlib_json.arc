@@ -43,19 +43,17 @@ print("\nto_json Parsing test passed.\n\n--- json_get_value test ---\n")
 
 var val = json_get_value(map, "test")
 
-print(val)
-
-if val[0] == false then 
-  print("ERROR: val[0] == false")
+if val == null then 
+  print("ERROR: val == null")
   exit(1)
 end 
 
-if val[1] != 1 then 
-  print("ERROR: val[1] != 1")
+if val != 1 then 
+  print("ERROR: val != 1")
   exit(1)
 end
 
-print("test's value:", val[1])
+print("test's value:", val)
 print("\n--- json_get_value test passed ---")
 
 print("\ntest_stdlib_json.arc passed")

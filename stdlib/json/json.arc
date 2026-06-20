@@ -16,9 +16,9 @@ end
 fn json_get_value(map, key) then 
   for kv in map then 
     if kv[0] == key then 
-      return [true, kv[1]]
+      return kv[1]
     end 
   end 
 
-  return [false, 0]
+  return null
 end 

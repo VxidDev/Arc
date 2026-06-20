@@ -32,6 +32,11 @@ static void printInternal(Object* obj) {
       break;
     }
 
+    case OBJ_NULL: {
+      printf("null");
+      break;
+    }
+
     default:
       printf("<object>");
       break;
