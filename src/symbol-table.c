@@ -122,8 +122,9 @@ void freeTable(SymbolTable *table) {
 
       while (sym) {
         Symbol *next = sym->next;
-
-        freeValue(sym->value);
+        
+        forceFreeObject(IS_OBJ(sym->value) ? AS_OBJ(sym->value) : NULL);
+        if (!IS_OBJ(sym->value)) freeValue(sym->value);
         poolFree(symbolPool, sym);
 
         sym = next;

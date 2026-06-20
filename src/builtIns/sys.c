@@ -86,4 +86,38 @@ Object* builtIn_unlink(Object** args, size_t argCount) {
   }
 }
 
+Object* builtIn_write(Object** args, size_t argCount) {
+  (void)argCount;
+  
+  Object* fd = args[0];
+  Object* buf = args[1];
+  Object* len = args[2];
+  
+  if (fd->type != OBJ_NUMBER_INT) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'int', received '%s'.", typeofobj(fd));
+    return (Object*)initProgramError(buf);
+  }
+
+  if (buf->type != OBJ_STRING) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 2 to be object of type 'string', received '%s'.", typeofobj(fd));
+    return (Object*)initProgramError(buf);
+  }
+
+  if (len->type != OBJ_NUMBER_INT) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 3 to be object of type 'int', received '%s'.", typeofobj(fd));
+    return (Object*)initProgramError(buf);
+  }
+  
+  Number* fileDesc = (Number*)fd;
+  String* buffer = (String*)buf;
+  Number* length = (Number*)len;
+
+  int res = write(fileDesc->as.i, buffer->value, length->as.i);
+
+  return (Object*)initInt(res);
+}
+
 #endif 

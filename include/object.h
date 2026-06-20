@@ -220,4 +220,5 @@ String* addString(const String* dest, const String* src);
 String* mulString(const String* dest, const Number* src);
 
 void freeObject(Object* obj);
+void forceFreeObject(Object* obj);
 #endif // OBJECT_H

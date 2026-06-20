@@ -164,3 +164,28 @@ void freeObject(Object* obj) {
 
   return;
 }
+
+// only used for full program teardown
+void forceFreeObject(Object* obj) {
+  if (!obj) return;
+
+  if (obj->type == OBJ_INSTANCE) {
+    Instance* inst = (Instance*)obj;
+    if (inst->fields) freeTable(inst->fields);
+    poolFree(instancePool, inst);
+    return;
+  }
+
+  if (obj->type == OBJ_LIST) {
+    List* list = (List*)obj;
+
+    for (uint64_t i = 0; i < list->size; i++)
+      forceFreeObject(list->objects[i]);
+
+    free(list->objects);
+    free(list);
+    return;
+  }
+  
+  freeValue(VAL_OBJ(obj));
+}

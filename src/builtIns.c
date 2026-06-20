@@ -22,6 +22,10 @@ void initSysModule(SymbolTable* table) {
     NativeFunction* unlinkFn = initNativeFunction("unlink", builtIn_unlink, 1, false);
     setTable(table, internIdentifier("unlink", 6), VAL_OBJ((Object*)unlinkFn));
     freeObject((Object*)unlinkFn);
+
+    NativeFunction* writeFn = initNativeFunction("write", builtIn_write, 3, false);
+    setTable(table, internIdentifier("write", 5), VAL_OBJ((Object*)writeFn));
+    freeObject((Object*)writeFn);
   #endif
 }
 

@@ -4,6 +4,8 @@
 #include "../object.h"
 
 Object* builtIn_append_list(Object** args, size_t argCount);
+Object* builtIn_pop_list(Object** args, size_t argCount);
+
 Object* builtIn_range(Object** args, size_t argCount);
 
 #endif // ARC_LISTS_H

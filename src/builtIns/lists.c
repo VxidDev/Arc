@@ -28,6 +28,29 @@ Object* builtIn_append_list(Object** args, size_t argCount) {
   return (Object*)list;
 }
 
+Object* builtIn_pop_list(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* arg0 = args[0];
+
+  if (arg0->type != OBJ_LIST) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'list', received '%s'.", typeofobj(arg0));
+    return (Object*)initProgramError(buf);
+  }
+
+  List *list = (List*)arg0;
+  
+  if (list->size == 0) {
+    return (Object*)initProgramError("Cannot pop from empty list.");
+  }
+  
+  list->size--;
+  list->objects[list->size] = NULL;
+
+  return arg0;
+}
+
 Object* builtIn_range(Object** args, size_t argCount) {
   (void)argCount;
 

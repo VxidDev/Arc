@@ -688,10 +688,8 @@ Object *vmRun(VM *vm) {
 
       for (int i = 0; i < count; i++) 
         items[count - 1 - i] = valueToObject(PEEK(i));
-
-      for (int i = 0; i < count; i++) {
-        freeValue(POP());
-      }
+      
+      sp -= count;
 
       PUSH(VAL_OBJ((Object*)initList(items, count, count)));
       if (items != smallBuf) free(items);

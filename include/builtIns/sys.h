@@ -8,6 +8,7 @@ Object* builtIn_exit(Object** args, size_t argCount);
 #ifndef _WIN32
   Object* builtIn_access(Object** args, size_t argCount);
   Object* builtIn_unlink(Object** args, size_t argCount);
+  Object* builtIn_write(Object** args, size_t argCount);
 
   #define FS_OK 0
   #define FS_NOTFOUND 1 

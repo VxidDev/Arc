@@ -7,7 +7,7 @@
 static ArenaBlock* arenaNewBlock(size_t minSize) {
   size_t cap = minSize > ARENA_BLOCK_SIZE ? minSize : ARENA_BLOCK_SIZE;
 
-  ArenaBlock* block = (ArenaBlock*)malloc(sizeof(ArenaBlock) + cap);
+  ArenaBlock* block = (ArenaBlock*)calloc(1, sizeof(ArenaBlock) + cap);
   
   if (!block) return NULL;
 
