@@ -253,21 +253,27 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
 
   if (aStr || bStr) {
     Value res = VAL_UNDEF();
+    bool returnedDest = false;
 
-    if (op == OP_ADD && aStr && bStr) 
-      res = VAL_OBJ((Object *)addString((String *)aObj, (String *)bObj));
+    if (op == OP_ADD && aStr && bStr) {
+      String *r = addString((String *)aObj, (String *)bObj);
+      returnedDest = (r == (String *)aObj);
+      res = VAL_OBJ((Object *)r);
+    }
     else if (op == OP_MUL && aStr && (IS_INT(b) || IS_FLOAT(b))) {
       Number tmp;
       tmp.as.i = IS_INT(b) ? AS_INT(b) : (int64_t)AS_FLOAT(b);
       tmp.base.type = OBJ_NUMBER_INT;
-      res = VAL_OBJ((Object *)mulString((String *)aObj, &tmp));
+      String *r = mulString((String *)aObj, &tmp);
+      returnedDest = (r == (String *)aObj);
+      res = VAL_OBJ((Object *)r);
     }
     else if (op == OP_EQ) 
       res = VAL_INT(aStr && bStr && strcmp(((String *)aObj)->value, ((String *)bObj)->value) == 0);
     else if (op == OP_NE)
       res = VAL_INT(!(aStr && bStr && strcmp(((String *)aObj)->value, ((String *)bObj)->value) == 0));
     
-    freeValue(a);
+    if (!returnedDest) freeValue(a);
     freeValue(b);
     return res;
   }

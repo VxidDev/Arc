@@ -72,22 +72,62 @@ Object* builtIn_to_string(Object** args, size_t argCount) {
       int64_t val = ((Number*)arg0)->as.i;
 
       size_t len = snprintf(NULL, 0, "%" PRId64, val);
-
-      char *str = arenaAlloc(stringArena, len + 1);
+      char *str = malloc(len + 1);
 
       snprintf(str, len + 1, "%" PRId64, val);
-      return (Object*)initString(str, len);
+      return (Object*)noCopyInitString(str, len);
     }
     
     case OBJ_NUMBER_FLOAT: {
       double val = ((Number*)arg0)->as.f;
 
       size_t len = snprintf(NULL, 0, "%f", val);
-
-      char *str = arenaAlloc(stringArena, len + 1);
+      char *str = malloc(len + 1);
 
       snprintf(str, len + 1, "%f", val);
-      return (Object*)initString(str, len);
+      return (Object*)noCopyInitString(str, len);
+    }
+
+    case OBJ_LIST: {
+      List* list = (List*)arg0;
+
+      size_t cap = 16;
+      char* buf = malloc(cap);
+      size_t len = 0;
+
+      buf[len++] = '[';
+
+      for (uint64_t i = 0; i < list->size; i++) {
+        Object* elem = list->objects[i];
+
+        Object* strObj = builtIn_to_string(&elem, 1);
+        String* s = (String*)strObj;
+
+        size_t slen = s->len;
+
+        // grow buffer if needed
+        if (len + slen + 2 >= cap) {
+          while (len + slen + 2 >= cap)
+            cap *= 2;
+
+          char* newBuf = malloc(cap);
+          memcpy(newBuf, buf, len);
+          buf = newBuf;
+        }
+
+        memcpy(buf + len, s->value, slen);
+        len += slen;
+
+        if (i + 1 < list->size) {
+          buf[len++] = ',';
+          buf[len++] = ' ';
+        }
+      }
+
+      buf[len++] = ']';
+      buf[len] = '\0';
+
+      return (Object*)noCopyInitString(buf, len);
     }
 
     default: break;

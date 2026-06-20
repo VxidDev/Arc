@@ -56,9 +56,10 @@ fn json_make_string_token(json_str, json_len, idx) then
   end 
   
   var token = JSONToken()
-
+  
   return [token.init(token, JSON_TOK_STRING, str), idx]
 end
+
 fn json_make_digit_token(json_str, json_len, idx) then 
   var str = ""
 
@@ -94,13 +95,13 @@ fn json_lexer(json_str) then
     
     if c == "{" then 
       token = JSONToken()
-      tokens = append_list(tokens, token.init(token, JSON_TOK_LCURLBRACK, 0))
+      append_list(tokens, token.init(token, JSON_TOK_LCURLBRACK, 0))
       continue
     end 
 
     if c == "}" then 
       token = JSONToken()
-      tokens = append_list(tokens, token.init(token, JSON_TOK_RCURLBRACK, 0))
+      append_list(tokens, token.init(token, JSON_TOK_RCURLBRACK, 0))
       continue
     end
 
@@ -109,19 +110,19 @@ fn json_lexer(json_str) then
       token = res[0]
       idx = res[1]
 
-      tokens = append_list(tokens, token)
+      append_list(tokens, token)
       continue
     end 
 
     if c == ":" then 
       token = JSONToken()
-      tokens = append_list(tokens, token.init(token, JSON_TOK_COLON, 0))
+      append_list(tokens, token.init(token, JSON_TOK_COLON, 0))
       continue 
     end
 
     if c == "," then 
       token = JSONToken()
-      tokens = append_list(tokens, token.init(token, JSON_TOK_COMMA, 0))
+      append_list(tokens, token.init(token, JSON_TOK_COMMA, 0))
       continue 
     end 
 
@@ -130,7 +131,7 @@ fn json_lexer(json_str) then
       token = res[0]
       idx = res[1]
 
-      tokens = append_list(tokens, token)
+      append_list(tokens, token)
       continue
     end 
 

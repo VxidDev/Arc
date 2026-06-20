@@ -64,7 +64,7 @@ typedef struct Number {
 typedef struct String {
   Object base;
   char *value;
-  uint64_t len;
+  uint64_t len, capacity;
   long hash;
 } String;
 
@@ -176,6 +176,7 @@ File* initFile(FILE* file, char* fname, char* fmod);
 File* copyFile(File* file);
 
 String* initString(char *value, uint64_t len);
+String* noCopyInitString(char *value, uint64_t len);
 String* initStringConst(char *value, uint64_t len);
 String* copyString(String *str);
 char* internIdentifier(const char* value, uint64_t len);
@@ -219,8 +220,8 @@ ErrType isGreaterThanNumber(Number* dest, const Number* src);
 ErrType andNumber(Number* dest, const Number* src);
 ErrType orNumber(Number* dest, const Number* src);
 
-String* addString(const String* dest, const String* src);
-String* mulString(const String* dest, const Number* src);
+String* addString(String* dest, const String* src);
+String* mulString(String* dest, const Number* src);
 
 void freeObject(Object* obj);
 void forceFreeObject(Object* obj);

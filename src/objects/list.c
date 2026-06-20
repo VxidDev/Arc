@@ -10,7 +10,7 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
   if (!listobj) return NULL;
 
   listobj->base.type = OBJ_LIST;
-  listobj->base.isStatic = false;
+  listobj->base.isStatic = true;
 
   listobj->size = size;
   listobj->capacity = capacity > 0 ? capacity : 1;

@@ -47,14 +47,14 @@ fn json_parse_object(tokens, idx) then
     idx = res[0]
     val = res[1]
 
-    objects = append_list(objects, [key, val])
-
+    append_list(objects, [key, val])
+ 
     if (idx < len) and (tokens[idx].type == JSON_TOK_COMMA) then 
       idx = idx + 1
-    else 
-      break 
-    end 
+    end
   end 
+  
+  idx = idx + 1 # skip '}'
 
   return [idx, objects]
 end 

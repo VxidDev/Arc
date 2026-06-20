@@ -1,6 +1,5 @@
 # benchmarking
-gen.py
-gen_py.py
+gen*.py
 py.py 
 fib.py
 text.*

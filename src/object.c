@@ -32,8 +32,6 @@ Object* copyObject(Object* obj) {
     case OBJ_NUMBER_INT:
     case OBJ_NUMBER_FLOAT:
       return (Object*)copyNumber((Number*)obj);
-    case OBJ_LIST:
-      return (Object*)copyList((List*)obj);
     case OBJ_NATIVE_FUNCTION:
       return (Object*)copyNativeFunction((NativeFunction*)obj);
     case OBJ_STRING:
@@ -46,6 +44,7 @@ Object* copyObject(Object* obj) {
     case OBJ_CLASS:
     case OBJ_INSTANCE:
     case OBJ_NULL:
+    case OBJ_LIST:
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
@@ -64,27 +63,14 @@ void freeObject(Object* obj) {
     case OBJ_NUMBER_FLOAT:
       poolFree(numberPool, obj); break;
 
-    case OBJ_STRING: 
+    case OBJ_STRING:
+      String* s = (String*)obj;
+      if (s->value) free(s->value);
       poolFree(stringPool, obj); break;
     
     case OBJ_NATIVE_FUNCTION:
       poolFree(nativeFuncPool, obj); break;
-
-    case OBJ_LIST: {
-      List* list = (List*)obj;
-      
-      if (list->objects) {
-        for (uint64_t i = 0; i < list->size; i++) 
-          freeObject(list->objects[i]);
-
-        free(list->objects);
-      }
-
-      free(list);
-
-      break;
-    }
-    
+ 
     case OBJ_MODULE:
       free(obj);
       break;
@@ -165,6 +151,7 @@ void freeObject(Object* obj) {
     }
     
     case OBJ_NULL: // unreachable
+    case OBJ_LIST:
     case OBJ_CLASS: {
        break;
     }
@@ -192,6 +179,7 @@ void forceFreeObject(Object* obj) {
 
     free(list->objects);
     free(list);
+
     return;
   }
   

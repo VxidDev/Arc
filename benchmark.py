@@ -1,14 +1,15 @@
 import time
-import sys 
+import sys
+import json 
 
 sys.setrecursionlimit(8096)
 
-def benchmark(name, fn, iterations=1):
+def benchmark(name, fn, iterations=1, print_res=True):
     start = time.perf_counter()
     for _ in range(iterations):
         result = fn()
     end = time.perf_counter()
-    print(f"{name}: {(end - start) * 1000:.2f}ms (result: {result})")
+    print(f"{name}: {(end - start) * 1000:.2f}ms (result: {result if print_res else 'skipped printing result'})")
 
 # 1. Fibonacci (recursive) - tests function call overhead
 def fib(n):
@@ -96,3 +97,14 @@ def var_churn(n):
     return x
 
 benchmark("variable churn x100000", lambda: var_churn(100000))
+
+json_string = None 
+
+try:
+    with open("nested.json", "r") as f:
+        json_string = f.read()
+except (FileNotFoundError, json.JSONDecodeError):
+    print("nested.json not found, skipping benchmark.")
+
+if json_string:
+    benchmark("nested json parsing (3.7 mb)", lambda: json.loads(json_string), print_res = False)
