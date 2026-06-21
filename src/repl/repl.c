@@ -153,6 +153,14 @@ void registerBuiltins(SymbolTable* table) {
   setTable(table, internIdentifier("string_finish", 13), VAL_OBJ((Object*)string_finishFn));
   freeObject((Object*)string_finishFn);
 
+  NativeFunction* char_atFn = initNativeFunction("char_at", builtIn_char_at, 2, false);
+  setTable(table, internIdentifier("char_at", 7), VAL_OBJ((Object*)char_atFn));
+  freeObject((Object*)char_atFn);
+  
+  NativeFunction* char_to_stringFn = initNativeFunction("char_to_string", builtIn_char_to_string, 1, false);
+  setTable(table, internIdentifier("char_to_string", 14), VAL_OBJ((Object*)char_to_stringFn));
+  freeObject((Object*)char_to_stringFn);
+
   // List 
   
   NativeFunction* append_listFn = initNativeFunction("append_list", builtIn_append_list, 2, false);

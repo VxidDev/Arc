@@ -5,15 +5,15 @@
 #include <math.h>
 #include <stdbool.h>
 
-static Number _intCache[256];
+static Number _intCache[512];
 static bool _intCacheInit = false;
 
 static void _ensureIntCache() {
   if (_intCacheInit) return;
 
-  for (int i = 0; i < 256; i++) {
+  for (int i = 0; i < 512; i++) {
     _intCache[i].base.type = OBJ_NUMBER_INT;
-    _intCache[i].as.i = i - 128;
+    _intCache[i].as.i = i - 256;
     _intCache[i].base.isStatic = true;
   }
 
@@ -51,8 +51,8 @@ static inline bool isValid(const Object* a, const Object* b) {
 Number *initInt(int64_t value) {
   _ensureIntCache();
 
-  if (value >= -128 && value < 128)
-    return &_intCache[value + 128];
+  if (value >= -256 && value < 256)
+    return &_intCache[value + 256];
 
   Number* number = poolAlloc(numberPool);
 

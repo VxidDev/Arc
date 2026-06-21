@@ -34,7 +34,7 @@ Token initToken(TokType type, void* value, bool needsToBeFreed, Position start, 
   token.type = type;
 
   switch (type) {
-    case TOK_INT: token.val.i = *(long*)value; break;
+    case TOK_INT: token.val.i = *(int64_t*)value; break;
     case TOK_FLOAT: token.val.f = *(double*)value; break;
     default: token.val.s = (char*)value; break;
   }

@@ -180,7 +180,9 @@ Object* builtIn_string_finish(Object** args, size_t argCount) {
   Object* obj = args[0];
 
   if (obj->type != OBJ_STRING) {
-    return (Object*)initProgramError("Expected argument 1 to be object of type 'string'.");
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'string', received '%s'.", typeofobj(obj));
+    return (Object*)initProgramError(buf);
   }
 
   String* buf = (String*)obj;
@@ -189,4 +191,51 @@ Object* builtIn_string_finish(Object** args, size_t argCount) {
   if (!result) return (Object*)initProgramError("Failed to finalize string buffer.");
 
   return (Object*)result;
+}
+
+Object* builtIn_char_at(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* strObj = args[0];
+  Object* idxObj = args[1];
+
+  if (strObj->type != OBJ_STRING) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'string', received '%s'.", typeofobj(strObj));
+    return (Object*)initProgramError(buf);
+  }
+
+  if (idxObj->type != OBJ_NUMBER_INT) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument 2 to be object of type 'string', received '%s'.", typeofobj(idxObj));
+    return (Object*)initProgramError(buf);
+  }
+
+  String* str = (String*)strObj;
+  int64_t idx = ((Number*)idxObj)->as.i;
+
+  if (idx < 0 || (uint64_t)idx >= str->len) {
+    return (Object*)initProgramError("Index out of bounds.");
+  }
+
+  return (Object*)initInt(str->value[idx]);
+}
+
+Object* builtIn_char_to_string(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* obj = args[0];
+
+  if (obj->type != OBJ_NUMBER_INT) {
+    return (Object*)initProgramError("Expected argument 1 to be object of type 'int'.");
+  }
+
+  int64_t code = ((Number*)obj)->as.i;
+
+  if (code < 0 || code > 0xFF) {
+    return (Object*)initProgramError("Char code out of byte range (0-255).");
+  }
+
+  char buf[2] = { (char)code, '\0' };
+  return (Object*)initString(buf, 1);
 }

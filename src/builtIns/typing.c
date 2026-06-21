@@ -101,22 +101,36 @@ Object* builtIn_to_string(Object** args, size_t argCount) {
         Object* elem = list->objects[i];
 
         Object* strObj = builtIn_to_string(&elem, 1);
+
+        if (strObj->type == OBJ_ERROR) {
+          free(buf);
+          return strObj; 
+        }
+
         String* s = (String*)strObj;
 
         size_t slen = s->len;
 
         // grow buffer if needed
-        if (len + slen + 2 >= cap) {
-          while (len + slen + 2 >= cap)
+        if (len + slen + 2 + 2 >= cap) {
+          while (len + slen + 2 + 2 >= cap)
             cap *= 2;
 
-          char* newBuf = malloc(cap);
-          memcpy(newBuf, buf, len);
+          char* newBuf = realloc(buf, cap);
+
+          if (!newBuf) {
+            free(buf);
+            freeObject(strObj);
+            return (Object*)initProgramError("Failed to convert object to string: Out of memory.");
+          }
+
           buf = newBuf;
         }
 
         memcpy(buf + len, s->value, slen);
         len += slen;
+
+        freeObject(strObj);
 
         if (i + 1 < list->size) {
           buf[len++] = ',';

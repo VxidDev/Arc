@@ -17,6 +17,6 @@ end
 
 if json_string then 
   var t = perf_counter()
-  var s = to_json(json_string)
+  var s = json_lexer(json_string)
   bench("nested json (3.7 mb)", t, "skipped printing result")
 end

@@ -362,6 +362,53 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
   return initToken(TOK_STRING, buffer, false, start, lexer->pos);
 }
 
+static Token makeCharLexer(Lexer *lexer, Error** error) {
+  Position start = lexer->pos;
+  advanceLexer(lexer); // skip '\''
+  
+  int64_t value;
+
+  if (lexer->currChar == '\\') {
+    advanceLexer(lexer); // consume backslash
+
+    switch (lexer->currChar) {
+      case 'n': value = '\n'; break;
+      case 't': value = '\t'; break;
+      case 'r': value = '\r'; break;
+      case '0': value = '\0'; break;
+      case '\\': value = '\\'; break;
+      case '\'': value = '\''; break;
+      case '"': value = '"'; break;
+      default:
+        if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Unknown escape sequence in char literal.", lexer->text);
+        return (Token){.type = TOK_INVALID};
+    }
+
+    advanceLexer(lexer);
+  } else if (lexer->currChar == '\'' || !lexer->currChar) {
+    if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Char literal must contain exactly one character.", lexer->text);
+    return (Token){.type = TOK_INVALID};
+  } else { 
+    uint8_t raw = lexer->currChar;
+
+    if (raw > 0x7F) {
+      if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Char literals only support single-byte (ASCII) characters.", lexer->text);
+      return (Token){.type = TOK_INVALID};
+    }
+
+    value = (int64_t)raw;
+    advanceLexer(lexer);
+  }
+
+  if (lexer->currChar != '\'') {
+    if (*error == NULL) *error = initSyntaxError(start, lexer->pos, lexer->filename, "Char literal must contain exactly one character.", lexer->text);
+    return (Token){.type = TOK_INVALID};
+  }
+  advanceLexer(lexer);
+  
+  return initToken(TOK_INT, &value, false, start, lexer->pos);
+}
+
 bool _generateToken(Lexer *lexer, Token** tokens, unsigned long *size, unsigned long *capacity, TokType tokenType) {
   if (UNLIKELY(*size >= *capacity)) {
     if (!_resizeTokensList(tokens, capacity)) {
@@ -488,6 +535,11 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
 
     if (lexer->currChar == '"') {
       if (!_appendToken(makeStringLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == '\'') {
+      if (!_appendToken(makeCharLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
       continue;
     }
 

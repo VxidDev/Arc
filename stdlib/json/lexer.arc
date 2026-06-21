@@ -86,8 +86,22 @@ fn json_lexer(json_str) then
   var len = len_of(json_str)
   
   var tokens = []
+  
+  var lcurl_tok = JSONToken()
+  lcurl_tok.init(lcurl_tok, JSON_TOK_LCURLBRACK, 0)
+  
+  var rcurl_tok = JSONToken()
+  rcurl_tok.init(rcurl_tok, JSON_TOK_RCURLBRACK, 0)
+  
+  var colon_tok = JSONToken()
+  colon_tok.init(colon_tok, JSON_TOK_COLON, 0)
+  
+  var comma_tok = JSONToken()
+  comma_tok.init(comma_tok, JSON_TOK_COMMA, 0)
 
   while idx < len then
+    print(idx)
+
     c = json_str[idx]
     idx = idx + 1
 
@@ -96,14 +110,12 @@ fn json_lexer(json_str) then
     end
     
     if c == "{" then 
-      token = JSONToken()
-      append_list(tokens, token.init(token, JSON_TOK_LCURLBRACK, 0))
+      append_list(tokens, lcurl_tok)
       continue
     end 
 
     if c == "}" then 
-      token = JSONToken()
-      append_list(tokens, token.init(token, JSON_TOK_RCURLBRACK, 0))
+      append_list(tokens, rcurl_tok)
       continue
     end
 
@@ -117,14 +129,12 @@ fn json_lexer(json_str) then
     end 
 
     if c == ":" then 
-      token = JSONToken()
-      append_list(tokens, token.init(token, JSON_TOK_COLON, 0))
+      append_list(tokens, colon_tok)
       continue 
     end
 
     if c == "," then 
-      token = JSONToken()
-      append_list(tokens, token.init(token, JSON_TOK_COMMA, 0))
+      append_list(tokens, comma_tok)
       continue 
     end 
 

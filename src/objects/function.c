@@ -105,7 +105,7 @@ NativeFunction* initNativeFunction(char *name, NativeFunc func, size_t requiredA
   }
 
   nativeFunc->base.type = OBJ_NATIVE_FUNCTION;
-  nativeFunc->base.isStatic = false;
+  nativeFunc->base.isStatic = true;
 
   nativeFunc->function = func;
   nativeFunc->requiredArgCount = requiredArgCount;
