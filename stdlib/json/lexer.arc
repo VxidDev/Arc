@@ -100,8 +100,6 @@ fn json_lexer(json_str) then
   comma_tok.init(comma_tok, JSON_TOK_COMMA, 0)
 
   while idx < len then
-    print(idx)
-
     c = json_str[idx]
     idx = idx + 1
 

@@ -6,6 +6,7 @@ text.*
 calc.arc
 arc.arc
 vgcore.*
+lib.c
 
 fib.arc
 profile.txt

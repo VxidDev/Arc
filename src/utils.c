@@ -49,6 +49,21 @@ char* typeofobj(const Object* obj) {
   }
 }
 
+char *objTypeToStr(const ObjType type) {
+  switch (type) {
+    case OBJ_NUMBER_INT: return "int";
+    case OBJ_NUMBER_FLOAT: return "float"; 
+    case OBJ_STRING: return "string"; 
+    case OBJ_ERROR: return "error"; 
+    case OBJ_LIST: return "list";
+    case OBJ_FUNCTION: return "function"; 
+    case OBJ_FILE: return "file";
+    case OBJ_INSTANCE: return "instance";
+    case OBJ_CLASS: return "class";
+    default: return "object"; 
+  }
+}
+
 char* tokToString(const TokType type) {
   switch (type) {
     case TOK_INT: return "INT";
@@ -178,4 +193,14 @@ char* resolveImportPath(const char* currentFile, const char* importPath) {
   }
 
   return stringDup(buffer);
+}
+
+Object* enforceType(Object* obj, ObjType expectedType, size_t argN) {
+  if (obj->type != expectedType) {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected argument %zu to be object of type '%s', received '%s'.", argN, objTypeToStr(expectedType), typeofobj(obj));
+    return (Object*)initProgramError(buf);
+  }
+
+  return NULL;
 }

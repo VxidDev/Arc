@@ -2,11 +2,26 @@
 #include "../include/builtIns/math.h"
 #include "../include/builtIns/sys.h"
 #include "../include/builtIns/time.h"
+#include "../include/builtIns/ctools.h"
 
 void initMathModule(SymbolTable* table) {
   NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false); // DEPRECATED, to_int() is prefered.
   setTable(table, internIdentifier("truncate", 8), VAL_OBJ((Object*)truncateFn));
   freeObject((Object*)truncateFn);
+}
+
+void initCTools(SymbolTable* table) {
+  NativeFunction* dl_openFn = initNativeFunction("dl_open", builtIn_dl_open, 2, false);
+  setTable(table, internIdentifier("dl_open", 7), VAL_OBJ((Object*)dl_openFn));
+  freeObject((Object*)dl_openFn);
+
+  NativeFunction* dl_symFn = initNativeFunction("dl_sym", builtIn_dl_sym, 4, false);
+  setTable(table, internIdentifier("dl_sym", 6), VAL_OBJ((Object*)dl_symFn));
+  freeObject((Object*)dl_symFn);
+
+  NativeFunction* dl_closeFn = initNativeFunction("dl_close", builtIn_dl_close, 1, false);
+  setTable(table, internIdentifier("dl_close", 8), VAL_OBJ((Object*)dl_closeFn));
+  freeObject((Object*)dl_closeFn);
 }
 
 void initSysModule(SymbolTable* table) {

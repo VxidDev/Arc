@@ -44,6 +44,9 @@ LDFLAGS_RELEASE = \
   -Wl,--gc-sections \
   -Wl,-O2
 
+LDFLAGS_RELEASE += -rdynamic
+LDFLAGS_DEBUG += -rdynamic
+
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
 LDFLAGS_PROFILE = -pg
 

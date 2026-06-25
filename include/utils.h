@@ -7,10 +7,14 @@
 char *stringDup(const char *s);
 uint32_t hashStr(const char *str, size_t len);
 char *tokToString(const TokType type);
+
 char *typeofobj(const Object* obj);
+char *objTypeToStr(const ObjType type);
 
 void getDirectory(const char *path, char *out);
 
 char *resolveImportPath(const char *currentFile, const char *importPath);
+
+Object* enforceType(Object* obj, ObjType expectedType, size_t argN);
 
 #endif // UTILS_H 
