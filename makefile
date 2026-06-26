@@ -67,7 +67,7 @@ ECHO = @echo
 all: dev
 
 dev: CFLAGS = $(CFLAGS_DEV)
-dev: LDFLAGS =
+dev: LDFLAGS = -rdynamic
 dev: $(TARGET)
 
 profile: CFLAGS = $(CFLAGS_PROFILE)

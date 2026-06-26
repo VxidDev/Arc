@@ -46,7 +46,7 @@ Object* builtIn_dl_close(Object** args, size_t argCount) {
 
   dlclose((void*)((uintptr_t)handle->as.i));
 
-  return (Object*)initNull();
+  return (Object*)initInt(1);
 }
 
 Object* builtIn_dl_sym(Object** args, size_t argCount) {
