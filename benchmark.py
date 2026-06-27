@@ -107,4 +107,4 @@ except (FileNotFoundError, json.JSONDecodeError):
     print("nested.json not found, skipping benchmark.")
 
 if json_string:
-    benchmark("nested json parsing (3.7 mb)", lambda: json.loads(json_string), print_res = False)
+    benchmark("nested json parsing (3.8 mb)", lambda: json.loads(json_string), print_res = False)
