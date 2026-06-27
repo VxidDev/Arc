@@ -1,6 +1,3 @@
-#ifndef ARCJSON_LEXER_H
-#define ARCJSON_LEXER_H
-
 #include "../../../include/utils.h"
 
 #include <stdlib.h>
@@ -160,7 +157,7 @@ Object* arcJson_parseValue(ArcJsonToken** tokens, size_t *idx) {
   }
   
   printf("Invalid JSON value.");
-  return NULL; // TODO: implement parsing 
+  return NULL; 
 }
 
 bool _appendTokenList(ArcJsonToken*** tokens, ArcJsonToken* token, size_t *size, size_t *capacity) {
@@ -308,5 +305,3 @@ Object* arcJson_loads(Object** args, size_t argCount) {
   free(tokens);
   return map;
 }
-
-#endif // ARCJSON_LEXER_H 

@@ -65,14 +65,15 @@ VAR x = 30  # Re-declaration (also valid)
 
 ## Classes
 
-Arc supports a class-based abstraction layer for grouping data and functions. Classes are defined using the `CLASS` keyword and do not use a `this` or `self` binding.
+Arc supports a class-based abstraction layer for grouping data and functions. Classes are defined using the `CLASS` keyword.
 
 ### Class Syntax
 ```arc
 CLASS name
     VAR field = "abc"
 
-    FN func(instance, ...) THEN
+    # 'self' is an explicit parameter and must be passed
+    FN func(self, ...) THEN
         ...
     END
 END
@@ -92,7 +93,7 @@ instance.field = 123  # modifies field value
 ```
 
 ### Method Calls
-Methods are encapsulated functions. Because they are **not implicitly bound** to the instance, instance data must be accessed by passing the instance explicitly:
+Methods are encapsulated functions. Because they are **not implicitly bound** to the instance, you must explicitly pass the instance as the first argument, conventionally named `self`:
 ```arc
 instance.func(instance, ...)
 ```
@@ -115,76 +116,17 @@ VAR last_element = my_list[3]  // 0
 
 List-related built-in functions like `len_of`, `max`, and `min` (math.arc) can be used to query properties or perform operations on lists.
 
-## Built-in Functions
+## Standard Library
 
-Arc provides several built-in functions implemented in C for core functionality:
+Arc provides a set of built-in functions and modules for core functionality:
 
-### I/O
-- `print(value1, ...)`: Prints one or more values to stdout. Values are converted to strings and separated by spaces. A newline is automatically appended. 
-- `get_input(prompt)`: Prints prompt and reads input from stdin.
-- `open_file(path, mode)`: Opens a file with specified mode (e.g., "r", "w").
-- `close_file(file)`: Closes an open file object.
-- `read_file(file)`: Reads content from a file object.
-- `write_file(file, string)`: Writes string to a file object.
+- [**I/O**](stdlib/io.md): Input/Output operations.
+- [**Types & Properties**](stdlib/typing.md): Inspection and conversion.
+- [**String Manipulation**](stdlib/string.md): String operations.
+- [**List Manipulation**](stdlib/list.md): List operations.
+- [**System & Time**](stdlib/sys.md): System and timing functions.
+- [**Math Library**](stdlib/math.md): Mathematical constants and functions.
 
-### Type & Properties
-- `len_of(value)`: Returns the length of a string or list.
-- `typeof(value)`: Returns the type of the value (e.g., "number", "string", "list", "function").
-- `to_int(value)`: Converts a value to an integer.
-
-### String Manipulation
-- `split_string(string, delimiter)`: Splits a string into a list of strings based on the delimiter.
-
-### List Manipulation
-- `append_list(list, value)`: Appends a value to the end of a list.
-- `range(start, end)`: Generates a list of numbers from `start` to `end` (exclusive).
-
-### System & Time
-These functions are available via `IMPORT` or registered in specific native modules:
-- `exit(code)`: Terminates the program with the given exit code. (Native module `__sys`).
-- `perf_counter()`: Returns a high-resolution performance counter for timing. (Native module `__time`).
-
-## Command Line Arguments
-
-When running a script, Arc exposes command-line arguments through two global variables:
-
-- `argc`: The number of command-line arguments (including the script name).
-- `argv`: A list containing the command-line arguments.
-
-```arc
-print("Argument count: ", argc)
-
-VAR i = 0
-
-WHILE i < argc THEN
-    print("Arg", i, ": " + argv[i])
-    i = i + 1
-END
-```
-
-## Standard Library (`math.arc`)
-
-`math.arc` provides additional mathematical functions. These can be used by adding `IMPORT "math.arc"` at the top of your script.
-
-### Constants
-- `PI`: 3.141592653589793
-- `E`: 2.718281828459045
-- `TAU`: 6.283185307179586
-
-### Mathematical Functions
-- `exp(x)`: Exponential function ($E^x$).
-- `logn(x)`: Natural logarithm.
-- `log(base, x)`: Logarithm with a specific base.
-- `sqrt(x)`: Square root.
-- `abs(x)`: Absolute value.
-- `sign(x)`: Returns -1 if x < 0, 0 if x == 0, 1 if x > 0.
-- `floor(x)`: Rounds down to the nearest integer.
-- `fmod(x, y)`: Floating-point modulo.
-- `sin(x)`: Sine.
-- `cos(x)`: Cosine.
-- `tan(x)`: Tangent.
-- `max(list)`: Returns the maximum value in a list.
-- `min(list)`: Returns the minimum value in a list.
 
 ## Control Flow
 

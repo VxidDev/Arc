@@ -89,10 +89,6 @@ This document lists all opcodes used by the Arc Virtual Machine, their stack eff
 - **Stack**: `..., result -> (caller stack)`
 - **Description**: Returns from the current function frame with the top stack value.
 
-### OP_BUILD_INSTANCE
-- **Stack**: `... -> ..., instance`
-- **Description**: Creates a new object instance for a class.
-
 ### OP_PROPERTY_ACCESS
 - **Stack**: `..., instance -> ..., value`
 - **Operand**: 1-byte index to interned string (property name).
@@ -135,3 +131,6 @@ This document lists all opcodes used by the Arc Virtual Machine, their stack eff
 ### OP_IMPORT
 - **Operand**: 1-byte index to constant string (path).
 - **Description**: Loads and executes an external file or native module.
+
+### OP_HALT
+- **Description**: Stops the VM execution loop.
