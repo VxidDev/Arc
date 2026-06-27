@@ -146,9 +146,9 @@ catch e then
 end 
 
 if json_string then 
-  #import "__c_tools" <- Requires compiling stdlib/clib/json, TODO: add makefile support
+  #import "__c_tools" # <- Requires compiling stdlib/clib/json, TODO: add makefile support
   
-  #var jsonlib = dl_open("./arcjson.so", 1)
+  #var jsonlib = dl_open("./stdlib/clib/json/build/libarcjson.so", 1)
   #var to_json = dl_sym(jsonlib, "arcJson_loads", 1, false)
 
   var t = perf_counter()

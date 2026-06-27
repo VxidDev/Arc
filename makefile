@@ -48,7 +48,7 @@ LDFLAGS_RELEASE += -rdynamic
 LDFLAGS_DEBUG += -rdynamic
 
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
-LDFLAGS_PROFILE = -pg
+LDFLAGS_PROFILE = -pg -rdynamic
 
 TEST_FILES := $(wildcard tests/*.arc)
 

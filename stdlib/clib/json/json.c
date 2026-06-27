@@ -10,14 +10,15 @@ typedef enum ARCJSON_TOKEN {
   ARCJSON_TOK_COLON,
   ARCJSON_TOK_COMMA,
   ARCJSON_TOK_INT, 
-  ARCJSON_TOK_STRING
+  ARCJSON_TOK_STRING,
+  ARCJSON_END 
 } ARCJSON_TOKEN;
 
 typedef struct ArcJsonToken {
   size_t type;
 
   union {
-    char *s;
+    struct s { char *s; size_t len; } s;
     int64_t i;
   } val;
 } ArcJsonToken;
@@ -28,70 +29,58 @@ typedef enum ARCJSON_VALUE {
   ARCJSON_OBJ
 } ARCJSON_VALUE;
 
-ArcJsonToken* initArcJsonToken(size_t type, void* content) {
-  ArcJsonToken* token = malloc(sizeof(ArcJsonToken));
+typedef struct ArcJsonLexer {
+  String* s;
+  ArcJsonToken currentTok;
+  size_t cursor;
+} ArcJsonLexer;
 
-  if (!token) return NULL;
-
-  token->type = type;
-  
-  if (type == ARCJSON_TOK_STRING) {
-    token->val.s = (char*)content;
-  } else if (type == ARCJSON_TOK_INT) {
-    token->val.i = (int64_t)(uintptr_t)content;
-  } 
-
-  return token;
-}
-
-const char *arcTokenRepr(ArcJsonToken* tok) {
-  switch (tok->type) {
+const char *arcTokenRepr(ArcJsonToken tok) {
+  switch (tok.type) {
     case ARCJSON_TOK_LCURLBRACK: return "LCURLBRACK";
     case ARCJSON_TOK_RCURLBRACK: return "RCURLBRACK";
     case ARCJSON_TOK_STRING: return "STRING";
     case ARCJSON_TOK_COLON: return "COLON";
     case ARCJSON_TOK_INT: return "INT";
     case ARCJSON_TOK_COMMA: return "COMMA";
+    case ARCJSON_END: return "END";
     default: return "UNKNOWN";
   }
 }
 
-Object* arcJson_parseValue(ArcJsonToken** tokens, size_t *idx);
+Object* arcJson_parseValue(ArcJsonLexer *lexer);
+ArcJsonToken arcJson_getNextToken(ArcJsonLexer* lexer); 
 
-Object* arcJson_parseObject(ArcJsonToken** tokens, size_t *idx) {
-  (*idx)++; // skip '{'
-  
+Object* arcJson_parseObject(ArcJsonLexer *lexer) { 
   size_t size = 0;
-  size_t capacity = 128;
+  size_t capacity = 8;
 
   Object** objects = malloc(sizeof(Object*) * capacity);
 
   if (!objects) {
     return NULL;
   }
+
+  ArcJsonToken current = arcJson_getNextToken(lexer); // consumes '{'
   
-  while (tokens[*idx] && tokens[*idx]->type != ARCJSON_TOK_RCURLBRACK) {
-    if (tokens[*idx]->type != ARCJSON_TOK_STRING) {
+  while (current.type != ARCJSON_END && current.type != ARCJSON_TOK_RCURLBRACK) {
+    if (current.type != ARCJSON_TOK_STRING) {
       return (Object*)initProgramError("Key must be a string.");
     }
 
-    Object* k = arcJson_parseValue(tokens, idx);
+    Object* k = (Object*)initString(current.val.s.s, current.val.s.len); 
 
     if (!k || k->type == OBJ_ERROR) {
       return k;
     }
 
-    if (!tokens[*idx] || tokens[*idx]->type != ARCJSON_TOK_COLON) {
+    current = arcJson_getNextToken(lexer); // consumes colon 
+
+    if (current.type != ARCJSON_TOK_COLON) {
       return (Object*)initProgramError("Expected ':'.");
     }
-
-    (*idx)++;
-    
-    if (!tokens[*idx]) {
-      return (Object*)initProgramError("Expected value.");
-    }
-
-    Object* v = arcJson_parseValue(tokens, idx);
+ 
+    Object* v = arcJson_parseValue(lexer); // consumes value 
 
     if (!v || v->type == OBJ_ERROR) {
       return v;
@@ -116,14 +105,14 @@ Object* arcJson_parseObject(ArcJsonToken** tokens, size_t *idx) {
     }
 
     objects[size++] = (Object*)l;
+    
+    current = arcJson_getNextToken(lexer);
 
-    if (tokens[*idx] && tokens[*idx]->type == ARCJSON_TOK_COMMA) {
-      (*idx)++;
+    if (current.type == ARCJSON_TOK_COMMA) {
+      current = arcJson_getNextToken(lexer);
     }
   }
-
-  (*idx)++;
-  
+   
   Object* obj = (Object*)initList(objects, size, capacity);
 
   for (size_t i = 0; i < size; i++) {
@@ -135,148 +124,81 @@ Object* arcJson_parseObject(ArcJsonToken** tokens, size_t *idx) {
   return obj;
 }
 
-Object* arcJson_parseValue(ArcJsonToken** tokens, size_t *idx) {
-  ArcJsonToken* current = tokens[*idx];
+Object* arcJson_parseValue(ArcJsonLexer* lexer) {
+  ArcJsonToken current = arcJson_getNextToken(lexer);
 
-  if (current->type == ARCJSON_TOK_STRING) {
-    Object* o = (Object*)initString(current->val.s, strlen(current->val.s));
-    (*idx)++;
-
+  if (current.type == ARCJSON_TOK_STRING) {
+    Object* o = (Object*)initString(current.val.s.s, current.val.s.len);
     return o;
   }
 
-  if (current->type == ARCJSON_TOK_INT) {
-    Object* o = (Object*)initInt(current->val.i);
-    (*idx)++;
-
+  if (current.type == ARCJSON_TOK_INT) {
+    Object* o = (Object*)initInt(current.val.i);
     return o;
   }
 
-  if (current->type == ARCJSON_TOK_LCURLBRACK) { 
-    return arcJson_parseObject(tokens, idx); 
+  if (current.type == ARCJSON_TOK_LCURLBRACK) { 
+    return arcJson_parseObject(lexer); 
   }
   
-  printf("Invalid JSON value.");
+  printf("Invalid JSON value, Token type: %s\n", arcTokenRepr(current));
   return NULL; 
 }
 
-bool _appendTokenList(ArcJsonToken*** tokens, ArcJsonToken* token, size_t *size, size_t *capacity) {
-  if (*size + 1 > *capacity) {
-    size_t newCap = (*capacity == 0) ? 1 : (*capacity * 2);
-    ArcJsonToken** newTokens = realloc(*tokens, sizeof(ArcJsonToken*) * newCap);
+ArcJsonToken arcJson_getNextToken(ArcJsonLexer* lexer) { 
+  ARCJSON_TOKEN type = ARCJSON_END;
+  void* value = NULL;
+  size_t len = 0;
   
-    if (!newTokens) {
-      return false;
-    }
-
-    *tokens = newTokens;
-    *capacity = newCap;
-  }
-
-  (*tokens)[*size] = token;
-  (*size)++;
-
-  return true;
-}
-
-ArcJsonToken** arcJson_lexer(String* jsonString) { 
-  size_t len = jsonString->len;
+  char *s = lexer->s->value;
   
-  size_t size = 0;
-  size_t capacity = len ? len / 2 : 4;
+  while (s[lexer->cursor] <= ' ') lexer->cursor++;
 
-  ArcJsonToken** tokens = malloc(sizeof(ArcJsonToken*) * capacity);
-
-  if (!tokens) return NULL;
-  
-  char *val = jsonString->value;
-
-  for (size_t i = 0; i < len; i++) {
-    char c = val[i];
-
-    if (c == ' ') continue;
-
-    if (c == '{') {
-      if (!_appendTokenList(&tokens, initArcJsonToken(ARCJSON_TOK_LCURLBRACK, NULL), &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (c == '}') {
-      if (!_appendTokenList(&tokens, initArcJsonToken(ARCJSON_TOK_RCURLBRACK, NULL), &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (c == ':') {
-      if (!_appendTokenList(&tokens, initArcJsonToken(ARCJSON_TOK_COLON, NULL), &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (c == ',') {
-      if (!_appendTokenList(&tokens, initArcJsonToken(ARCJSON_TOK_COMMA, NULL), &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (c == '\"') {
-      size_t strIdx = 0;
-      char *s = malloc(1024);
-
-      if (!s) {
-        for (size_t i = 0; i < size; i++) {
-          if (tokens[i]->type == ARCJSON_TOK_STRING) free(tokens[i]->val.s);
-          free(tokens[i]);
-        }
-
-        free(tokens);
-        return NULL;
-      }
-
-      i++;
-
-      while (i < len && val[i] != '\"') {
-        s[strIdx++] = val[i]; // TODO: add resizing logic
-        i++;
-      }
+  switch (s[lexer->cursor++]) {
+    case '{': type = ARCJSON_TOK_LCURLBRACK; goto end;
+    case '}': type = ARCJSON_TOK_RCURLBRACK; goto end;
+    case ':': type = ARCJSON_TOK_COLON; goto end;
+    case ',': type = ARCJSON_TOK_COMMA; goto end;  
+    case '\"': {
+      size_t start = lexer->cursor;
+      char *closing = memchr(s + start, '\"', lexer->s->len - start);
+      len = closing - (s + start);
+      *closing = '\0';
       
-      s[strIdx] = '\0';
-             
-      if (!_appendTokenList(&tokens, initArcJsonToken(ARCJSON_TOK_STRING, s), &size, &capacity)) return NULL;
-      continue;
+      lexer->cursor = (closing - s) + 1;
+
+      type = ARCJSON_TOK_STRING;
+      value = &s[start];
+      goto end;
     }
 
-    if (c >= '0' && c <= '9') {
-      char *start = &val[i];
+    case '0' ... '9': {
+      char *start = &s[lexer->cursor - 1];
       char *endptr;
 
       errno = 0;
       int64_t num = strtoll(start, &endptr, 10);
-      
+
       if (endptr == start) {
-        i++;
-        continue;
+        lexer->cursor++;
+        goto end;
       }
 
-      if (errno == ERANGE || (*endptr != '\0' && *endptr != '}' && *endptr != ']' && *endptr != ',' && *endptr != ' ')) {
+
+      if (errno == ERANGE || (*endptr != '\0' && *endptr != '}' && *endptr != ']' && *endptr != ',' && *endptr > ' ')) {
         printf("Cursor at: %c\n", *endptr);
-
-        for (size_t i = 0; i < size; i++) {
-          if (tokens[i]->type == ARCJSON_TOK_STRING) free(tokens[i]->val.s);
-          free(tokens[i]);
-        }
-
-        free(tokens);
-
-        return NULL;
+        return (ArcJsonToken){ARCJSON_END, {.i = 0}};
       }
 
-      i = (size_t)(endptr - val) - 1;
-       
-      if (!_appendTokenList(&tokens, initArcJsonToken(ARCJSON_TOK_INT, (void*)(uintptr_t)num), &size, &capacity)) return NULL;
-      continue; 
+      lexer->cursor = (size_t)(endptr - s);
+      
+      type = ARCJSON_TOK_INT;
+      value = (void*)(uintptr_t)num;
     }
   }
-
-  tokens[size] = NULL;
-  return tokens;
+  
+  end:
+     return type == ARCJSON_TOK_INT ? (ArcJsonToken){type, .val = {.i = (int64_t)(uintptr_t)value}} : (ArcJsonToken){type, {.s = { value, len}}};
 }
 
 Object* arcJson_loads(Object** args, size_t argCount) {
@@ -286,22 +208,13 @@ Object* arcJson_loads(Object** args, size_t argCount) {
   if (err) return err;
   
   String* jsonString = (String*)args[0];
+  String* copiedString = initString(jsonString->value, jsonString->len);
 
-  ArcJsonToken** tokens = arcJson_lexer(jsonString);
+  ArcJsonLexer lexer = (ArcJsonLexer){copiedString, {0}, 0};
+ 
+  Object* map = arcJson_parseValue(&lexer);
+  
+  freeObject((Object*)copiedString);
 
-  if (!tokens) {
-    printf("Error had occured while parsing JSON string.\n");
-    return (Object*)initInt(0);
-  }
-   
-  size_t idx = 0;
-  Object* map = arcJson_parseValue(tokens, &idx);
-
-  for (size_t i = 0; tokens[i]; i++) {
-    if (tokens[i]->type == ARCJSON_TOK_STRING) free(tokens[i]->val.s);
-    free(tokens[i]);
-  }
-
-  free(tokens);
   return map;
 }
