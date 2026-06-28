@@ -101,9 +101,10 @@ fn json_lexer(json_str) then
 
   while idx < len then
     c = json_str[idx]
+    ch = char_at(json_str, idx)
     idx = idx + 1
 
-    if c == " " then 
+    if ch <= ' ' then
       continue
     end
     
