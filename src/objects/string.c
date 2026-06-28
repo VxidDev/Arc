@@ -228,6 +228,7 @@ String *mulString(String *dest, const Number *src) {
   if (times <= 0) return initString("", 0);
 
   size_t len = dest->len;
+  if (len != 0 && (size_t)times > SIZE_MAX / len) return NULL;
   size_t total = len * (size_t)times;
   
   if (total + 1 > dest->capacity) {
