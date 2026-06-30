@@ -7,12 +7,15 @@ TARGET = arc
 PREFIX ?= /usr
 BINDIR = $(DESTDIR)$(PREFIX)/bin
 
+ARC_LIB_DIR = $(DESTDIR)/usr/local/share/arc/lib
+CLIB_SRC_DIR = stdlib/clib
+
 C_SRC = $(shell find $(SRC_DIR) -name '*.c')
 OBJ = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
 
 LDLIBS = -lm
 
-BASE_FLAGS = -Wall -Wextra -Iinclude -MMD -MP
+BASE_FLAGS = -Wall -Wextra -Iinclude -DARC_LIB_DIR=\"$(ARC_LIB_DIR)\" -MMD -MP
 
 CFLAGS_DEV = $(BASE_FLAGS) -O0 -g
 
@@ -50,6 +53,9 @@ LDFLAGS_DEBUG += -rdynamic
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
 LDFLAGS_PROFILE = -pg -rdynamic
 
+CLIB_MODULES = json net
+CLIB_TARGETS = $(foreach mod,$(CLIB_MODULES),$(CLIB_SRC_DIR)/$(mod)/build/libarc$(mod).so)
+
 TEST_FILES := $(wildcard tests/*.arc)
 
 V ?= 0
@@ -81,6 +87,25 @@ debug: $(TARGET)
 release: CFLAGS = $(CFLAGS_RELEASE)
 release: LDFLAGS = $(LDFLAGS_RELEASE)
 release: $(TARGET)
+
+$(CLIB_SRC_DIR)/%/build/libarc%.so:
+	$(Q)$(MAKE) -C $(CLIB_SRC_DIR)/$*
+
+release-libs: CFLAGS = $(CFLAGS_RELEASE)
+release-libs: $(CLIB_TARGETS)
+
+debug-libs: CFLAGS = $(CFLAGS_DEBUG)
+debug-libs: $(CLIB_TARGETS)
+
+dev-libs: CFLAGS = $(CFLAGS_DEV)
+dev-libs: $(CLIB_TARGETS)
+
+install-libs:
+	$(ECHO) "Installing Arc standard library to $(ARC_LIB_DIR)..."
+	$(Q)install -d $(ARC_LIB_DIR)
+	$(Q)install -d $(ARC_LIB_DIR)/clib
+	$(Q)cp $(CLIB_SRC_DIR)/*/build/*.so $(ARC_LIB_DIR)/clib/
+	$(Q)find stdlib -name "*.arc" -exec install -Dm644 {} $(ARC_LIB_DIR)/{} \;
 
 $(TARGET): $(OBJ)
 	$(Q)$(CC) $(OBJ) -o $@ $(LDFLAGS) $(LDLIBS)
