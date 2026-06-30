@@ -26,6 +26,8 @@ typedef struct {
 
   uint32_t currentInstr;
   Object* instance;
+
+  bool ownsChunk;
 } CallFrame;
 
 typedef struct {

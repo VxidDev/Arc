@@ -89,9 +89,6 @@ Object* arcJson_parseObject(ArcJsonLexer *lexer) {
     Object *kv[2] = {k, v};
     List* l = initList(kv, 2, 2);
 
-    freeObject(k);
-    freeObject(v);
-
     if (size + 1 > capacity) {
       capacity *= 2;
 
@@ -114,11 +111,6 @@ Object* arcJson_parseObject(ArcJsonLexer *lexer) {
   }
    
   Object* obj = (Object*)initList(objects, size, capacity);
-
-  for (size_t i = 0; i < size; i++) {
-    freeObject(objects[i]);
-  }
-
   free(objects);
 
   return obj;

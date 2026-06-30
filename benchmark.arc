@@ -146,12 +146,14 @@ catch e then
 end 
 
 if json_string then 
-  #import "__c_tools" # <- Requires compiling stdlib/clib/json, TODO: add makefile support
+  import "__c_tools" # <- Requires compiling stdlib/clib/json, TODO: add makefile support
   
-  #var jsonlib = dl_open("./stdlib/clib/json/build/libarcjson.so", 1)
-  #var to_json = dl_sym(jsonlib, "arcJson_loads", 1, false)
+  var jsonlib = dl_open("./stdlib/clib/json/build/libarcjson.so", 1)
+  var to_json = dl_sym(jsonlib, "arcJson_loads", 1, false)
 
   var t = perf_counter()
   var s = to_json(json_string)
   bench("nested json (3.8 mb)", t, "skipped printing result")
+
+  dl_close(jsonlib)
 end

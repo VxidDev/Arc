@@ -10,7 +10,8 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
   if (!listobj) return NULL;
 
   listobj->base.type = OBJ_LIST;
-  listobj->base.isStatic = true;
+  listobj->base.isStatic = false;
+  listobj->base.refCount = 1;
 
   listobj->size = size;
   listobj->capacity = capacity > 0 ? capacity : 1;
@@ -23,7 +24,7 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
   }
 
   for (uint64_t i = 0; i < listobj->size; i++) {
-    listobj->objects[i] = copyObject(list[i]);
+    listobj->objects[i] = list[i];
   }
 
   return listobj;
@@ -31,5 +32,6 @@ List* initList(Object** list, uint64_t size, uint64_t capacity) {
 
 List* copyList(List* list) {
   if (!list) return NULL;
-  return initList(list->objects, list->size, list->capacity);
+  list->base.refCount++;
+  return list;
 }

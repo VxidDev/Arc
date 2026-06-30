@@ -38,6 +38,7 @@ typedef enum ObjType {
 
 typedef struct Object {
   ObjType type;
+  int refCount;
   bool isStatic;
 } Object;
 

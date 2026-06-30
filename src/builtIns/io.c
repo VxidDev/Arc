@@ -106,9 +106,7 @@ Object* builtIn_get_input(Object** args, size_t argCount) {
 
   buf[size] = '\0';
 
-  Object* s = (Object*)initString(buf, size);
-  free(buf);
-
+  Object* s = (Object*)noCopyInitString(buf, size);
   return s;
 }
 
@@ -232,9 +230,7 @@ Object* builtIn_read_file(Object** args, size_t argCount) {
 
   fcontent[size] = '\0';
 
-  Object* obj = (Object*)initString(fcontent, size);
-  free(fcontent);
-
+  Object* obj = (Object*)noCopyInitString(fcontent, size);
   return obj;
 }
 

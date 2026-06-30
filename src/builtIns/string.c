@@ -109,8 +109,7 @@ Object* builtIn_split_string(Object** args, size_t argCount) {
 
   __freeSplit_internal(out, i);
 
-  Object* list = (Object*)initList((Object**)res, i, i);
-  
+  Object* list = (Object*)initList((Object**)res, i, i); 
   free(res);
 
   return list;

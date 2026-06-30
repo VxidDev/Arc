@@ -35,6 +35,10 @@ Object* copyObject(Object* obj) {
       return (Object*)copyNumber((Number*)obj);
     case OBJ_STRING:
       return (Object*)copyString((String*)obj);
+    case OBJ_LIST:
+    case OBJ_INSTANCE:
+      obj->refCount++;
+      return obj;
     case OBJ_MODULE:
     case OBJ_FUNCTION:
     case OBJ_NATIVE_FUNCTION:
@@ -42,9 +46,7 @@ Object* copyObject(Object* obj) {
     case OBJ_CONTINUE:
     case OBJ_BREAK:
     case OBJ_CLASS:
-    case OBJ_INSTANCE:
     case OBJ_NULL:
-    case OBJ_LIST:
       return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
@@ -66,7 +68,8 @@ void freeObject(Object* obj) {
     case OBJ_STRING:
       String* s = (String*)obj;
       if (s->value) free(s->value);
-      poolFree(stringPool, obj); break; 
+      poolFree(stringPool, obj); 
+      break; 
  
     case OBJ_MODULE:
       free(obj);
@@ -139,16 +142,29 @@ void freeObject(Object* obj) {
 
     case OBJ_INSTANCE: {
       Instance* instance = (Instance*)obj;
+      if (--instance->base.refCount > 0) break;
 
       freeTable(instance->fields);
-
       poolFree(instancePool, instance);
 
       break;
     }
     
-    case OBJ_NULL: // unreachable
-    case OBJ_LIST:
+    case OBJ_LIST: {
+      List* list = (List*)obj;
+      if (--list->base.refCount > 0) break;
+
+      for (uint64_t i = 0; i < list->size; i++) {
+        freeObject(list->objects[i]);
+      }
+
+      free(list->objects);
+      free(list);
+
+      break;
+    }  
+    
+    case OBJ_NULL:
     case OBJ_NATIVE_FUNCTION:
     case OBJ_CLASS: {
        break;

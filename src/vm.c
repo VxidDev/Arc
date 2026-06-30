@@ -117,6 +117,7 @@ static inline bool isTruthy(Value v) {
       vm->localsTop = leavingFrame->localsBase; \
       if (!leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) \
         freeTable(leavingFrame->variables); \
+      if (leavingFrame->instance) forceFreeObject(leavingFrame->instance); \
     } \
     REFRESH_FRAME(); \
     ip = tf.ip; \
@@ -635,7 +636,8 @@ Object *vmRun(VM *vm) {
 
       if (!isTruthy(cond))
         ip += offset;
-
+      
+      freeValue(cond);
       DISPATCH();
     }
 
@@ -889,6 +891,7 @@ Object *vmRun(VM *vm) {
         newFrame->currentInstr = 0;
         newFrame->instance = NULL;
         newFrame->filename = frame->filename;
+        newFrame->ownsChunk = false;
         
         int paramCount = (int)func->paramCount;
         int base = newFrame->localsBase;
@@ -1004,6 +1007,7 @@ Object *vmRun(VM *vm) {
         newFrame->currentInstr = 0;
         newFrame->instance = (Object*)instance;
         newFrame->filename = frame->filename;
+        newFrame->ownsChunk = false;
 
         for (int i = 0; i < class->maxLocals; i++)
           vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -1107,6 +1111,7 @@ Object *vmRun(VM *vm) {
       newFrame->currentInstr = 0;
       newFrame->instance = NULL;
       newFrame->filename = resolvedPath;
+      newFrame->ownsChunk = true;
 
       for (int i = 0; i < chunk->maxLocals; i++)
         vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -1131,6 +1136,8 @@ Object *vmRun(VM *vm) {
         
         if (!leavingFrame->instance && !leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
           freeTable(leavingFrame->variables);
+
+        if (leavingFrame->ownsChunk) freeChunk(leavingFrame->chunk);
 
         vm->tryStackTop = leavingFrame->tryStackTop;
         
@@ -1198,7 +1205,8 @@ VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, ch
     .localsBase = 0,
     .localCount = chunk->maxLocals,
     .instance = NULL,
-    .filename = filename
+    .filename = filename,
+    .ownsChunk = false
   };
 
   vm->localsTop = chunk->maxLocals;
