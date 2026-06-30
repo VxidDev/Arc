@@ -469,10 +469,6 @@ Object *vmRun(VM *vm) {
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
   
-      if (UNLIKELY(_DEBUG)) {
-        printf("[debug] OP_STORE_VAR: name = %p | name->value = %p\n", name, name ? name->value : (void*)0);
-      }
-
       setTable(vars, name->value, PEEK(0));
       DISPATCH();
     }
@@ -788,7 +784,7 @@ Object *vmRun(VM *vm) {
       if (LIKELY(target->type == OBJ_LIST)) {
         List *list = (List *)target;
 
-        if (UNLIKELY(i < 0 && (uint64_t)i >= list->size)) { 
+        if (UNLIKELY(i < 0 || (uint64_t)i >= list->size)) { 
           VM_ERR(initIndexError, "Index out of range.");
           freeValue(val);
           freeValue(idxVal);

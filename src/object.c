@@ -39,139 +39,89 @@ Object* copyObject(Object* obj) {
     case OBJ_INSTANCE:
       obj->refCount++;
       return obj;
-    case OBJ_MODULE:
-    case OBJ_FUNCTION:
-    case OBJ_NATIVE_FUNCTION:
-    case OBJ_ERROR:
-    case OBJ_CONTINUE:
-    case OBJ_BREAK:
-    case OBJ_CLASS:
-    case OBJ_NULL:
-      return obj;
     case OBJ_FILE:
       return (Object*)copyFile((File*)obj);
-    default: return NULL;
+    default: 
+      return obj;
   }
 }
 
 void freeObject(Object* obj) {
-  if (!obj || obj->isStatic) {
-    if (_DEBUG) printf("[debug] skipping freeing object. Reason: %s%s\n", !obj ? "object is null" : "object is static, type of object: ", !obj ? "" : typeofobj(obj));
-    return;
-  }
-
+  if (!obj || obj->isStatic) return;
+  
   switch (obj->type) {
     case OBJ_NUMBER_INT:
     case OBJ_NUMBER_FLOAT:
-      poolFree(numberPool, obj); break;
+      poolFree(numberPool, obj);
+      return;
 
     case OBJ_STRING:
       String* s = (String*)obj;
       if (s->value) free(s->value);
       poolFree(stringPool, obj); 
-      break; 
+      return; 
  
-    case OBJ_MODULE:
-      free(obj);
-      break;
-
     case OBJ_FUNCTION:
-      Function* func = (Function*)obj;
-      if (_DEBUG) printf("[debug] freeing function. | name = %s\n", func->name);
-
-      if (!func->chunk && !func->body) break;
-
-      if (func->chunk) freeChunk(func->chunk);
+      if (((Function*)obj)->chunk) 
+        freeChunk(((Function*)obj)->chunk);
 
       poolFree(functionPool, obj);
-      break;
+      return;
 
     case OBJ_RETURN: {
-      Return* ret = (Return*)obj;
-
-      freeObject(ret->value);
-      free(ret);
-
-      break;
-    }
-
-    case OBJ_ERROR: {
-      ProgramError* err = (ProgramError*)obj;
-
-      free(err);
-
-      break;
+      freeObject(((Return*)obj)->value);
+      free(obj);
+      return;
     }
 
     case OBJ_FUNCTION_CALL: {
-      // FunctionCall* fncall = (FunctionCall*)obj;
-      
-      /*
-      if (fncall->args) {
-        for (size_t i = 0; i < fncall->argCount; i++) {
-          freeObject(fncall->args[i]);
-        }
-      }
-      */
-
-      // if (fncall->env) freeTable(fncall->env);
       poolFree(functionCallPool, obj);
-
-      break;
+      return;
     }
-
-    case OBJ_FILE: {
-      File* file = (File*)obj;
-      
-      free(file);
-
-      break;
-    }
-
+    
+    case OBJ_ERROR:
+    case OBJ_FILE: 
+    case OBJ_CONTINUE:
+    case OBJ_MODULE:
     case OBJ_BREAK: {
       free(obj);
-
-      break;
-    }
-
-    case OBJ_CONTINUE: {
-      free(obj);
-
-      break;
+      return;
     }
 
     case OBJ_INSTANCE: {
-      Instance* instance = (Instance*)obj;
-      if (--instance->base.refCount > 0) break;
+      Instance* inst = (Instance*)obj;
+      if (--inst->base.refCount > 0) break;
 
-      freeTable(instance->fields);
-      poolFree(instancePool, instance);
-
-      break;
+      freeTable(inst->fields);
+      poolFree(instancePool, inst);
+      return;
     }
     
     case OBJ_LIST: {
       List* list = (List*)obj;
-      if (--list->base.refCount > 0) break;
-
+      if (--list->base.refCount > 0) return;
+      
       for (uint64_t i = 0; i < list->size; i++) {
-        freeObject(list->objects[i]);
+        Object* elem = list->objects[i];
+
+        if (elem && !elem->isStatic) {
+          if (elem->type == OBJ_NUMBER_INT || elem->type == OBJ_NUMBER_FLOAT)
+            poolFree(numberPool, elem);
+          else if (elem->type == OBJ_STRING) {
+            free(((String*)elem)->value);
+            poolFree(stringPool, elem);
+          } else freeObject(elem);
+        }
       }
 
       free(list->objects);
       free(list);
 
-      break;
-    }  
-    
-    case OBJ_NULL:
-    case OBJ_NATIVE_FUNCTION:
-    case OBJ_CLASS: {
-       break;
+      return;
     }
-  }
 
-  return;
+    default: return;
+  }
 }
 
 // only used for full program teardown

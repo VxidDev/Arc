@@ -1,9 +1,10 @@
 #include "../include/mempool.h"
 #include "../include/repl/repl.h"
 #include "../include/memarena.h"
-
 #include <stdlib.h>
 #include <string.h>
+
+#define POOL_GROWTH_FACTOR 2
 
 MemPool* initPool(size_t objSize) {
   if (objSize == 0) return NULL;
@@ -12,67 +13,68 @@ MemPool* initPool(size_t objSize) {
   if (!pool) return NULL;
 
   pool->slab = arenaAlloc(poolArena, objSize * POOL_SIZE);
-
-  if (!pool->slab) {
-    free(pool);
-    return NULL;
-  }
+  if (!pool->slab) { free(pool); return NULL; }
 
   memset(pool->slab, 0, objSize * POOL_SIZE);
 
-  pool->slots = arenaAlloc(poolArena, POOL_SIZE * sizeof(void*));
+  pool->slots = malloc(POOL_SIZE * sizeof(void*));
+  if (!pool->slots) { free(pool); return NULL; }
 
-  if (!pool->slots) { 
-    free(pool->slab);
-    free(pool);
-    return NULL; 
-  }
-
-
-  for (int i = 0; i < POOL_SIZE; i++)
-    pool->slots[i] = (char*)pool->slab + i * objSize;
+  char* base = (char*)pool->slab;
+  
+  for (size_t i = 0; i < (size_t)POOL_SIZE; i++)
+    pool->slots[i] = base + i * objSize;
 
   pool->top = POOL_SIZE;
+  pool->cap = POOL_SIZE;
   pool->objSize = objSize;
+  pool->slabCount = POOL_SIZE;
 
   return pool;
 }
 
-static inline int _isSlabPtr(MemPool* pool, void* ptr) {
-  char* p = (char*)ptr;
-  char* start = (char*)pool->slab;
-  char* end = start + pool->objSize * POOL_SIZE;
-
+static inline int _isSlabPtr(const MemPool* pool, const void* ptr) {
+  const char* p = (const char*)ptr;
+  const char* start = (const char*)pool->slab;
+  const char* end = start + pool->objSize * pool->slabCount;
   return p >= start && p < end;
 }
 
-void* poolAlloc(MemPool* pool) {
-  if (!pool) return NULL;
+static int _growSlots(MemPool* pool) {
+  size_t newCap = pool->cap * POOL_GROWTH_FACTOR;
+  void** newSlots = realloc(pool->slots, newCap * sizeof(void*));
+  if (!newSlots) return 0;
+  pool->slots = newSlots;
+  pool->cap = newCap;
+  return 1;
+}
 
-  if (pool->top > 0)
+void* poolAlloc(MemPool* pool) {
+  if (MP_UNLIKELY(!pool)) return NULL;
+
+  if (MP_LIKELY(pool->top > 0))
     return pool->slots[--pool->top];
 
-  return calloc(pool->objSize, 1);
+  return malloc(pool->objSize);
 }
 
 void poolFree(MemPool* pool, void* obj) {
-  if (!pool || !obj) return;
+  if (MP_UNLIKELY(!pool || !obj)) return;
 
-  if (pool->top < (size_t)POOL_SIZE)
-    pool->slots[pool->top++] = obj;
-  else
-    if (!_isSlabPtr(pool, obj)) free(obj);
-    // slab pointers get dropped and will get freed when freePool is called.
+  if (MP_UNLIKELY(!_isSlabPtr(pool, obj))) {
+    free(obj);
+    return;
+  }
+
+  if (MP_UNLIKELY(pool->top >= pool->cap)) {
+    if (!_growSlots(pool)) return;
+  }
+
+  pool->slots[pool->top++] = obj;
 }
 
 void freePool(MemPool* pool) {
   if (!pool) return;
-
-  // free any heap-overflow objects sitting in the freelist
-  for (size_t i = 0; i < pool->top; i++) {
-    if (!_isSlabPtr(pool, pool->slots[i]))
-      free(pool->slots[i]);
-  }
-
+  free(pool->slots);
   free(pool);
 }
