@@ -13,7 +13,7 @@ CLIB_SRC_DIR = stdlib/clib
 C_SRC = $(shell find $(SRC_DIR) -name '*.c')
 OBJ = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
 
-LDLIBS = -lm
+LDLIBS = -lm -lffi
 
 BASE_FLAGS = -Wall -Wextra -Iinclude -DARC_LIB_DIR=\"$(ARC_LIB_DIR)\" -MMD -MP
 

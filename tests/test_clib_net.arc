@@ -1,5 +1,5 @@
 import "__c_tools"
-import "../stdlib/json/json.arc"
+import "@stdlib/json/json.arc"
 
 var netlib = dl_open("./stdlib/clib/net/build/libarcnet.so", 1)
 

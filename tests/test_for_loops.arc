@@ -1,4 +1,4 @@
-IMPORT "../stdlib/assert.arc"
+IMPORT "@stdlib/assert.arc"
 IMPORT "__sys"
 
 # --- Test 1: Basic FOR loop over a list ---

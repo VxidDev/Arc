@@ -22,6 +22,29 @@ void initCTools(SymbolTable* table) {
   NativeFunction* dl_closeFn = initNativeFunction("dl_close", builtIn_dl_close, 1, false);
   setTable(table, internIdentifier("dl_close", 8), VAL_OBJ((Object*)dl_closeFn));
   freeObject((Object*)dl_closeFn);
+
+  NativeFunction* __dl_symFn = initNativeFunction("__dl_sym", builtIn_raw_dl_sym, 2, false);
+  setTable(table, internIdentifier("__dl_sym", 8), VAL_OBJ((Object*)__dl_symFn));
+  freeObject((Object*)__dl_symFn);
+
+  NativeFunction* c_func_signatureFn = initNativeFunction("c_func_signature", builtIn_c_func_signature, 1, true);
+  setTable(table, internIdentifier("c_func_signature", 16), VAL_OBJ((Object*)c_func_signatureFn));
+  freeObject((Object*)c_func_signatureFn);
+  
+  // Will be replaced after addition of .arc wrapper
+  setTable(table, internIdentifier("C_INT", 5), VAL_INT(0));
+  setTable(table, internIdentifier("C_INT_PTR", 9), VAL_INT(1));
+  setTable(table, internIdentifier("C_FLOAT", 7), VAL_INT(2));
+  setTable(table, internIdentifier("C_FLOAT_PTR", 11), VAL_INT(3));
+  setTable(table, internIdentifier("C_DOUBLE", 8), VAL_INT(4));
+  setTable(table, internIdentifier("C_DOUBLE_PTR", 12), VAL_INT(5));
+  setTable(table, internIdentifier("C_CHAR", 6), VAL_INT(6));
+  setTable(table, internIdentifier("C_CHAR_PTR", 10), VAL_INT(7));
+  setTable(table, internIdentifier("C_VOID_PTR", 10), VAL_INT(8));
+
+  NativeFunction* c_runFn = initNativeFunction("c_run", builtIn_c_run, 3, false);
+  setTable(table, internIdentifier("c_run", 5), VAL_OBJ((Object*)c_runFn));
+  freeObject((Object*)c_runFn);
 }
 
 void initSysModule(SymbolTable* table) {

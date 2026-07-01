@@ -1,5 +1,5 @@
-IMPORT "../stdlib/math.arc"
-IMPORT "../stdlib/assert.arc"
+IMPORT "@stdlib/math.arc"
+IMPORT "@stdlib/assert.arc"
 
 assert_eq(PI, 3.141592653589793, "PI")
 assert_eq(E, 2.718281828459045, "E")

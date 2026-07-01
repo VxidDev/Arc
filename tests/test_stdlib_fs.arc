@@ -1,5 +1,5 @@
-import "../stdlib/io/fs.arc"
-import "../stdlib/io/file.arc"
+import "@stdlib/io/fs.arc"
+import "@stdlib/io/file.arc"
 # import "__sys" included with fs.arc 
 
 # create test file 

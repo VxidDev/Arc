@@ -1,4 +1,4 @@
-IMPORT "../stdlib/assert.arc"
+IMPORT "@stdlib/assert.arc"
 IMPORT "__sys"
 
 # basic if true

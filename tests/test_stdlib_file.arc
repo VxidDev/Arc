@@ -1,4 +1,4 @@
-IMPORT "../stdlib/io/file.arc"
+IMPORT "@stdlib/io/file.arc"
 IMPORT "__sys"
 
 fn analyze_file_object(file) then 

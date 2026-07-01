@@ -1,4 +1,4 @@
-import "../stdlib/json/json.arc"
+import "@stdlib/json/json.arc"
 
 import "__sys"
 
