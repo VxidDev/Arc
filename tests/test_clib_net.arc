@@ -6,6 +6,9 @@ var netlib = dl_open("./stdlib/clib/net/build/libarcnet.so", 1)
 var net_req_init = dl_sym(netlib, "arcNet_request_init", 0, false)
 var net_req_deinit = dl_sym(netlib, "arcNet_request_deinit", 0, false)
 var net_req_get = dl_sym(netlib, "arcNet_request_get", 1, false)
+var net_HttpServer = dl_sym(netlib, "arcNet_HttpServer", 5, false)
+var net_start_server = dl_sym(netlib, "arcNet_start_server", 1, false)
+var net_add_route = dl_sym(netlib, "arcNet_add_route", 4, false)
 
 net_req_init()
 
@@ -14,6 +17,9 @@ print("raw:", res)
 
 print("json:", to_json(res))
 
-net_req_deinit()
+# var server = net_HttpServer("localhost", 8000, 4096, 4, true)
+# net_start_server(server)
+# TODO: try to add routing
 
+net_req_deinit()
 dl_close(netlib)

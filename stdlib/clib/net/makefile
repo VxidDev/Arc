@@ -1,9 +1,9 @@
 CC = gcc
+
 BUILD_DIR = build
 TARGET_LIB = libarcnet.so
 
-BASE_FLAGS = -Wall -Wextra -I../../../include -MMD -MP -fPIC -shared -lcurl
-
+BASE_FLAGS = -Wall -Wextra -I../../../include -MMD -MP -fPIC -shared -lcurl -laxionetd
 CFLAGS_DEBUG = $(BASE_FLAGS) -O0 -g \
 	-fsanitize=address,undefined \
 	-fno-omit-frame-pointer
@@ -38,8 +38,10 @@ LDFLAGS_DEBUG += -rdynamic
 
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
 LDFLAGS_PROFILE = -pg
-
 .PHONY: all dev debug release profile clean
+
+CFLAGS_DEV = $(BASE_FLAGS) -O0 -g
+LDFLAGS_DEV = -rdynamic
 
 all: dev
 
@@ -61,6 +63,7 @@ profile: $(TARGET_LIB)
 
 $(TARGET_LIB): net.c
 	@mkdir -p $(BUILD_DIR)
+	make -C axionetd
 	$(CC) $(CFLAGS) net.c -o $(BUILD_DIR)/$@ $(LDFLAGS)
 
 clean:

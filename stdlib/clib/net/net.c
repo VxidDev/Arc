@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 
 #include "../../../include/utils.h"
+#include "./axionetd/include/axionetd.h"
 
 static CURL* curl = NULL;
 
@@ -95,4 +96,52 @@ Object* arcNet_request_deinit(Object** args, size_t argCount) {
   curl = NULL;
 
   return (Object*)initInt(1);
+}
+
+Object* arcNet_HttpServer(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_STRING, 1); // host 
+  if (err) return err;
+
+  err = enforceType(args[1], OBJ_NUMBER_INT, 2); // port 
+  if (err) return err;
+
+  err = enforceType(args[2], OBJ_NUMBER_INT, 3); // backlog
+  if (err) return err;
+
+  err = enforceType(args[3], OBJ_NUMBER_INT, 4); // workers
+  if (err) return err;
+
+  err = enforceType(args[4], OBJ_NUMBER_INT, 5); // logging 
+  if (err) return err;
+
+  int64_t logging = ((Number*)args[4])->as.i;
+
+  if (logging != 0 && logging != 1) { // ensure bool
+    return (Object*)initProgramError("Expected argument 5 to be a valid bool.");
+  }
+  
+  const char *host = ((String*)args[0])->value;
+  const int port = ((Number*)args[1])->as.i;
+  const int backlog = ((Number*)args[2])->as.i;
+  int workers = ((Number*)args[3])->as.i;
+
+  Axionet* server = initServer(host, port, backlog, workers, logging);
+
+  if (!server) {
+    return (Object*)initProgramError("Failed to initialize HTTP server.");
+  }
+  
+  return (Object*)initInt((int64_t)(uintptr_t)server);
+}
+
+Object* arcNet_start_server(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
+  if (err) return err;
+
+  startServer((Axionet*)(uintptr_t)((Number*)args[0])->as.i);
+  return (Object*)initInt(0);
 }

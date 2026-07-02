@@ -8,6 +8,8 @@
 #include <ffi.h>
 #include <ffitarget.h>
 
+#include <string.h>
+
 typedef struct {
   void *funcPtr;
   ffi_cif cif;
@@ -317,4 +319,16 @@ Object* builtIn_c_func_signature(Object** args, size_t argCount) {
   free(copiedObjects);
 
   return (Object*)list;
+}
+
+Object* builtIn_string_at(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
+  if (err) return err;
+  
+  void* ptr = (void*)(uintptr_t)((Number*)args[0])->as.i;
+  char* s = (char*)ptr;
+
+  return (Object*)noCopyInitString(s, strlen(s));
 }

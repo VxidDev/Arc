@@ -103,9 +103,10 @@ dev-libs: $(CLIB_TARGETS)
 install-libs:
 	$(ECHO) "Installing Arc standard library to $(ARC_LIB_DIR)..."
 	$(Q)install -d $(ARC_LIB_DIR)
-	$(Q)install -d $(ARC_LIB_DIR)/clib
-	$(Q)cp $(CLIB_SRC_DIR)/*/build/*.so $(ARC_LIB_DIR)/clib/
-	$(Q)find stdlib -name "*.arc" -exec install -Dm644 {} $(ARC_LIB_DIR)/{} \;
+	$(Q)sudo make -C stdlib/clib/net
+	$(Q)sudo install -d $(ARC_LIB_DIR)/clib
+	$(Q)sudo cp $(CLIB_SRC_DIR)/*/build/*.so $(ARC_LIB_DIR)/clib/
+	$(Q)sudo find stdlib -name "*.arc" -exec install -Dm644 {} $(ARC_LIB_DIR)/{} \;
 
 $(TARGET): $(OBJ)
 	$(Q)$(CC) $(OBJ) -o $@ $(LDFLAGS) $(LDLIBS)

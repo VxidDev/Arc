@@ -36,4 +36,9 @@ end
 
 print("(c_add) Time elapsed:", perf_counter() - start, "s")
 
+var __fn_ptr = __dl_sym(lib, "yield_string")
+var __fn_sig = c_func_signature(C_CHAR_PTR)
+
+print(string_at(c_run(__fn_ptr, __fn_sig, [])))
+
 dl_close(lib)

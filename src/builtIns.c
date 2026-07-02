@@ -45,6 +45,10 @@ void initCTools(SymbolTable* table) {
   NativeFunction* c_runFn = initNativeFunction("c_run", builtIn_c_run, 3, false);
   setTable(table, internIdentifier("c_run", 5), VAL_OBJ((Object*)c_runFn));
   freeObject((Object*)c_runFn);
+
+  NativeFunction* string_atFn = initNativeFunction("string_at", builtIn_string_at, 1, false);
+  setTable(table, internIdentifier("string_at", 9), VAL_OBJ((Object*)string_atFn));
+  freeObject((Object*)string_atFn);
 }
 
 void initSysModule(SymbolTable* table) {

@@ -1188,7 +1188,7 @@ Object *vmRun(VM *vm) {
 }
 
 VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, char *sourcetext) {
-  VM *vm = arenaNew(objectArena, VM);
+  VM *vm = malloc(sizeof(VM));
   if (!vm) return NULL;
 
   vm->frameTop = 0;
@@ -1240,5 +1240,7 @@ void deinitVM(VM *vm) {
     for (int i = 0; i < frame->localCount; i++)
       freeValue(vm->locals[frame->localsBase + i]);
   }
+
+  free(vm);
 }
 
