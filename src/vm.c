@@ -266,6 +266,12 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
       tmp.as.i = IS_INT(b) ? AS_INT(b) : (int64_t)AS_FLOAT(b);
       tmp.base.type = OBJ_NUMBER_INT;
       String *r = mulString((String *)aObj, &tmp);
+
+      if (!r) { 
+        VM_ERR_FRAME(vm, frame, initValueError, "String repetition produced a string that is too large.");
+        return VAL_NULL();
+      }
+
       returnedDest = (r == (String *)aObj);
       res = VAL_OBJ((Object *)r);
     }
