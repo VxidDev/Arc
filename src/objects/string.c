@@ -228,15 +228,14 @@ String *mulString(String *dest, const Number *src) {
   if (times <= 0) return initString("", 0);
 
   size_t len = dest->len;
+  if (len != 0 && (size_t)times > SIZE_MAX / len) return NULL;
   size_t total = len * (size_t)times;
   
   if (total + 1 > dest->capacity) {
     String *res = poolAlloc(stringPool);
     if (!res) return NULL;
 
-    uint64_t newCap = total * 2;
-
-    char *buf = malloc(newCap + 1);
+    char *buf = malloc(total + 1);
 
     if (!buf) {
       poolFree(stringPool, res);
@@ -254,7 +253,7 @@ String *mulString(String *dest, const Number *src) {
     res->base.type = OBJ_STRING;
     res->base.isStatic = false;
     res->len = total;
-    res->capacity = newCap;
+    res->capacity = total;
     res->isBuffer = false;
 
     return res;
