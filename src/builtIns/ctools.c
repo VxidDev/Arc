@@ -113,7 +113,7 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
 
       if (err) {
         free(argSignature);
-        return (Object*)initProgramError("Failed to prepare argSignature for ffi_cif. (Out of memory)");
+        return err;
       }
 
       int64_t type = ((Number*)signature->objects[i])->as.i;
@@ -170,6 +170,8 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
   FFIResult result;
   ffi_call(&cif, FFI_FN(funcPtr), &result, values);
 
+  free(values);
+
   switch (last.returnType) {
     case C_INT: return (Object*)initInt(result.i64);
     case C_INT_PTR: return (Object*)initInt((int64_t)(uintptr_t)result.p);
@@ -181,8 +183,6 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
     case C_CHAR_PTR: return (Object*)initInt((int64_t)(uintptr_t)result.p);
     case C_VOID_PTR: return (Object*)initInt((int64_t)(uintptr_t)result.p);
   }
-
-  free(values);
 
   return (Object*)initNull();
 }
@@ -331,4 +331,16 @@ Object* builtIn_string_at(Object** args, size_t argCount) {
   char* s = (char*)ptr;
 
   return (Object*)noCopyInitString(s, strlen(s));
+}
+
+Object* builtIn_int_at(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
+  if (err) return err;
+
+  void* ptr = (void*)(uintptr_t)((Number*)args[0])->as.i;
+  int i = *(int*)ptr;
+
+  return (Object*)initInt(i);
 }

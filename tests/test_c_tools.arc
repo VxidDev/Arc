@@ -41,4 +41,9 @@ var __fn_sig = c_func_signature(C_CHAR_PTR)
 
 print(string_at(c_run(__fn_ptr, __fn_sig, [])))
 
+__fn_ptr = __dl_sym(lib, "yield_int")
+__fn_sig = c_func_signature(C_INT_PTR)
+
+print(int_at(c_run(__fn_ptr, __fn_sig, [])))
+
 dl_close(lib)
