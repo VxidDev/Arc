@@ -13,21 +13,24 @@
 Object* builtIn_exit(Object** args, size_t argCount) {
   (void)argCount;
 
-  Object* exitCode = args[0];
-
-  if (exitCode->type != OBJ_NUMBER_INT) {
-    char buf[256];
-
-    snprintf(buf, sizeof(buf), "Expected object of type 'int', received '%s'.", typeofobj(exitCode));
-
-    return (Object*)initProgramError(buf);
-  }
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
+  if (err) return err;
 
   char buf[256];
 
-  snprintf(buf, sizeof(buf), "@%" PRId64 "\n", ((Number*)exitCode)->as.i);
+  snprintf(buf, sizeof(buf), "@%" PRId64 "\n", ((Number*)args[0])->as.i);
 
   return (Object*)initProgramError(buf); // will exit cleanly
+}
+
+Object* builtIn_system(Object** args, size_t argCount) {
+  (void)argCount;
+  
+  Object* err = enforceType(args[0], OBJ_STRING, 1);
+  if (err) return err;
+
+  const char* cmd = ((String*)args[0])->value;
+  return (Object*)initInt(system(cmd));
 }
 
 #ifndef _WIN32 
@@ -120,4 +123,4 @@ Object* builtIn_write(Object** args, size_t argCount) {
   return (Object*)initInt(res);
 }
 
-#endif 
+#endif

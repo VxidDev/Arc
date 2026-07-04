@@ -35,10 +35,24 @@ size_t ARENA_BLOCK_SIZE = (256 * 1024); // 256 Kb
 SymbolTable* variables = NULL;
 int exitcode = 0;
 bool _CLEANUP = false;
+bool _ARGS_ONLY = false;
 
 String** argVect;
 uint64_t argVectSize = 1;
 uint64_t argVectCap = 64;
+
+char** rawPositionalArgs;
+uint64_t rawArgsSize = 0;
+uint64_t rawArgsCap = 64;
+
+static inline void appendRawArg(char* s) {
+  if (rawArgsSize >= rawArgsCap) {
+    rawArgsCap *= 2;
+    rawPositionalArgs = realloc(rawPositionalArgs, sizeof(char*) * rawArgsCap);
+  }
+
+  rawPositionalArgs[rawArgsSize++] = s;
+}
 
 static inline void _exit(int code) {
   if (_CLEANUP) {
@@ -67,7 +81,7 @@ static inline void appendArgv(String* s) {
 
     argVect = realloc(argVect, sizeof(String*) * argVectCap);
   }
-
+  
   argVect[argVectSize++] = s;
 }
 
@@ -280,12 +294,25 @@ void parseArguments(int argc, char **argv) {
   if (argc < 2) return; // repl
 
   for (int i = 1; i < argc; i++) {
+    if (_ARGS_ONLY) {
+      if (!_INPUT_FILE) {
+        _INPUT_FILE = argv[i];
+      } else {
+        appendRawArg(argv[i]);
+      }
+      continue;
+    }
+    
+    if (strcmp(argv[i], "--") == 0) {
+      _ARGS_ONLY = true;
+      continue;
+    }
+
     if (argv[i][0] != '-') {
       if (!_INPUT_FILE) {
         _INPUT_FILE = argv[i];
       } else {
-        String* arg = initString(argv[i], strlen(argv[i]));
-        appendArgv(arg);
+        appendRawArg(argv[i]);
       }
       continue;
     }
@@ -384,7 +411,14 @@ int main(int argc, char **argv) {
     printf("%sArc: %sFailed to initialize argv.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG), COLOR(ANSI_RESET));
 
     return 1;
-  } 
+  }
+
+  rawPositionalArgs = malloc(sizeof(char*) * rawArgsCap);
+
+  if (!rawPositionalArgs) {
+    printf("%sArc: %sFailed to initialize argument buffer.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
+    return 1;
+  }
 
   parseArguments(argc, argv);
   
@@ -403,15 +437,22 @@ int main(int argc, char **argv) {
 
   argVect[0] = arg0;
 
+  for (uint64_t i = 0; i < rawArgsSize; i++) {
+    String* arg = initString(rawPositionalArgs[i], strlen(rawPositionalArgs[i]));
+    appendArgv(arg);
+  }
+
+  free(rawPositionalArgs);
+  
+  if (_DEBUG) printf("[debug] argc: %zu\n", argVectSize);
+
   Number* argumentCount = initInt(argVectSize);
   setTable(variables, internIdentifier("argc", 4), VAL_OBJ((Object*)argumentCount));
 
-  List* list = initList((Object**)argVect, argVectSize, argVectCap);
-  
+  List* list = initList((Object**)argVect, argVectSize, argVectCap); 
   free(argVect);
 
   setTable(variables, internIdentifier("argv", 4), VAL_OBJ((Object*)list));
-
   freeObject((Object*)list);
 
   registerBuiltins(variables);

@@ -4,6 +4,7 @@
 #include "../object.h"
 
 Object* builtIn_exit(Object** args, size_t argCount);
+Object* builtIn_system(Object** args, size_t argCount);
 
 #ifndef _WIN32
   Object* builtIn_access(Object** args, size_t argCount);

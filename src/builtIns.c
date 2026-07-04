@@ -3,11 +3,18 @@
 #include "../include/builtIns/sys.h"
 #include "../include/builtIns/time.h"
 #include "../include/builtIns/ctools.h"
+#include "../include/builtIns/libtools.h"
 
 void initMathModule(SymbolTable* table) {
   NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false); // DEPRECATED, to_int() is prefered.
   setTable(table, internIdentifier("truncate", 8), VAL_OBJ((Object*)truncateFn));
   freeObject((Object*)truncateFn);
+}
+
+void initLibtools(SymbolTable* table) {
+  NativeFunction* stdlib_pathFn = initNativeFunction("stdlib_path", builtIn_stdlib_path, 0, false);
+  setTable(table, internIdentifier("stdlib_path", 11), VAL_OBJ((Object*)stdlib_pathFn));
+  freeObject((Object*)stdlib_pathFn);
 }
 
 void initCTools(SymbolTable* table) {
@@ -59,6 +66,10 @@ void initSysModule(SymbolTable* table) {
   NativeFunction* exitFn = initNativeFunction("exit", builtIn_exit, 1, false);
   setTable(table, internIdentifier("exit", 4), VAL_OBJ((Object*)exitFn));
   freeObject((Object*)exitFn);
+
+  NativeFunction* systemFn = initNativeFunction("system", builtIn_system, 1, false);
+  setTable(table, internIdentifier("system", 6), VAL_OBJ((Object*)systemFn));
+  freeObject((Object*)systemFn);
   
   #ifndef _WIN32
     NativeFunction* accessFn = initNativeFunction("access", builtIn_access, 2, false);

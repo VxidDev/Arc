@@ -419,8 +419,24 @@ Object *vmRun(VM *vm) {
         VM_ERR(initNameError, buf); 
         HANDLE_ERROR();
       }
+
+      if (IS_OBJ(val)) {
+        Object* obj = AS_OBJ(val);
+
+        if (obj->type == OBJ_NULL) {
+          PUSH(VAL_NULL());
+        } else if (obj->type == OBJ_NUMBER_INT)
+          PUSH(VAL_INT(((Number*)obj)->as.i));
+        else if (obj->type == OBJ_NUMBER_FLOAT)
+          PUSH(VAL_FLOAT(((Number*)obj)->as.f));
+        else if (obj->isStatic || obj->type == OBJ_FUNCTION)
+          PUSH(VAL_OBJ(obj)); 
+        else
+          PUSH(copyValue(objectToValue(obj)));
+      } else {
+        PUSH(val);
+      }
  
-      PUSH(IS_OBJ(val) && !AS_OBJ(val)->isStatic ? copyValue(val) : val);
       DISPATCH();
     }
 

@@ -247,12 +247,7 @@ void freeChunk(Chunk *chunk) {
     Object *obj = chunk->constants[i];
     if (!obj) continue;
 
-    if (obj->type == OBJ_FUNCTION) {
-      Function *func = (Function *)obj;
-      Chunk *subChunk = func->chunk;
-      func->chunk = NULL;
-      if (subChunk) freeChunk(subChunk);
-    } else if (obj->type == OBJ_STRING) {
+    if (obj->type == OBJ_STRING) {
       poolFree(stringPool, obj);
     } else if (!obj->isStatic) {
       freeObject(obj);
@@ -668,6 +663,8 @@ static void compileFunction(ASTNode *node, Compiler *c) {
   func->chunk = fc.chunk;
   func->chunk->maxLocals = fc.maxLocalCount;
   func->maxLocals = fc.maxLocalCount;
+
+  if (_DEBUG) disassembleChunk(func->chunk, func->name);
 
   setPosFromNode(c, node);
   emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)func));

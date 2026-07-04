@@ -16,7 +16,8 @@ const NativeModuleEntry* stdlibModules[] = {
   &(NativeModuleEntry){ "__mathlib", initMathModule }, 
   &(NativeModuleEntry){ "__sys", initSysModule }, 
   &(NativeModuleEntry){ "__time", initTimeModule }, 
-  &(NativeModuleEntry){ "__c_tools", initCTools }, NULL 
+  &(NativeModuleEntry){ "__c_tools", initCTools }, 
+  &(NativeModuleEntry){ "__lib_tools", initLibtools }, NULL 
 };
 
 static Object nullSingleton = { .type = OBJ_NULL, .isStatic = true };
