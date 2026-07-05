@@ -63,7 +63,7 @@ profile: $(TARGET_LIB)
 
 $(TARGET_LIB): net.c
 	@mkdir -p $(BUILD_DIR)
-	make -C axionetd
+	make -C axionetd install
 	$(CC) $(CFLAGS) net.c -o $(BUILD_DIR)/$@ $(LDFLAGS)
 
 clean:
