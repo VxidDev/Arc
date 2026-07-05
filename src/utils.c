@@ -123,6 +123,10 @@ char* tokToString(const TokType type) {
     case TOK_CLASS: return "CLASS";
     case TOK_DOT: return "DOT";
 
+    case TOK_LCURLBRACK: return "LCURLBRACK";
+    case TOK_RCURLBRACK: return "RCURLBRACK";
+    case TOK_COLON: return "COLON";
+
     case TOK_EOF: return "EOF";
     case TOK_INVALID: return "INVALID";
 

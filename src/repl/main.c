@@ -231,6 +231,17 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
   Chunk* chunk = compileAST(ast, error, filename, text);
 
   if (!chunk) {
+    if (*error) { 
+      char *errStr = errorAsString(*error);
+      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
+      free(errStr);
+
+      freeError(*error);
+      *error = NULL;
+    }
+
+    freeTokens(tokens, *size);
+
     printf("%sArc: %sFailed to compile AST tree to bytecode.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return;
   }

@@ -43,8 +43,14 @@
 #define PEEK(i) (*(sp - 1 - (i)))
 
 #define READ_BYTE()  (*ip++)
-#define READ_CONST() (constants[*ip++])
 
+static inline uint32_t _read_const_idx(uint8_t **ipp) {
+  uint32_t idx = ((uint32_t)(*ipp)[0] << 16) | ((uint32_t)(*ipp)[1] << 8) | (*ipp)[2];
+  *ipp += 3;
+  return idx;
+}
+
+#define READ_CONST() (constants[_read_const_idx(&ip)])
 
 static inline int16_t _read_short(uint8_t **ipp) {
   uint16_t v;

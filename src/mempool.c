@@ -9,8 +9,10 @@
 MemPool* initPool(size_t objSize) {
   if (objSize == 0) return NULL;
 
-  MemPool* pool = malloc(sizeof(MemPool));
-  if (!pool) return NULL;
+  MemPool* pool = NULL;
+  
+  if (posix_memalign((void**)&pool, 64, sizeof(MemPool)) != 0 || !pool)
+    return NULL;
 
   pool->slab = arenaAlloc(poolArena, objSize * POOL_SIZE);
   if (!pool->slab) { free(pool); return NULL; }

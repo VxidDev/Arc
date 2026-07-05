@@ -59,7 +59,7 @@ static bool internTableResize(InternTable *t, size_t oldCap, size_t newCap) {
   return true;
 }
 
-static uint8_t internString(Compiler *c, char *str, size_t len) {
+static uint32_t internString(Compiler *c, char *str, size_t len) {
   if (!c->intern.entries) {
     size_t cap = INTERN_TABLE_INIT_CAP;
     c->intern.entries = arenaAlloc(objectArena, cap * sizeof(InternEntry));
@@ -83,12 +83,12 @@ static uint8_t internString(Compiler *c, char *str, size_t len) {
     slot = (slot + 1) & (c->intern.cap - 1);
   }
 
-  if (c->chunk->constCount >= 256) {
+  if (c->chunk->constCount >= 0xFFFFFF) {
     if (c->err && !*c->err)
       *c->err = initRuntimeError(
         (Position){0,0,0}, (Position){0,0,0},
         c->filename,
-        "Too many constants in chunk (max 256).",
+        "Too many constants in chunk.",
         c->sourcetext);
 
     return 0;
@@ -107,7 +107,7 @@ static uint8_t internString(Compiler *c, char *str, size_t len) {
   int raw = chunkAddConst(c->chunk, obj);
   if (raw < 0) goto oom;
 
-  uint8_t idx = (uint8_t)raw;
+  uint32_t idx = (uint32_t)raw;
 
   if (c->intern.count * 4 >= c->intern.cap * 3) {
     if (!internTableResize(&c->intern, c->intern.cap, c->intern.cap * 2)) goto oom;
@@ -138,13 +138,13 @@ oom:
   return 0;
 }
 
-static uint8_t addStringConst(Compiler *c, char *str, size_t len) {
-  if (c->chunk->constCount >= 256) {
+static uint32_t addStringConst(Compiler *c, char *str, size_t len) {
+  if (c->chunk->constCount >= 0xFFFFFF) {
     if (c->err && !*c->err)
       *c->err = initRuntimeError(
         (Position){0,0,0}, (Position){0,0,0},
         c->filename,
-        "Too many constants in chunk (max 256).",
+        "Too many constants in chunk.",
         c->sourcetext);
 
     return 0;
@@ -162,7 +162,7 @@ static uint8_t addStringConst(Compiler *c, char *str, size_t len) {
   int raw = chunkAddConst(c->chunk, obj);
   if (raw < 0) return 0;
 
-  return (uint8_t)raw;
+  return (uint32_t)raw;
 }
 
 
@@ -300,17 +300,23 @@ static inline void emitBytes(Compiler *c, uint8_t a, uint8_t b) {
   emitByte(c, b);
 }
 
-static uint8_t addConst(Compiler *c, Object *obj) {
+static inline void emitConstRef(Compiler *c, uint32_t idx) {
+  emitByte(c, (idx >> 16) & 0xFF);
+  emitByte(c, (idx >> 8) & 0xFF);
+  emitByte(c, idx & 0xFF);
+}
+
+static uint32_t addConst(Compiler *c, Object *obj) {
   int idx = chunkAddConst(c->chunk, obj);
 
-  if (idx < 0 || idx > 255) {
+  if (idx < 0 || idx > 0xFFFFFF) { // 24-bit cap
     if (c->err && !*c->err)
-      *c->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, c->filename, "Too many constants in chunk (max 256).", c->sourcetext);
+      *c->err = initRuntimeError((Position){0, 0, 0}, (Position){0, 0, 0}, c->filename, "Too many constants in chunk.", c->sourcetext);
 
     return 0;
   }
 
-  return (uint8_t)idx;
+  return (uint32_t)idx;
 }
 
 static int emitJump(Compiler *c, uint8_t op) {
@@ -342,18 +348,40 @@ static void emitLoop(Compiler *c, int loopStart) {
   c->chunk->code[jumpBytesPos + 1] = offset & 0xFF;
 }
 
+static uint32_t addNumberConst(Compiler *c, Object *obj) {
+  bool isFloat = obj->type == OBJ_NUMBER_FLOAT;
+  double key = isFloat ? ((Number*)obj)->as.f : (double)((Number*)obj)->as.i;
+
+  for (size_t i = 0; i < c->chunk->constCount; i++) {
+    Object *existing = c->chunk->constants[i];
+    if (existing->type != obj->type) continue;
+
+    bool match = isFloat ? ((Number*)existing)->as.f == key : ((Number*)existing)->as.i == ((Number*)obj)->as.i;
+
+    if (match) { 
+      freeObject(obj); 
+      return (uint32_t)i;
+    }
+  }
+  return addConst(c, obj);
+}
+
 static void compileNumber(ASTNode *node, Compiler *c) {
   NumberNode *num = (NumberNode *)node;
 
   Object *obj = num->token.type == TOK_FLOAT ? (Object *)initFloat(num->token.val.f) : (Object *)initInt(num->token.val.i);
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, obj));
+
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addNumberConst(c, obj));
 }
 
 static void compileString(ASTNode *node, Compiler *c) {
   StringNode *str = (StringNode *)node;
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addStringConst(c, str->token.val.s, str->len));
+
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addStringConst(c, str->token.val.s, str->len));
 }
 
 static void compileVarAccess(ASTNode *node, Compiler *c) {
@@ -370,12 +398,14 @@ static void compileVarAccess(ASTNode *node, Compiler *c) {
     }
 
     if (c->funcName && strcmp(va->token.val.s, c->funcName) == 0 && c->funcObj) {
-      emitBytes(c, OP_LOAD_CONST, addConst(c, c->funcObj));
+      emitByte(c, OP_LOAD_CONST);
+      emitConstRef(c, addConst(c, c->funcObj));
       return;
     }
   }
 
-  emitBytes(c, OP_LOAD_VAR, internString(c, va->token.val.s, strlen(va->token.val.s)));
+  emitByte(c, OP_LOAD_VAR);
+  emitConstRef(c, internString(c, va->token.val.s, strlen(va->token.val.s)));
 }
 
 static void compileVarAssign(ASTNode *node, Compiler *c) {
@@ -399,7 +429,8 @@ static void compileVarAssign(ASTNode *node, Compiler *c) {
     }
   }
 
-  emitBytes(c, OP_STORE_VAR, internString(c, va->identifier, strlen(va->identifier)));
+  emitByte(c, OP_STORE_VAR);
+  emitConstRef(c, internString(c, va->identifier, strlen(va->identifier)));
 }
 
 static void compileBinOp(ASTNode *node, Compiler *c) {
@@ -498,7 +529,8 @@ static void compileIf(ASTNode *node, Compiler *c) {
     compileNode(n->elseExpr, c);
   } else {
     setPosFromNode(c, node);
-    emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(0)));
+    emitByte(c, OP_LOAD_CONST);
+    emitConstRef(c, addNumberConst(c, (Object *)initInt(0)));
   }
 
   for (int i = 0; i < endJumpCount; i++) 
@@ -554,7 +586,8 @@ static void compileWhile(ASTNode *node, Compiler *c) {
   JumpList *bl = info.breaks;
   while (bl) { patchJump(c, bl->offset); bl = bl->next; }
 
-  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addNumberConst(c, (Object *)initInt(1)));
 }
 
 /*
@@ -588,7 +621,8 @@ static void compileFor(ASTNode *node, Compiler *c) {
   int loopStart = (int)c->chunk->count;
   int exitJump = emitJump(c, OP_FOR_ITER);
   
-  emitBytes(c, OP_STORE_VAR, internString(c, fn->ident.val.s, strlen(fn->ident.val.s)));
+  emitByte(c, OP_STORE_VAR);
+  emitConstRef(c, internString(c, fn->ident.val.s, strlen(fn->ident.val.s)));
   emitByte(c, OP_POP);
 
   LoopInfo info = { .start = loopStart, .breaks = NULL, .continues = NULL, .next = c->loop };
@@ -618,7 +652,8 @@ static void compileFor(ASTNode *node, Compiler *c) {
   }
 
 
-  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addNumberConst(c, (Object *)initInt(1)));
 }
 
 /*
@@ -667,12 +702,15 @@ static void compileFunction(ASTNode *node, Compiler *c) {
   if (_DEBUG) disassembleChunk(func->chunk, func->name);
 
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)func));
-  emitBytes(c, OP_STORE_VAR, internString(c, fn->name, strlen(fn->name)));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addConst(c, (Object *)func));
+  emitByte(c, OP_STORE_VAR);
+  emitConstRef(c, internString(c, fn->name, strlen(fn->name)));
   emitByte(c, OP_POP);
 
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addNumberConst(c, (Object *)initInt(1)));
 }
 
 /*
@@ -707,7 +745,8 @@ static void compileTryCatch(ASTNode *node, Compiler *c) {
   patchJump(c, catchJump);
   
   setPosFromNode(c, node);
-  emitBytes(c, OP_STORE_VAR, internString(c, tn->errIdentifier.val.s, strlen(tn->errIdentifier.val.s)));
+  emitByte(c, OP_STORE_VAR);
+  emitConstRef(c, internString(c, tn->errIdentifier.val.s, strlen(tn->errIdentifier.val.s)));
 
   setPosFromNode(c, node);
   emitByte(c, OP_POP);
@@ -722,12 +761,14 @@ static void compileTryCatch(ASTNode *node, Compiler *c) {
 static void compileImport(ASTNode *node, Compiler *c) {
   ImportNode *in = (ImportNode *)node;
   setPosFromNode(c, node);
-  emitBytes(c, OP_IMPORT, internString(c, in->filePath.val.s, strlen(in->filePath.val.s)));
+  emitByte(c, OP_IMPORT);
+  emitConstRef(c, internString(c, in->filePath.val.s, strlen(in->filePath.val.s)));
 }
 
 static void compileNull(ASTNode *node, Compiler *c) {
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, initNull()));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addConst(c, initNull()));
 }
 
 static void compileReturn(ASTNode *node, Compiler *c) {
@@ -811,7 +852,8 @@ static void compilePropertyAssignNode(ASTNode* node, Compiler* c) {
   compileNode(pa->value, c);
 
   setPosFromNode(c, node);
-  emitBytes(c, OP_PROPERTY_SET, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
+  emitByte(c, OP_PROPERTY_SET);
+  emitConstRef(c, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
 }
 
 /*
@@ -825,7 +867,8 @@ static void compileProgram(ASTNode *node, Compiler *c) {
 
   if (prog->count == 0) {
     setPosFromNode(c, node);
-    emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(0)));
+    emitByte(c, OP_LOAD_CONST);
+    emitConstRef(c, addNumberConst(c, (Object *)initInt(0)));
     return;
   }
 
@@ -866,13 +909,16 @@ static void compileClass(ASTNode *node, Compiler *c) {
   class->maxLocals = cc.maxLocalCount;
 
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)class));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addConst(c, (Object *)class));
 
-  emitBytes(c, OP_STORE_VAR, internString(c, class->name, strlen(class->name)));
+  emitByte(c, OP_STORE_VAR);
+  emitConstRef(c, internString(c, class->name, strlen(class->name)));
   emitByte(c, OP_POP);
 
   setPosFromNode(c, node);
-  emitBytes(c, OP_LOAD_CONST, addConst(c, (Object *)initInt(1)));
+  emitByte(c, OP_LOAD_CONST);
+  emitConstRef(c, addNumberConst(c, (Object *)initInt(1)));
 }
 
 static void compilePropertyAccessNode(ASTNode* node, Compiler* c) {
@@ -882,7 +928,8 @@ static void compilePropertyAccessNode(ASTNode* node, Compiler* c) {
   compileNode(pa->target, c);
   
   setPosFromNode(c, node);
-  emitBytes(c, OP_PROPERTY_ACCESS, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
+  emitByte(c, OP_PROPERTY_ACCESS);
+  emitConstRef(c, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
 }
 
 static void compileNode(ASTNode *node, Compiler *c) {
@@ -989,9 +1036,30 @@ void disassembleChunk(Chunk *chunk, const char *name) {
     uint8_t op = chunk->code[i];
 
     switch (op) {
-      case OP_LOAD_CONST: printf("OP_LOAD_CONST"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
-      case OP_LOAD_VAR: printf("OP_LOAD_VAR"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
-      case OP_STORE_VAR: printf("OP_STORE_VAR"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
+      case OP_LOAD_CONST: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_LOAD_CONST"); 
+        printConstant(chunk, idx);
+        printf("\n");
+        break;
+      }
+      case OP_LOAD_VAR: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_LOAD_VAR");
+        printConstant(chunk, idx); 
+        printf("\n");
+        break;
+      }
+      case OP_STORE_VAR: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_STORE_VAR"); 
+        printConstant(chunk, idx);
+        printf("\n");
+        break;
+      }
       case OP_ADD: printf("OP_ADD\n"); break;
       case OP_SUB: printf("OP_SUB\n"); break;
       case OP_MUL: printf("OP_MUL\n"); break;
@@ -1026,7 +1094,14 @@ void disassembleChunk(Chunk *chunk, const char *name) {
       }
 
       case OP_TRY_POP: printf("OP_TRY_POP\n"); break;
-      case OP_IMPORT: printf("OP_IMPORT"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
+      case OP_IMPORT: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_IMPORT");
+        printConstant(chunk, idx);
+        printf("\n");
+        break;
+      }
       case OP_CALL: printf("OP_CALL %u\n", chunk->code[++i]); break;
       case OP_BREAK: printf("OP_BREAK\n"); break;
       case OP_CONTINUE: printf("OP_CONTINUE\n"); break;
@@ -1034,8 +1109,22 @@ void disassembleChunk(Chunk *chunk, const char *name) {
       case OP_HALT: printf("OP_HALT\n"); break;
       case OP_LOAD_LOCAL:  printf("OP_LOAD_LOCAL  %u\n", chunk->code[++i]); break;
       case OP_STORE_LOCAL: printf("OP_STORE_LOCAL %u\n", chunk->code[++i]); break;
-      case OP_PROPERTY_ACCESS: printf("OP_PROPERTY_ACCESS"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
-      case OP_PROPERTY_SET: printf("OP_PROPERTY_ASSIGN"); printConstant(chunk, chunk->code[++i]); printf("\n"); break;
+      case OP_PROPERTY_ACCESS: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_PROPERTY_ACCESS");
+        printConstant(chunk, idx);
+        printf("\n");
+        break;
+      }
+      case OP_PROPERTY_SET: { 
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_PROPERTY_ASSIGN");
+        printConstant(chunk, idx);
+        printf("\n");
+        break;
+      }
 
       case OP_JUMP: {
         uint8_t hi = chunk->code[++i], lo = chunk->code[++i];

@@ -86,7 +86,7 @@ typedef struct LoopInfo {
 typedef struct InternEntry {
   const char *str;  
   size_t len;
-  uint8_t constIdx;
+  uint32_t constIdx;
   bool used;
 } InternEntry;
 

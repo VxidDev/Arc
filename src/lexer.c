@@ -583,6 +583,21 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
       continue;
     }
 
+    if (lexer->currChar == '{') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LCURLBRACK)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == '}') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RCURLBRACK)) return NULL;
+      continue;
+    }
+
+    if (lexer->currChar == ':') {
+      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_COLON)) return NULL;
+      continue;
+    }
+
     if (lexer->currChar == ',') {
       if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_COMMA)) return NULL;
       continue;
