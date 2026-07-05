@@ -96,6 +96,24 @@ typedef struct InternTable {
   size_t count; 
 } InternTable;
 
+#define NUM_CONST_TABLE_INIT_CAP 64 // TODO: add flag for this
+
+typedef struct NumConstEntry {
+  bool used;
+  bool isFloat;
+  union {
+    int64_t i;
+    double f;
+  } key;
+  uint32_t constIdx;
+} NumConstEntry;
+
+typedef struct NumConstTable {
+  NumConstEntry *entries;
+  size_t cap;
+  size_t count;
+} NumConstTable;
+
 typedef struct Compiler {
   Chunk *chunk;
   Error **err;
@@ -107,6 +125,7 @@ typedef struct Compiler {
   int localCount;
   bool isFunction; // false = top-level, no locals
   InternTable intern;
+  NumConstTable numConsts;
 
   int maxLocalCount;  
 

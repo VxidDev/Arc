@@ -1069,12 +1069,12 @@ ASTNode* __exprParser(Parser* parser) {
 
       if (target->type == NODE_PROPERTYACCESS) {
         PropertyAccessNode* pa = (PropertyAccessNode*)target;
-        return (ASTNode*)initPropertyAssignNode(pa->target, pa->field, value, pa->start, eq.end);
+        return (ASTNode*)initPropertyAssignNode(pa->target, pa->field, value, pa->base.start, eq.end);
       }
 
       if (target->type == NODE_INDEX) {
         IndexNode* idx = (IndexNode*)target;
-        return (ASTNode*)initIndexAssignNode(idx->target, idx->index, value, idx->start, eq.end);
+        return (ASTNode*)initIndexAssignNode(idx->target, idx->index, value, idx->base.start, eq.end);
       }
 
       if (*parser->error == NULL)

@@ -348,22 +348,106 @@ static void emitLoop(Compiler *c, int loopStart) {
   c->chunk->code[jumpBytesPos + 1] = offset & 0xFF;
 }
 
+static inline uint32_t hashNumKey(bool isFloat, int64_t i, double f) {
+  uint64_t x;
+
+  if (isFloat) {
+    memcpy(&x, &f, sizeof(x));
+  } else {
+    x = (uint64_t)i;
+  }
+
+  x ^= x >> 33; x *= 0xff51afd7ed558ccdULL;
+  x ^= x >> 33; x *= 0xc4ceb9fe1a85ec53ULL;
+  x ^= x >> 33;
+  return (uint32_t)x ^ (isFloat ? 0x9E3779B9u : 0u);
+}
+
+static bool numConstTableResize(NumConstTable *t, size_t oldCap, size_t newCap) {
+  NumConstEntry *newEntries = arenaAlloc(objectArena, newCap * sizeof(NumConstEntry));
+  if (!newEntries) return false;
+
+  memset(newEntries, 0, newCap * sizeof(NumConstEntry));
+
+  // rehash old entries into new table
+  for (size_t i = 0; i < oldCap; i++) {
+    if (!t->entries[i].used) continue;
+
+    NumConstEntry *old = &t->entries[i];
+    uint32_t h = hashNumKey(old->isFloat, old->key.i, old->key.f);
+    size_t slot = h & (newCap - 1);
+
+    while (newEntries[slot].used)
+      slot = (slot + 1) & (newCap - 1);
+
+    newEntries[slot] = *old;
+  }
+
+  t->entries = newEntries;
+  t->cap = newCap;
+  return true;
+}
+
 static uint32_t addNumberConst(Compiler *c, Object *obj) {
   bool isFloat = obj->type == OBJ_NUMBER_FLOAT;
-  double key = isFloat ? ((Number*)obj)->as.f : (double)((Number*)obj)->as.i;
+  int64_t ikey = isFloat ? 0 : ((Number*)obj)->as.i;
+  double fkey = isFloat ? ((Number*)obj)->as.f : 0;
 
-  for (size_t i = 0; i < c->chunk->constCount; i++) {
-    Object *existing = c->chunk->constants[i];
-    if (existing->type != obj->type) continue;
+  if (!c->numConsts.entries) {
+    size_t cap = NUM_CONST_TABLE_INIT_CAP;
+    c->numConsts.entries = arenaAlloc(objectArena, cap * sizeof(NumConstEntry));
+    if (!c->numConsts.entries) { freeObject(obj); return 0; }
 
-    bool match = isFloat ? ((Number*)existing)->as.f == key : ((Number*)existing)->as.i == ((Number*)obj)->as.i;
-
-    if (match) { 
-      freeObject(obj); 
-      return (uint32_t)i;
-    }
+    memset(c->numConsts.entries, 0, cap * sizeof(NumConstEntry));
+    c->numConsts.cap = cap;
+    c->numConsts.count = 0;
   }
-  return addConst(c, obj);
+
+  uint32_t hash = hashNumKey(isFloat, ikey, fkey);
+  size_t slot = hash & (c->numConsts.cap - 1);
+
+  while (c->numConsts.entries[slot].used) {
+    NumConstEntry *e = &c->numConsts.entries[slot];
+
+    bool match = (e->isFloat == isFloat) &&
+                 (isFloat ? e->key.f == fkey : e->key.i == ikey);
+
+    if (match) {
+      freeObject(obj);
+      return e->constIdx;
+    }
+
+    slot = (slot + 1) & (c->numConsts.cap - 1);
+  }
+
+  uint32_t idx = addConst(c, obj);
+
+  if (c->numConsts.count * 4 >= c->numConsts.cap * 3) {
+    if (!numConstTableResize(&c->numConsts, c->numConsts.cap, c->numConsts.cap * 2))
+      return idx; // skip caching this entry, dedup just misses it next time
+
+    slot = hash & (c->numConsts.cap - 1);
+
+    while (c->numConsts.entries[slot].used)
+      slot = (slot + 1) & (c->numConsts.cap - 1);
+  }
+
+  NumConstEntry newEntry = {
+    .used = true,
+    .isFloat = isFloat,
+    .constIdx = idx,
+  };
+
+  if (isFloat) 
+    newEntry.key.f = fkey;
+  else 
+    newEntry.key.i = ikey;
+
+  c->numConsts.entries[slot] = newEntry;
+  c->numConsts.count++;
+
+  c->numConsts.count++;
+  return idx;
 }
 
 static void compileNumber(ASTNode *node, Compiler *c) {
@@ -1012,7 +1096,7 @@ Chunk *compileAST(ASTNode *ast, Error **err, char *filename, char *sourcetext) {
   return c.chunk;
 }
 
-static void printConstant(Chunk *chunk, uint8_t idx) {
+static void printConstant(Chunk *chunk, uint32_t idx) {
   if (idx >= chunk->constCount) { 
     printf(" <invalid const %u>", idx);
     return;

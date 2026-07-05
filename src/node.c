@@ -13,9 +13,12 @@ NumberNode* initNumberNode(Token token) {
   NumberNode* node = arenaAlloc(parseArena, sizeof(NumberNode));
 
   if (!node) return NULL;
-
+  
   node->base.type = NODE_NUMBER;
   node->token = token;
+
+  node->base.start = token.start;
+  node->base.end = token.end;
 
   return node;
 }
@@ -30,6 +33,9 @@ NullNode* initNullNode(Token tok) {
   node->base.type = NODE_NULL;
   node->tok = tok;
 
+  node->base.start = tok.start;
+  node->base.end = tok.end;
+
   return node;
 }
 
@@ -41,6 +47,9 @@ ForNode* initForNode(Token forTok, Token identifier, ASTNode* iterable, ASTNode 
   if (!node) return NULL;
 
   node->base.type = NODE_FOR;
+
+  node->base.start = forTok.start;
+  node->base.end = body->end;
 
   node->forTok = forTok;
   node->ident = identifier;
@@ -58,13 +67,13 @@ FunctionCallNode* initFunctionCallNode(ASTNode* callee, ASTNode **args, size_t a
   if (!fncallNode) return NULL;
   
   fncallNode->base.type = NODE_FUNCTION_CALL;
+
+  fncallNode->base.start = start;
+  fncallNode->base.end = end;
   
   fncallNode->callee = callee;
   fncallNode->args = args;
   fncallNode->argCount = argCount;
-
-  fncallNode->start = start;
-  fncallNode->end = end;
 
   return fncallNode;
 }
@@ -77,9 +86,10 @@ TryCatchNode* initTryCatchNode(Position tryStart, Position catchEnd, Token errId
   if (!node) return NULL;
     
   node->base.type = NODE_TRYCATCH;
+
+  node->base.start = tryStart;
+  node->base.end = catchEnd;
   
-  node->tryStart = tryStart;
-  node->catchEnd = catchEnd;
   node->errIdentifier = errIdentifier;
 
   node->body = body;
@@ -96,6 +106,10 @@ ContinueNode* initContinueNode(Token tok) {
   if (!node) return NULL;
   
   node->base.type = NODE_CONTINUE;
+
+  node->base.start = tok.start;
+  node->base.end = tok.end;
+
   node->tok = tok;
 
   return node;
@@ -109,6 +123,10 @@ BreakNode* initBreakNode(Token tok) {
   if (!node) return NULL;
   
   node->base.type = NODE_BREAK;
+
+  node->base.start = tok.start;
+  node->base.end = tok.end;
+
   node->tok = tok;
 
   return node;
@@ -122,6 +140,9 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
   if (!node) return NULL;
   
   node->base.type = NODE_FUNCTION;
+  
+  node->base.start = start;
+  node->base.end = end;
 
   node->body = body;
   node->name = stringDup(name);
@@ -130,8 +151,6 @@ FunctionNode* initFunctionNode(ASTNode* body, char *name, char **params, size_t 
 
   node->params = params;
   node->paramCount = paramCount;
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -144,9 +163,10 @@ ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, 
   if (!list) return NULL;
 
   list->base.type = NODE_LIST;
+
+  list->base.start = startBracket.start;
+  list->base.end = endBracket.end;
   
-  list->startBracket = startBracket;
-  list->endBracket = endBracket;
   list->objects = objects;
 
   list->size = size;
@@ -160,7 +180,10 @@ ProgramNode* initProgramNode(ASTNode **statements, size_t count) {
   if (!node) return NULL;
 
   node->base.type = NODE_PROGRAM;
-  
+
+  node->base.start = count > 0 ? statements[0]->start : (Position){0, 0, 0};
+  node->base.end = count > 0 ? statements[count - 1]->end : (Position){0, 0, 0};
+
   node->statements = statements;
   node->count = count;
 
@@ -175,6 +198,9 @@ StringNode* initStringNode(Token token) {
   if (!node) return NULL;
 
   node->base.type = NODE_STRING;
+
+  node->base.start = token.start;
+  node->base.end = token.end;
   
   node->token = token;
   node->len = strlen(token.val.s);
@@ -191,11 +217,11 @@ IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Positi
 
   node->base.type = NODE_INDEX;
   
+  node->base.start = start;
+  node->base.end = end;
+
   node->target = target;
   node->index = index;
-
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -208,12 +234,13 @@ PropertyAssignNode* initPropertyAssignNode(ASTNode* target, Token field, ASTNode
   if (!node) return NULL;
   
   node->base.type = NODE_PROPERTYASSIGN;
+  
+  node->base.start = start;
+  node->base.end = end;
 
   node->target = target;
   node->field = field;
   node->value = value;
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -226,12 +253,13 @@ IndexAssignNode* initIndexAssignNode(ASTNode* target, ASTNode* index, ASTNode* v
   if (!node) return NULL;
 
   node->base.type = NODE_INDEXASSIGN;
+
+  node->base.start = start;
+  node->base.end = end;
   
   node->target = target;
   node->index = index;
   node->value = value;
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -244,12 +272,12 @@ WhileNode* initWhileNode(ASTNode* condition, ASTNode* body, Position start, Posi
   if (!node) return NULL;
 
   node->base.type = NODE_WHILE;
+
+  node->base.start = start;
+  node->base.end = end;
   
   node->condition = condition;
   node->body = body;
-
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -262,6 +290,9 @@ BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode) {
   if (!node) return NULL;
 
   node->base.type = NODE_BINOP;
+
+  node->base.start = leftNode->start;
+  node->base.end = rightNode->end;
 
   node->leftNode = leftNode;
   node->operTok = operTok;
@@ -278,6 +309,9 @@ UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
   if (!unaryNode) return NULL;
 
   unaryNode->base.type = NODE_UNARYOP;
+
+  unaryNode->base.start = operTok.start;
+  unaryNode->base.end = node->end;
   
   unaryNode->operTok = operTok;
   unaryNode->node = node;
@@ -297,9 +331,11 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position star
   if (!varAssignNode->identifier) return NULL;
 
   varAssignNode->base.type = NODE_VARASSIGN;
-  varAssignNode->value = value;
+  
+  varAssignNode->base.start = start;
+  varAssignNode->base.end = value->end;
 
-  varAssignNode->start = start;
+  varAssignNode->value = value;
 
   return varAssignNode;
 }
@@ -312,6 +348,10 @@ VarAccessNode* initVarAccessNode(Token token) {
   if (!node) return NULL;
 
   node->base.type = NODE_VARACCESS;
+
+  node->base.start = token.start;
+  node->base.end = token.end;
+
   node->token = token;
   return node;
 }
@@ -324,6 +364,10 @@ ImportNode* initImportNode(Token filePath) {
   if (!node) return NULL;
 
   node->base.type = NODE_IMPORT;
+
+  node->base.start = filePath.start;
+  node->base.end = filePath.end;
+
   node->filePath = filePath;
 
   return node;
@@ -337,9 +381,11 @@ ReturnNode* initReturnNode(Position start, Position end, ASTNode* expr) {
   if (!node) return NULL;
 
   node->base.type = NODE_RETURN;
+
+  node->base.start = start;
+  node->base.end = end;
+
   node->expr = expr;
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -351,6 +397,10 @@ IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, A
   if (!node) return NULL;
 
   node->base.type = NODE_IF;
+
+  node->base.start = condition->start;
+  node->base.end = condition->end;
+
   node->condition = condition;
   node->thenExpr = thenExpr;
   node->elifConds = elifConds;
@@ -367,10 +417,12 @@ ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Positi
   ClassNode* node = arenaAlloc(parseArena, sizeof(ClassNode));
 
   node->base.type = NODE_CLASS;
+
+  node->base.start = start;
+  node->base.end = end;
+
   node->body = body;
   node->identifier = identifier;
-  node->start = start;
-  node->end = end;
 
   return node;
 }
@@ -381,81 +433,22 @@ PropertyAccessNode* initPropertyAccessNode(ASTNode* target, Token field, Positio
   PropertyAccessNode* node = arenaAlloc(parseArena, sizeof(PropertyAccessNode));
 
   node->base.type = NODE_PROPERTYACCESS;
+
+  node->base.start = start;
+  node->base.end = end;
+
   node->target = target;
   node->field = field;
-  node->start = start;
-  node->end = end;
 
   return node;
 } 
 
 Position getNodeStart(ASTNode *node) {
   if (!node) return (Position){0,0,0};
-
-  switch (node->type) {
-    case NODE_NUMBER: return ((NumberNode*)node)->token.start;
-    case NODE_STRING: return ((StringNode*)node)->token.start;
-    case NODE_VARACCESS: return ((VarAccessNode*)node)->token.start;
-    case NODE_VARASSIGN: return ((VarAssignNode*)node)->start;
-    case NODE_BINOP: return getNodeStart(((BinOpNode*)node)->leftNode);
-    case NODE_UNARYOP: return ((UnaryOpNode*)node)->operTok.start;
-    case NODE_IF: return getNodeStart(((IfNode*)node)->condition);
-    case NODE_LIST: return ((ListNode*)node)->startBracket.start;
-    case NODE_INDEX: return ((IndexNode*)node)->start;
-    case NODE_WHILE: return ((WhileNode*)node)->start;
-    case NODE_FUNCTION: return ((FunctionNode*)node)->start;
-    case NODE_FUNCTION_CALL: return ((FunctionCallNode*)node)->start;
-    case NODE_IMPORT: return ((ImportNode*)node)->filePath.start;
-    case NODE_RETURN: return ((ReturnNode*)node)->start;
-    case NODE_TRYCATCH: return ((TryCatchNode*)node)->tryStart;
-    case NODE_BREAK: return ((BreakNode*)node)->tok.start;
-    case NODE_NULL: return ((NullNode*)node)->tok.start;
-    case NODE_CONTINUE: return ((ContinueNode*)node)->tok.start;
-    case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->start;
-    case NODE_FOR: return ((ForNode*)node)->forTok.start;
-    case NODE_CLASS: return ((ClassNode*)node)->start;
-    case NODE_PROPERTYASSIGN: return ((PropertyAssignNode*)node)->start;
-    case NODE_PROPERTYACCESS: return getNodeStart(((PropertyAccessNode*)node)->target);
-    case NODE_PROGRAM: {
-      ProgramNode *p = (ProgramNode*)node;
-      return p->count > 0 ? getNodeStart(p->statements[0]) : (Position){0,0,0};
-    }
-
-    default: return (Position){0,0,0};
-  }
+  return node->start;
 }
 
 Position getNodeEnd(ASTNode *node) {
   if (!node) return (Position){0,0,0};
-
-  switch (node->type) {
-    case NODE_NUMBER: return ((NumberNode*)node)->token.end;
-    case NODE_STRING: return ((StringNode*)node)->token.end;
-    case NODE_VARACCESS: return ((VarAccessNode*)node)->token.end;
-    case NODE_VARASSIGN: return getNodeEnd(((VarAssignNode*)node)->value);
-    case NODE_BINOP: return getNodeEnd(((BinOpNode*)node)->rightNode);
-    case NODE_UNARYOP: return getNodeEnd(((UnaryOpNode*)node)->node);
-    case NODE_IF: return getNodeEnd(((IfNode*)node)->condition);
-    case NODE_LIST: return ((ListNode*)node)->endBracket.end;
-    case NODE_INDEX: return ((IndexNode*)node)->end;
-    case NODE_WHILE: return ((WhileNode*)node)->end;
-    case NODE_FUNCTION: return ((FunctionNode*)node)->end;
-    case NODE_FUNCTION_CALL: return ((FunctionCallNode*)node)->end;
-    case NODE_IMPORT: return ((ImportNode*)node)->filePath.end;
-    case NODE_RETURN: return ((ReturnNode*)node)->end;
-    case NODE_TRYCATCH: return ((TryCatchNode*)node)->catchEnd;
-    case NODE_BREAK: return ((BreakNode*)node)->tok.end;
-    case NODE_NULL: return ((NullNode*)node)->tok.end;
-    case NODE_CONTINUE: return ((ContinueNode*)node)->tok.end;
-    case NODE_INDEXASSIGN: return ((IndexAssignNode*)node)->end;
-    case NODE_FOR: return getNodeEnd(((ForNode*)node)->body);
-    case NODE_CLASS: return ((ClassNode*)node)->end;
-    case NODE_PROPERTYACCESS: return ((PropertyAccessNode*)node)->end;
-    case NODE_PROPERTYASSIGN: return ((PropertyAssignNode*)node)->end;
-    case NODE_PROGRAM: {
-      ProgramNode *p = (ProgramNode*)node;
-      return p->count > 0 ? getNodeEnd(p->statements[p->count-1]) : (Position){0,0,0};
-    }
-    default: return (Position){0,0,0};
-  }
+  return node->end;
 }

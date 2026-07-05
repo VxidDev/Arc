@@ -40,6 +40,7 @@ typedef Object* (*VisitFn)(ASTNode*, Interpretator*);
 
 typedef struct ASTNode {
   NodeType type;
+  Position start, end;
 } ASTNode;
 
 typedef struct NumberNode {
@@ -57,8 +58,6 @@ typedef struct ListNode {
   ASTNode base;
   ASTNode** objects;
   uint64_t size, capacity;
-  Token startBracket;
-  Token endBracket;
 } ListNode;
 
 typedef struct VarAccessNode {
@@ -70,15 +69,12 @@ typedef struct VarAssignNode {
   ASTNode base;
   char *identifier;
   ASTNode *value;
-  Position start;
 } VarAssignNode;
 
 typedef struct IndexNode {
   ASTNode base;
   ASTNode* target;
   ASTNode* index;
-
-  Position start, end;
 } IndexNode;
 
 typedef struct BinOpNode {
@@ -110,7 +106,6 @@ typedef struct WhileNode {
   ASTNode base;
   ASTNode* condition;
   ASTNode* body;
-  Position start, end;
 } WhileNode;
 
 typedef struct FunctionNode {
@@ -119,7 +114,6 @@ typedef struct FunctionNode {
   char **params;
   size_t paramCount;
   ASTNode* body;
-  Position start, end;
 } FunctionNode;
 
 typedef struct FunctionCallNode {
@@ -127,8 +121,6 @@ typedef struct FunctionCallNode {
   ASTNode* callee;
   ASTNode** args;
   size_t argCount;
-
-  Position start, end;
 } FunctionCallNode;
 
 typedef struct ImportNode {
@@ -145,13 +137,11 @@ typedef struct {
 typedef struct ReturnNode {
   ASTNode base;
   ASTNode* expr;
-  Position start, end;
 } ReturnNode;
 
 typedef struct TryCatchNode {
   ASTNode base;
   Token errIdentifier;
-  Position tryStart, catchEnd;
   ASTNode *body, *errHandler;
 } TryCatchNode;
 
@@ -175,8 +165,6 @@ typedef struct IndexAssignNode {
   ASTNode* target; 
   ASTNode* value;
   ASTNode* index;
-
-  Position start, end;
 } IndexAssignNode;
 
 typedef struct ForNode {
@@ -193,15 +181,12 @@ typedef struct ClassNode {
 
   Token identifier;
   ASTNode* body;
-
-  Position start, end;
 } ClassNode;
 
 typedef struct PropertyAccessNode {
   ASTNode base;
   ASTNode* target;
   Token field;
-  Position start, end;
 } PropertyAccessNode;
 
 typedef struct PropertyAssignNode {
@@ -209,7 +194,6 @@ typedef struct PropertyAssignNode {
   ASTNode* target;
   Token field;
   ASTNode* value;
-  Position start, end;
 } PropertyAssignNode;
 
 PropertyAssignNode* initPropertyAssignNode(ASTNode* target, Token field, ASTNode* value, Position start, Position end);
