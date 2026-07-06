@@ -104,14 +104,14 @@ void _extract_queryString(AxioRequest* request) {
     }
 }
 
-bool _parse_query_params(AxioRequest* request, MemoryPool *queryPool) {
+bool _parse_query_params(AxioRequest* request, axio_MemoryPool *queryPool) {
     if (!request->queryString) {
         request->queryParams = NULL;
         request->queryParamAmount = 0;
         return true;
     }
 
-    request->queryParams = poolAlloc(queryPool);
+    request->queryParams = axio_poolAlloc(queryPool);
     request->queryParamAmount = 0;
 
     char *p = request->queryString;
@@ -178,7 +178,7 @@ bool AxioRequest_parseJSON(AxioRequest* request) {
     return request->json != NULL;
 }
 
-bool parseRequest(AxioRequest *request, char *buf, MemoryPool *queryPool) {
+bool parseRequest(AxioRequest *request, char *buf, axio_MemoryPool *queryPool) {
     if (!request) {
         return false;
     }
@@ -210,7 +210,7 @@ bool parseRequest(AxioRequest *request, char *buf, MemoryPool *queryPool) {
     return true;
 }
 
-void initResponse(AxioResponse *resp, const char* body, int status, AxioHeader* headers, int headerCount, MemoryPool *responsePool) {
+void initResponse(AxioResponse *resp, const char* body, int status, AxioHeader* headers, int headerCount, axio_MemoryPool *responsePool) {
     size_t bodyLen = body ? strlen(body) : 0;
     
     // compute size manually 
@@ -238,7 +238,7 @@ void initResponse(AxioResponse *resp, const char* body, int status, AxioHeader* 
         return;
     }
     
-    char *response = poolAlloc(responsePool);
+    char *response = axio_poolAlloc(responsePool);
 
     if (!response) {
         resp->response = NULL;
@@ -327,7 +327,7 @@ void initResponse(AxioResponse *resp, const char* body, int status, AxioHeader* 
 }
 
 
-void HTMLResponse(AxioResponse* resp, const char* body, const int status, AxioHeader* headers, int headerAmount, MemoryPool *responsePool) {
+void HTMLResponse(AxioResponse* resp, const char* body, const int status, AxioHeader* headers, int headerAmount, axio_MemoryPool *responsePool) {
     AxioHeader h[headerAmount + 1];
 
     for (int i = 0; i < headerAmount; i++) {

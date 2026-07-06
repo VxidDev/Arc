@@ -14,11 +14,11 @@ typedef struct {
     unsigned long capacity;
 
     pthread_mutex_t lock;
-} MemoryPool;
+} axio_MemoryPool;
 
-MemoryPool* poolCreate(size_t objectSize, size_t capacity);
-void* poolAlloc(MemoryPool *pool);
-void poolFree(MemoryPool *pool, void *ptr);
-void poolDestroy(MemoryPool *pool);
+axio_MemoryPool* axio_poolCreate(size_t objectSize, size_t capacity);
+void* axio_poolAlloc(axio_MemoryPool *pool);
+void axio_poolFree(axio_MemoryPool *pool, void *ptr);
+void axio_poolDestroy(axio_MemoryPool *pool);
 
 #endif // AXIO_MEMORY_POOL_H

@@ -56,8 +56,8 @@ typedef struct AxioConnection {
 } AxioConnection;
 
 bool AxioRequest_parseJSON(AxioRequest* request);
-bool parseRequest(AxioRequest* request, char *buf, MemoryPool *queryPool);
-void initResponse(AxioResponse* resp, const char* body, const int status, AxioHeader* headers, int headerCount, MemoryPool *responsePool);
-void HTMLResponse(AxioResponse* resp, const char* body, const int status, AxioHeader* headers, int headerAmount, MemoryPool *responsePool);
+bool parseRequest(AxioRequest* request, char *buf, axio_MemoryPool *queryPool);
+void initResponse(AxioResponse* resp, const char* body, const int status, AxioHeader* headers, int headerCount, axio_MemoryPool *responsePool);
+void HTMLResponse(AxioResponse* resp, const char* body, const int status, AxioHeader* headers, int headerAmount, axio_MemoryPool *responsePool);
 
 #endif // AXIONETD_REQUEST_H

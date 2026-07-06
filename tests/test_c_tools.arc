@@ -21,7 +21,7 @@ print(c_add(1, 3))
 var i = 0
 var start = perf_counter()
 
-while i != 1000000 then 
+while i != 1000 then 
   i = add(i, 1)
 end 
 
@@ -30,7 +30,7 @@ print("(add) Time elapsed:", perf_counter() - start, "s")
 i = 0
 start = perf_counter()
 
-while i != 1000000 then 
+while i != 1000 then 
   i = c_add(i, 1)
 end 
 
@@ -45,5 +45,13 @@ __fn_ptr = __dl_sym(lib, "yield_int")
 __fn_sig = c_func_signature(C_INT_PTR)
 
 print(int_at(c_run(__fn_ptr, __fn_sig, [])))
+
+var run_fn = dl_sym(lib, "run_fn", 2, false)
+
+fn greet(name) then 
+  print("Hello, " + name + "!")
+end 
+
+run_fn(greet, ["World"])
 
 dl_close(lib)

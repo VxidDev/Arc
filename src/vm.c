@@ -474,7 +474,7 @@ Object *vmRun(VM *vm) {
 
     OP_PROPERTY_SET: {
       String* name = (String*)READ_CONST();
-      
+
       Value val = POP();
       Value targetVal = POP();
 
@@ -486,7 +486,7 @@ Object *vmRun(VM *vm) {
       }
 
       Instance* target = (Instance*)AS_OBJ(targetVal);
-      setTable(target->fields, name->value, val);
+      setTable(target->fields, name->value, IS_OBJ(val) ? copyValue(val) : val);
 
       PUSH(val);
       freeValue(targetVal);
@@ -496,8 +496,8 @@ Object *vmRun(VM *vm) {
       
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
-  
-      setTable(vars, name->value, PEEK(0));
+      Value val = PEEK(0);
+      setTable(vars, name->value, IS_OBJ(val) ? copyValue(val) : val);
       DISPATCH();
     }
 
@@ -953,19 +953,26 @@ Object *vmRun(VM *vm) {
 
         Object* objArgsBuf[16];
         Object** objArgs = (argCount <= 16) ? objArgsBuf : (Object**)malloc(sizeof(Object*) * argCount);
-
-        for (int i = 0; i < argCount; i++)
-          objArgs[i] = valueToObject(args[i]);
-
-        Object *res = nf->function(objArgs, argCount);
+        bool wasObjBuf[16];
+        bool *wasObj = (argCount <= 16) ? wasObjBuf : (bool*)malloc(sizeof(bool) * argCount);
 
         for (int i = 0; i < argCount; i++) {
-          if (!IS_OBJ(args[i])) 
+          wasObj[i] = IS_OBJ(args[i]);     // snapshot BEFORE the reentrant call
+          objArgs[i] = valueToObject(args[i]);
+        }
+        
+        SAVE_STATE();
+        Object *res = nf->function(objArgs, argCount);
+        REFRESH_FRAME();
+
+        for (int i = 0; i < argCount; i++) {
+          if (!wasObj[i])
             freeObject(objArgs[i]);
-          else if (objArgs[i] != res) 
-            freeValue(args[i]);
+          else if (objArgs[i] != res)
+            freeObject(objArgs[i]);
         }
 
+        if (wasObj != wasObjBuf) free(wasObj);
         if (objArgs != objArgsBuf) free(objArgs);
           
         if (UNLIKELY(res && res->type == OBJ_ERROR)) {
@@ -1150,7 +1157,7 @@ Object *vmRun(VM *vm) {
     OP_RETURN: {
       Value res = POP();
 
-      if (vm->frameTop > 1) {
+      if (vm->frameTop > vm->exitFrameTop) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
         
         for (int i = 0; i < leavingFrame->localCount; i++)
@@ -1186,7 +1193,7 @@ Object *vmRun(VM *vm) {
     OP_HALT: {
       Value res = (sp > vm->stack) ? POP() : VAL_INT(0);
 
-      if (vm->frameTop > 1) {
+      if (vm->frameTop > vm->exitFrameTop) {
         CallFrame *leavingFrame = &vm->frames[--vm->frameTop];
 
         for (int i = 0; i < leavingFrame->localCount; i++)
@@ -1240,6 +1247,9 @@ VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, ch
   vm->err = err;
   vm->filename = filename;
   vm->sourcetext = sourcetext;
+
+  vm->exitFrameTop = 1;
+
   return vm;
 }
 

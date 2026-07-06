@@ -2,8 +2,8 @@
 
 #include <stdlib.h>
 
-MemoryPool* poolCreate(size_t objectSize, size_t capacity) {
-    MemoryPool *pool = malloc(sizeof(MemoryPool));
+axio_MemoryPool* axio_poolCreate(size_t objectSize, size_t capacity) {
+    axio_MemoryPool *pool = malloc(sizeof(axio_MemoryPool));
     pool->objectSize = objectSize < sizeof(PoolNode) ? sizeof(PoolNode) : objectSize;
     pool->capacity = capacity;
 
@@ -22,7 +22,7 @@ MemoryPool* poolCreate(size_t objectSize, size_t capacity) {
     return pool;
 }
 
-void* poolAlloc(MemoryPool *pool) {
+void* axio_poolAlloc(axio_MemoryPool *pool) {
     pthread_mutex_lock(&pool->lock);
 
     if (!pool->freeList) {
@@ -38,7 +38,7 @@ void* poolAlloc(MemoryPool *pool) {
     return node;
 }
 
-void poolFree(MemoryPool *pool, void *ptr) {
+void axio_poolFree(axio_MemoryPool *pool, void *ptr) {
     pthread_mutex_lock(&pool->lock);
 
     PoolNode *node = (PoolNode*)ptr;
@@ -48,7 +48,7 @@ void poolFree(MemoryPool *pool, void *ptr) {
     pthread_mutex_unlock(&pool->lock);
 }
 
-void poolDestroy(MemoryPool *pool) {
+void axio_poolDestroy(axio_MemoryPool *pool) {
     if (!pool) return;
 
     pthread_mutex_destroy(&pool->lock);

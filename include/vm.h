@@ -52,6 +52,8 @@ typedef struct VM {
   Error **err;
   char *filename;
   char *sourcetext;
+
+  int exitFrameTop;
 } VM;
 
 VM *initVM(Chunk *chunk, SymbolTable *variables, Error **err, char *filename, char *sourcetext);

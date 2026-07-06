@@ -5,7 +5,14 @@
 #include <curl/curl.h>
 
 #include "../../../include/utils.h"
+#include "../../../include/error.h"
+#include "../../../include/repl/repl.h"
+#include "../../../include/c-bridge.h"
+
 #include "./axionetd/include/axionetd.h"
+#include "./axionetd/include/memory-pool.h"
+#include "./axionetd/include/http.h"
+#include "./axionetd/include/router.h"
 
 static CURL* curl = NULL;
 
@@ -144,4 +151,101 @@ Object* arcNet_start_server(Object** args, size_t argCount) {
 
   startServer((Axionet*)(uintptr_t)((Number*)args[0])->as.i);
   return (Object*)initInt(0);
+}
+
+void __arcNet_axionet_trampoline(AxioRequest *req, AxioResponse *res, axio_MemoryPool *pool, void *userdata) {
+  Function* func = (Function*)userdata;
+  
+  Value args[] = { VAL_OBJ((Object*)initString(req->path, strlen(req->path))) };
+  Object* result = callArcFunction(vm, func, args, 1);
+
+  if (vm->err && *vm->err) {
+    printf("%s\n", errorAsString(*vm->err));
+    freeError(*vm->err);
+    *vm->err = NULL;
+  }
+
+  if (!result) {
+    printf("Route handler returned null.\n");
+    return;
+  }
+  
+  if (result->type != OBJ_STRING) {
+    printf("Expected route response to be string, received: %s\n", typeofobj(result));
+    freeObject(result);
+    return;
+  }
+
+  HTMLResponse(res, ((String*)result)->value, 200, NULL, 0, pool);
+  freeObject(result);
+}
+
+Object* arcNet_add_route(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // server ptr 
+  if (err) return err;
+
+  err = enforceType(args[1], OBJ_STRING, 2); // path 
+  if (err) return err;
+
+  err = enforceType(args[2], OBJ_LIST, 3); // list of methods
+  if (err) return err;
+
+  err = enforceType(args[3], OBJ_FUNCTION, 4); // handler
+  if (err) return err;
+
+  AxioRoute* route = malloc(sizeof(AxioRoute));
+
+  if (!route) {
+    return (Object*)initProgramError("Failed to register route. (Out of memory)");
+  }
+
+  void* server = (void*)(uintptr_t)((Number*)args[0])->as.i;
+  char* path = stringDup(((String*)args[1])->value);
+  
+  if (!path) {
+    free(route);
+    return (Object*)initProgramError("Failed to register route. (Out of memory)");
+  }
+
+  List* methodsList = (List*)args[2];
+  char** methods = malloc(sizeof(char*) * methodsList->size);
+
+  if (!methods) {
+    free(route);
+    free(path);
+    return (Object*)initProgramError("Failed to register route. (Out of memory)");
+  }
+
+  for (size_t i = 0; i < methodsList->size; i++) {
+    if (methodsList->objects[i]->type != OBJ_STRING) {
+      free(route);
+      free(path);
+
+      for (size_t j = 0; j < i; j++) {
+        free(methods[j]);
+      }
+
+      return (Object*)initProgramError("Methods are supposed to be list of strings.");
+    }
+
+    methods[i] = stringDup(((String*)methodsList->objects[i])->value);
+  }
+
+  Function* func = (Function*)args[3];
+
+  bool ok = addRoute(server, path, methods, methodsList->size, __arcNet_axionet_trampoline, route, false);
+
+  if (!ok) {
+    for (size_t i = 0; i < methodsList->size; i++) free(methods[i]);
+    free(methods);
+    free(path);
+    free(route);
+    return (Object*)initProgramError("Failed to register route.");
+  }
+
+  route->userdata = func;
+
+  return (Object*)initInt(1);
 }

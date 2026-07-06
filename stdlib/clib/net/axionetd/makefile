@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -O0 -Iinclude -fPIC 
+CFLAGS = -Wall -O0 -g -Iinclude -fPIC 
 LDFLAGS = -Wl,-Bsymbolic-functions
 
 SRC_DIR = src

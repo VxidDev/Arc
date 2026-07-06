@@ -33,6 +33,7 @@ int POOL_SIZE = 1024;
 bool _SKIP_EVAL = false;
 size_t ARENA_BLOCK_SIZE = (256 * 1024); // 256 Kb
 SymbolTable* variables = NULL;
+VM* vm = NULL;
 int exitcode = 0;
 bool _CLEANUP = false;
 bool _ARGS_ONLY = false;
@@ -254,7 +255,7 @@ static inline void run(char *text, Error **error, unsigned long *size, SymbolTab
     //Interpretator* interpretator = initInterpretator(filename, text, error, variables);
     //Object* result = visitNode(ast, interpretator);
 
-    VM* vm = initVM(chunk, variables, error, filename, text);
+    vm = initVM(chunk, variables, error, filename, text);
     if (_DEBUG) printf("[vm] Starting vmRun...\n");
     Object* result = vmRun(vm);
     if (_DEBUG) printf("[vm] vmRun returned. Result: %p, Error: %p\n", (void*)result, (void*)*error);
