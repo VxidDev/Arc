@@ -47,7 +47,9 @@ static inline int arcDlclose(arcLibHandle handle) {
 typedef struct {
   void *funcPtr;
   ffi_cif cif;
+  ffi_type **argSignature;
   int64_t returnType;
+  unsigned int nargs;
   bool isInitialized;
 } FFICache;
 
@@ -95,7 +97,10 @@ void* __convert_to_primitive(Object* obj) {
 }
 
 Object* builtIn_c_run(Object** args, size_t argCount) {
-  (void)argCount;   
+  if (argCount > 3) {
+    Object* err = enforceType(args[3], OBJ_NUMBER_INT, 4);
+    if (err) return err;
+  }
 
   Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // ptr 
   if (err) return err;
@@ -106,17 +111,41 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
   err = enforceType(args[2], OBJ_LIST, 3); // args 
   if (err) return err;
 
-  void* funcPtr = (void*)(uintptr_t)(((Number*)args[0])->as.i);
-  ffi_cif cif;
+  bool isVariadic = (argCount > 3);
+  int64_t fixedArgsCount = isVariadic ? ((Number*)args[3])->as.i : 0;
 
-  if (last.isInitialized && last.funcPtr == funcPtr) {
+  void* funcPtr = (void*)(uintptr_t)(((Number*)args[0])->as.i);
+  List* arguments = (List*)args[2];
+  List* signature = (List*)args[1];
+
+  unsigned int expectedArgs = (unsigned int)signature->size - 1;
+  
+  if (arguments->size != expectedArgs) {
+    char buf[128];
+    
+    snprintf(buf, sizeof(buf),
+      "FFI call argument count mismatch: signature expects %u args, got %zu",
+      expectedArgs, arguments->size);
+    
+    return (Object*)initProgramError(buf);
+  }
+
+  ffi_cif cif;
+  ffi_type **local_argSignature = NULL;
+  int64_t retType;
+
+  if (!isVariadic && last.isInitialized && last.funcPtr == funcPtr && last.nargs == expectedArgs) {
     cif = last.cif;
+    retType = last.returnType;
   } else {
-    List* signature = (List*)args[1];
     ffi_type **argSignature = malloc(sizeof(ffi_type*) * signature->size);
+
+    if (!argSignature) {
+      return (Object*)initProgramError("Failed to prepare argSignature for ffi_cif. (Out of memory)");
+    }
+
     ffi_type* returnType;
-     
-    int64_t retType = ((Number*)signature->objects[0])->as.i;
+    retType = ((Number*)signature->objects[0])->as.i;
 
     switch (retType) {
       case C_INT: returnType = &ffi_type_sint; break;
@@ -129,17 +158,10 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
       case C_CHAR_PTR: returnType = &ffi_type_pointer; break;
       case C_VOID_PTR: returnType = &ffi_type_pointer; break;
       default: {
-        free(args);
         char buf[256];
         snprintf(buf, sizeof(buf), "Invalid FFI return type signature. (Value %" PRId64 " is not valid)", retType);
         return (Object*)initProgramError(buf);
       }
-
-      last.returnType = retType;
-    }
-
-    if (!argSignature) {
-      return (Object*)initProgramError("Failed to prepare argSignature for ffi_cif. (Out of memory)");
     }
 
     for (size_t i = 1; i < signature->size; i++) {
@@ -163,27 +185,36 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
         case C_CHAR_PTR: argSignature[i - 1] = &ffi_type_pointer; break;
         case C_VOID_PTR: argSignature[i - 1] = &ffi_type_pointer; break;
         default: {
-          free(args);
           char buf[256];
           snprintf(buf, sizeof(buf), "Invalid FFI function signature. (Value %" PRId64 " is not valid)", type);
           return (Object*)initProgramError(buf);
         }
       }
     }
-      
-    last.funcPtr = funcPtr;
-    
-    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, signature->size - 1, returnType, argSignature) != FFI_OK) {
-      free(args);
-      return (Object*)initProgramError("Failed to prepare ffi_cif.");
-    }
 
-    last.cif = cif;
-    last.isInitialized = true;
+    unsigned int totalArgsCount = signature->size - 1;
+
+    if (isVariadic) {
+      if (ffi_prep_cif_var(&cif, FFI_DEFAULT_ABI, (unsigned int)fixedArgsCount, totalArgsCount, returnType, argSignature) != FFI_OK) {
+        free(argSignature);
+        return (Object*)initProgramError("Failed to prepare variadic ffi_cif.");
+      }
+
+      local_argSignature = argSignature;
+    } else {  
+      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, signature->size - 1, returnType, argSignature) != FFI_OK) {
+        return (Object*)initProgramError("Failed to prepare ffi_cif.");
+      }
+
+      last.cif = cif;
+      last.funcPtr = funcPtr;
+      last.argSignature = argSignature;
+      last.returnType = retType;
+      last.isInitialized = true;
+      last.nargs = totalArgsCount;
+    }
   }
   
-  List* arguments = (List*)args[2];
-
   void** values = malloc(sizeof(void*) * arguments->size);
   
   if (!values) {
@@ -205,8 +236,9 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
   ffi_call(&cif, FFI_FN(funcPtr), &result, values);
 
   free(values);
+  if (local_argSignature) free(local_argSignature);
 
-  switch (last.returnType) {
+  switch (isVariadic ? retType : last.returnType) {
     case C_INT: return (Object*)initInt(result.i64);
     case C_INT_PTR: return (Object*)initInt((int64_t)(uintptr_t)result.p);
     case C_FLOAT: return (Object*)initFloat(result.f);
@@ -369,4 +401,16 @@ Object* builtIn_int_at(Object** args, size_t argCount) {
   int i = *(int*)ptr;
 
   return (Object*)initInt(i);
+}
+
+Object* builtIn_pointer_at(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
+  if (err) return err;
+
+  void* ptr = (void*)(uintptr_t)((Number*)args[0])->as.i;
+  void* deref = *(void**)ptr;
+
+  return (Object*)initInt((int64_t)(uintptr_t)deref);
 }

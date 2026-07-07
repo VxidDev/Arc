@@ -60,6 +60,10 @@ void initCTools(SymbolTable* table) {
   NativeFunction* int_atFn = initNativeFunction("int_at", builtIn_int_at, 1, false);
   setTable(table, internIdentifier("int_at", 6), VAL_OBJ((Object*)int_atFn));
   freeObject((Object*)int_atFn);
+
+  NativeFunction* pointer_atFn = initNativeFunction("pointer_at", builtIn_pointer_at, 1, false);
+  setTable(table, internIdentifier("pointer_at", 10), VAL_OBJ((Object*)pointer_atFn));
+  freeObject((Object*)pointer_atFn);
 }
 
 void initSysModule(SymbolTable* table) {
