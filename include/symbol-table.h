@@ -12,12 +12,12 @@ typedef struct Symbol {
 
 typedef struct SymbolTable {
   Symbol **buckets;
-  unsigned long capacity;
-  unsigned long count;
+  size_t capacity;
+  size_t count;
   struct SymbolTable *parent;
 } SymbolTable;
 
-SymbolTable *createTable(unsigned long capacity, SymbolTable *parent);
+SymbolTable *createTable(size_t capacity, SymbolTable *parent);
 void setTable(SymbolTable *table, char *name, Value value);
 Value getTable(SymbolTable *table, const char *name);
 void removeSymbol(SymbolTable *table, const char *name);

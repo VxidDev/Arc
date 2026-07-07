@@ -2,13 +2,47 @@
 #include "../../include/utils.h"
 
 #include <inttypes.h>
-#include <dlfcn.h>
 #include <stdlib.h>
 
 #include <ffi.h>
 #include <ffitarget.h>
 
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+
+typedef HMODULE arcLibHandle;
+
+static inline arcLibHandle arcDlopen(const char *path) {
+  return LoadLibraryA(path);
+}
+
+static inline void *arcDlsym(arcLibHandle handle, const char *name) {
+  return (void *)GetProcAddress(handle, name);
+}
+
+static inline int arcDlclose(arcLibHandle handle) {
+  return FreeLibrary(handle) ? 0 : -1;
+}
+
+#else
+#include <dlfcn.h>
+
+typedef void *arcLibHandle;
+
+static inline arcLibHandle arcDlopen(const char *path) {
+  return dlopen(path, RTLD_LAZY);
+}
+
+static inline void *arcDlsym(arcLibHandle handle, const char *name) {
+  return dlsym(handle, name);
+}
+
+static inline int arcDlclose(arcLibHandle handle) {
+  return dlclose(handle);
+}
+#endif
 
 typedef struct {
   void *funcPtr;
@@ -196,20 +230,12 @@ Object* builtIn_dl_open(Object** args, size_t argCount) {
     return err;
   }
 
-  err = enforceType(args[1], OBJ_NUMBER_INT, 2);
-
-  if (err) {
-    return err;
-  }
-
   String* path = (String*)args[0];
-  Number* mode = (Number*)args[1];
 
-  void* handle = dlopen(path->value, mode->as.i);
+  arcLibHandle handle = arcDlopen(path->value);
 
   if (!handle) {
-    char *dlErr = dlerror();
-    return (Object*)initProgramError(dlErr ? dlErr : "Unknown error during opening .so");
+    return (Object*)initProgramError("Failed to open shared object.");
   }
 
   return (Object*)initInt((uintptr_t)handle);
@@ -227,7 +253,7 @@ Object* builtIn_dl_close(Object** args, size_t argCount) {
     return (Object*)initProgramError("Invalid handle.");
   }
 
-  dlclose((void*)((uintptr_t)handle->as.i));
+  arcDlclose((void*)((uintptr_t)handle->as.i));
 
   return (Object*)initInt(1);
 }
@@ -260,7 +286,7 @@ Object* builtIn_dl_sym(Object** args, size_t argCount) {
     return (Object*)initProgramError(buf);
   }
 
-  NativeFunc func = (NativeFunc)dlsym((void*)handle, name->value);
+  NativeFunc func = (NativeFunc)arcDlsym((void*)handle, name->value);
 
   return (Object*)initNativeFunction(name->value, func, paramCount->as.i, isVariant->as.i);
 }
@@ -278,7 +304,7 @@ Object* builtIn_raw_dl_sym(Object** args, size_t argCount) {
   uintptr_t handle = (uintptr_t)handleObj->as.i;
 
   String* name = (String*)args[1];
-  void* func = dlsym((void*)handle, name->value);
+  void* func = arcDlsym((void*)handle, name->value);
 
   return (Object*)initInt((int64_t)(uintptr_t)func);
 }

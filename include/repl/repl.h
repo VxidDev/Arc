@@ -7,7 +7,13 @@
 #include "../mempool.h"
 #include "../vm.h"
 
-#define ARC_LIB_DIR "/usr/local/share/arc/lib" // TODO: add windows support 
+#ifndef ARC_LIB_DIR
+  #ifdef _WIN32
+    #define ARC_LIB_DIR "C:\\ProgramData\\arc\\lib"
+  #else
+    #define ARC_LIB_DIR "/usr/local/share/arc/lib"
+  #endif
+#endif 
 
 extern char *_CODE;
 extern bool _DEBUG;

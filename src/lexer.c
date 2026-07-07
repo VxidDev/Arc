@@ -56,8 +56,8 @@ Lexer* initLexer(char *filename, char *text) {
   return lexer;
 }
 
-bool _resizeTokensList(Token **tokens, unsigned long *capacity) {
-  unsigned long newCap = (*capacity) * 2;
+bool _resizeTokensList(Token **tokens, size_t *capacity) {
+  size_t newCap = (*capacity) * 2;
 
   Token *tmp = arenaRealloc(parseArena, *tokens, *capacity * sizeof(Token), newCap * sizeof(Token));
   if (!tmp) return false;
@@ -270,8 +270,8 @@ Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
 }
 
 Token makeIdentifierLexer(Lexer *lexer) {
-  unsigned long size = 0;
-  unsigned long capacity = 32;
+  size_t size = 0;
+  size_t capacity = 32;
 
   char *idStr = arenaAlloc(stringArena, capacity);
 
@@ -330,7 +330,7 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
   advanceLexer(lexer); // Skip opening quote
 
   char *buffer = arenaAlloc(stringArena, 1024); // fixed length for now
-  unsigned long len = 0;
+  size_t len = 0;
 
   while (lexer->currChar && lexer->currChar != '"') {
     if (lexer->currChar == '\\') {
@@ -409,7 +409,7 @@ static Token makeCharLexer(Lexer *lexer, Error** error) {
   return initToken(TOK_INT, &value, false, start, lexer->pos);
 }
 
-bool _generateToken(Lexer *lexer, Token** tokens, unsigned long *size, unsigned long *capacity, TokType tokenType) {
+bool _generateToken(Lexer *lexer, Token** tokens, size_t *size, size_t *capacity, TokType tokenType) {
   if (UNLIKELY(*size >= *capacity)) {
     if (!_resizeTokensList(tokens, capacity)) {
       freeTokens(*tokens, *size);
@@ -436,7 +436,7 @@ bool _generateToken(Lexer *lexer, Token** tokens, unsigned long *size, unsigned 
   return true;
 }
 
-bool _appendToken(Token token, Token** tokens, unsigned long *size, unsigned long *capacity) {
+bool _appendToken(Token token, Token** tokens, size_t *size, size_t *capacity) {
   if (token.type == TOK_INVALID) {
     freeTokens(*tokens, *size);
     return false;
@@ -510,9 +510,9 @@ Token makeGreaterThanToken(Lexer* lexer) {
   return initToken(TOK_GT, NULL, false, start, lexer->pos);
 }
 
-Token* makeTokensLexer(Lexer *lexer, Error **error, unsigned long *outSize) {
-  unsigned long size = 0;
-  unsigned long capacity = lexer->textLen / 2 + 64;
+Token* makeTokensLexer(Lexer *lexer, Error **error, size_t *outSize) {
+  size_t size = 0;
+  size_t capacity = lexer->textLen / 2 + 64;
 
   Token* tokens = arenaAlloc(parseArena, sizeof(Token) * capacity);
   if (!tokens) return NULL;

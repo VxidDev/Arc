@@ -3,8 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <termios.h>
 #include <string.h>
+
+// Raw mode setup
+#ifndef _WIN32
+
+#include <termios.h>
 
 struct termios origTermios;
 
@@ -26,6 +30,27 @@ void enableRawMode() {
   raw.c_lflag &= ~(ICANON | ECHO);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
+
+#else
+
+#include <windows.h>
+
+static DWORD origConsoleMode;
+static HANDLE hStdin;
+
+void disableRawMode() {
+  SetConsoleMode(hStdin, origConsoleMode);
+}
+
+void enableRawMode(void) {
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hStdin, &mode);
+    mode &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT);
+    SetConsoleMode(hStdin, mode);
+}
+
+#endif // _WIN32
 
 char *input(const char* prompt) {
   if (prompt) printf("%s", prompt);

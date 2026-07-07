@@ -6,11 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <inttypes.h>
 
 static void printInternal(Object* obj) {
   switch (obj->type) {
     case OBJ_NUMBER_INT:
-      printf("%ld", ((Number*)obj)->as.i);
+      printf("%" PRId64, ((Number*)obj)->as.i);
       break;
 
     case OBJ_NUMBER_FLOAT:

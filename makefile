@@ -7,7 +7,12 @@ TARGET = arc
 PREFIX ?= /usr
 BINDIR = $(DESTDIR)$(PREFIX)/bin
 
-ARC_LIB_DIR = $(DESTDIR)/usr/local/share/arc/lib
+ifneq (,$(findstring mingw, $(CC)))
+	ARC_LIB_DIR = "C:/ProgramData/arc/lib"
+else
+	ARC_LIB_DIR = /usr/local/share/arc/lib
+endif 
+
 CLIB_SRC_DIR = stdlib/clib
 
 C_SRC = $(shell find $(SRC_DIR) -name '*.c')
@@ -47,11 +52,20 @@ LDFLAGS_RELEASE = \
   -Wl,--gc-sections \
   -Wl,-O2
 
-LDFLAGS_RELEASE += -rdynamic
-LDFLAGS_DEBUG += -rdynamic
-
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
-LDFLAGS_PROFILE = -pg -rdynamic
+LDFLAGS_PROFILE = -pg 
+
+ifneq (,$(findstring mingw,$(CC)))
+	LDFLAGS_DEV += -Wl,--export-all-symbols
+  LDFLAGS_DEBUG += -Wl,--export-all-symbols
+	LDFLAGS_PROFILE += -Wl,--export-all-symbols
+	LDFLAGS_RELEASE += -Wl,--export-all-symbols
+else
+	LDFLAGS_DEV += -rdynamic
+  LDFLAGS_DEBUG += -rdynamic
+	LDFLAGS_PROFILE += -rdynamic
+	LDFLAGS_RELEASE += -rdynamic
+endif
 
 CLIB_MODULES = json net
 CLIB_TARGETS = $(foreach mod,$(CLIB_MODULES),$(CLIB_SRC_DIR)/$(mod)/build/libarc$(mod).so)
@@ -73,7 +87,7 @@ ECHO = @echo
 all: dev
 
 dev: CFLAGS = $(CFLAGS_DEV)
-dev: LDFLAGS = -rdynamic
+dev: LDFLAGS = $(LDFLAGS_DEV)
 dev: $(TARGET)
 
 profile: CFLAGS = $(CFLAGS_PROFILE)

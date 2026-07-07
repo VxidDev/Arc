@@ -4,6 +4,8 @@
 #include "token.h"
 #include "error.h"
 
+#include <stddef.h>
+
 typedef struct Lexer {
   char *text;
   char *filename;
@@ -16,7 +18,7 @@ Lexer* initLexer(char *filename, char *text);
 
 void advanceLexer(Lexer *lexer);
 
-Token* makeTokensLexer(Lexer *lexer, Error** error, unsigned long *outSize);
+Token* makeTokensLexer(Lexer *lexer, Error** error, size_t *outSize);
 
 void freeLexer(Lexer* lexer);
 

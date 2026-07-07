@@ -4,6 +4,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+
+#include <malloc.h>
+
+static inline int arcAlignedAlloc(void **ptr, size_t alignment, size_t size) {
+  *ptr = _aligned_malloc(size, alignment);
+  return (*ptr == NULL) ? -1 : 0;
+}
+
+static inline void arcAlignedFree(void *ptr) {
+  _aligned_free(ptr);
+}
+
+#else 
+
+static inline int arcAlignedAlloc(void **ptr, size_t alignment, size_t size) {
+  return posix_memalign(ptr, alignment, size);
+}
+
+static inline void arcAlignedFree(void *ptr) {
+  free(ptr);
+}
+
+#endif // _WIN32
+
 #define POOL_GROWTH_FACTOR 2
 
 MemPool* initPool(size_t objSize) {
@@ -11,7 +36,7 @@ MemPool* initPool(size_t objSize) {
 
   MemPool* pool = NULL;
   
-  if (posix_memalign((void**)&pool, 64, sizeof(MemPool)) != 0 || !pool)
+  if (arcAlignedAlloc((void**)&pool, 64, sizeof(MemPool)) != 0 || !pool)
     return NULL;
 
   pool->slab = arenaAlloc(poolArena, objSize * POOL_SIZE);
@@ -78,5 +103,5 @@ void poolFree(MemPool* pool, void* obj) {
 void freePool(MemPool* pool) {
   if (!pool) return;
   free(pool->slots);
-  free(pool);
+  arcAlignedFree(pool);
 }

@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static inline unsigned long hashPointer(const char *ptr) {
-  unsigned long x = (unsigned long)ptr;
+static inline size_t hashPointer(const char *ptr) {
+  size_t x = (size_t)ptr;
   x ^= x >> 33;
   x *= 0xff51afd7ed558ccdULL;
   x ^= x >> 33;
@@ -35,7 +35,7 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
 }
 
 void setTable(SymbolTable *table, char *name, Value value) {
-  unsigned long index = hashPointer(name) & (table->capacity - 1); // table capacity MUST be power of 2
+  size_t index = hashPointer(name) & (table->capacity - 1); // table capacity MUST be power of 2
 
   for (Symbol* sym = table->buckets[index]; sym; sym = sym->next) {
     if (sym->name == name) {
@@ -58,12 +58,12 @@ void setTable(SymbolTable *table, char *name, Value value) {
 }
 
 Value getTable(SymbolTable *table, const char *name) {
-  unsigned long hash = hashPointer(name);
+  size_t hash = hashPointer(name);
 
   for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
     if (currTable->count == 0) continue;
 
-    unsigned long index = hash & (currTable->capacity - 1);
+    size_t index = hash & (currTable->capacity - 1);
     Symbol *sym = currTable->buckets[index];
     Symbol *prev = NULL;
 

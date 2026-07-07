@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
+#include <inttypes.h>
 
 bool _DEBUG = false;
 bool _IS_COLORED = true;
@@ -55,7 +56,7 @@ static inline void appendRawArg(char* s) {
   rawPositionalArgs[rawArgsSize++] = s;
 }
 
-static inline void _exit(int code) {
+static inline void arcExit(int code) {
   if (_CLEANUP) {
     if (variables) freeTable(variables);
 
@@ -88,7 +89,7 @@ static inline void appendArgv(String* s) {
 
 static void printObjInternal(Object* obj) {
   if (obj->type == OBJ_NUMBER_INT) {
-    printf("%s%s%ld%s",
+    printf("%s%s%" PRId64 "%s",
       COLOR(ANSI_BRIGHT_CYAN_FG),
       COLOR(ANSI_BOLD),
       ((Number*)obj)->as.i,
@@ -163,7 +164,7 @@ int parseInt(const char *s, int *out) {
   return 1;
 }
 
-static inline void run(char *text, Error **error, unsigned long *size, SymbolTable* variables, char *filename) {
+static inline void run(char *text, Error **error, size_t *size, SymbolTable* variables, char *filename) {
   Lexer *lexer = initLexer(stringDup(filename), text);
 
   if (!lexer) {
@@ -338,33 +339,33 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--float-precision") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %sprecision cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       int precision;
 
       if (!parseInt(argv[++i], &precision)) {
         printf("%sArc: %sprecision must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       _FLOAT_PRECISION = precision;
     } else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--mempool-size") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %smemory pool size cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       int mempoolSize;
 
       if (!parseInt(argv[++i], &mempoolSize)) {
         printf("%sArc: %smemory pool size must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       if (mempoolSize < 8) {
         printf("%sArc: %smemory pool size must be greater than or equal to 8%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       POOL_SIZE = mempoolSize;
@@ -372,26 +373,26 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--arena-block-size") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %sarena block size cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       int arenaBlockSize;
 
       if (!parseInt(argv[++i], &arenaBlockSize)) {
         printf("%sArc: %sarena block size must be a valid integer%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1); 
+        arcExit(1); 
       }
 
       if (arenaBlockSize < 4) {
         printf("%sArc: %sarena block size must be greater than or equal to 4 Kb.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       ARENA_BLOCK_SIZE = arenaBlockSize * 1024; // convert to Kbs
     } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--code") == 0) {
       if (i + 1 >= argc) {
         printf("%sArc: %scode cannot be empty.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
-        _exit(1);
+        arcExit(1);
       }
 
       _CODE = argv[++i];
@@ -400,7 +401,7 @@ void parseArguments(int argc, char **argv) {
       continue;
     } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       printHelp();
-      _exit(0);
+      arcExit(0);
     } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--last-result") == 0) {
       _PRINT_LAST_RESULT = true;
       continue;
@@ -409,7 +410,7 @@ void parseArguments(int argc, char **argv) {
       continue;
     } else {
       printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
-      _exit(1);
+      arcExit(1);
     }
   }
 }
@@ -492,7 +493,7 @@ int main(int argc, char **argv) {
 
   if (code) {
     Error *error = NULL;
-    unsigned long size = 0;
+    size_t size = 0;
 
     run(code, &error, &size, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
     
@@ -547,7 +548,7 @@ int main(int argc, char **argv) {
 
     Error *error = NULL;
 
-    unsigned long size = 0;
+    size_t size = 0;
     run(userInput, &error, &size, variables, "<stdin>");
 
     if (error && error->details[0] != '@') {
