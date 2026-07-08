@@ -1,3 +1,5 @@
+#ifndef ARC_EXCLUDE_CTOOLS
+
 #include "../../include/builtIns/ctools.h"
 #include "../../include/utils.h"
 
@@ -414,3 +416,5 @@ Object* builtIn_pointer_at(Object** args, size_t argCount) {
 
   return (Object*)initInt((int64_t)(uintptr_t)deref);
 }
+
+#endif

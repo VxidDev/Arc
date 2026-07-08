@@ -17,6 +17,8 @@ void initLibtools(SymbolTable* table) {
   freeObject((Object*)stdlib_pathFn);
 }
 
+#ifndef ARC_EXCLUDE_CTOOLS
+
 void initCTools(SymbolTable* table) {
   NativeFunction* dl_openFn = initNativeFunction("dl_open", builtIn_dl_open, 2, false);
   setTable(table, internIdentifier("dl_open", 7), VAL_OBJ((Object*)dl_openFn));
@@ -65,6 +67,8 @@ void initCTools(SymbolTable* table) {
   setTable(table, internIdentifier("pointer_at", 10), VAL_OBJ((Object*)pointer_atFn));
   freeObject((Object*)pointer_atFn);
 }
+
+#endif // ARC_EXCLUDE_CTOOLS
 
 void initSysModule(SymbolTable* table) {
   NativeFunction* exitFn = initNativeFunction("exit", builtIn_exit, 1, false);

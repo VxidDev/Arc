@@ -15,8 +15,12 @@
 const NativeModuleEntry* stdlibModules[] = {
   &(NativeModuleEntry){ "__mathlib", initMathModule }, 
   &(NativeModuleEntry){ "__sys", initSysModule }, 
-  &(NativeModuleEntry){ "__time", initTimeModule }, 
-  &(NativeModuleEntry){ "__c_tools", initCTools }, 
+  &(NativeModuleEntry){ "__time", initTimeModule },
+  
+  #ifndef ARC_EXCLUDE_CTOOLS
+  &(NativeModuleEntry){ "__c_tools", initCTools },
+  #endif // ARC_EXCLUDE_CTOOLS
+
   &(NativeModuleEntry){ "__lib_tools", initLibtools }, NULL 
 };
 
