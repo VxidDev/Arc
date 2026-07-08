@@ -781,7 +781,14 @@ Object *vmRun(VM *vm) {
           HANDLE_ERROR(); 
         }
 
-        PUSH(copyValue(objectToValue(list->objects[i])));
+        Object* elem = list->objects[i];
+
+        if (elem->type == OBJ_NUMBER_INT)
+          PUSH(VAL_INT(((Number*)elem)->as.i));
+        else if (elem->type == OBJ_NUMBER_FLOAT)
+          PUSH(VAL_FLOAT(((Number*)elem)->as.f));
+        else
+          PUSH(copyValue(objectToValue(elem)));
       } else { 
         VM_ERR(initTypeError, "Target is not indexable.");
         freeValue(idxVal);

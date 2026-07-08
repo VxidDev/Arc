@@ -1,9 +1,9 @@
 CC = gcc
+
 BUILD_DIR = build
-TARGET_LIB = libarcjson.so
+TARGET_LIB = libarcui.so
 
-BASE_FLAGS = -Wall -Wextra -I../../../include -MMD -MP -fPIC -shared
-
+BASE_FLAGS = -Wall -Wextra -I../../../include -MMD -MP -fPIC -shared -lSDL3
 CFLAGS_DEBUG = $(BASE_FLAGS) -O0 -g \
 	-fsanitize=address,undefined \
 	-fno-omit-frame-pointer
@@ -33,16 +33,15 @@ LDFLAGS_RELEASE = \
   -Wl,--gc-sections \
   -Wl,-O2
 
-LDFLAGS_PROFILE = -pg
-
 LDFLAGS_RELEASE += -rdynamic
 LDFLAGS_DEBUG += -rdynamic
-LDFLAGS_DEV += -rdynamic
+
+CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
+LDFLAGS_PROFILE = -pg
+.PHONY: all dev debug release profile clean
 
 CFLAGS_DEV = $(BASE_FLAGS) -O0 -g
-CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
-
-.PHONY: all dev debug release profile clean
+LDFLAGS_DEV = -rdynamic
 
 all: dev
 
@@ -62,9 +61,9 @@ profile: CFLAGS = $(CFLAGS_PROFILE)
 profile: LDFLAGS = $(LDFLAGS_PROFILE)
 profile: $(TARGET_LIB)
 
-$(TARGET_LIB): json.c
+$(TARGET_LIB): ui.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) json.c -o $(BUILD_DIR)/$@ $(LDFLAGS)
+	$(CC) $(CFLAGS) ui.c -o $(BUILD_DIR)/$@ $(LDFLAGS)
 
 clean:
 	rm -rf $(BUILD_DIR)
