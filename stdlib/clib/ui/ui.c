@@ -172,3 +172,119 @@ Object* arcUI_poll_event(Object** args, size_t argCount) {
 
   return (Object*)initInt(0);
 }
+
+double __get_double(Number* num) {
+  if (num->base.type == OBJ_NUMBER_INT) return (double)num->as.i;
+  if (num->base.type == OBJ_NUMBER_FLOAT) return (double)num->as.f;
+  return 0.0;
+}
+
+Object* arcUI_rect(Object** args, size_t argCount) {
+  (void)argCount;
+  
+  for (size_t i = 0; i < 4; i++) {
+    if (args[i]->type != OBJ_NUMBER_INT && args[i]->type != OBJ_NUMBER_FLOAT) {
+      char buf[256];
+      snprintf(buf, sizeof(buf), "Expected argument %zu to be object of type 'int' or 'float', received '%s'", i + 1, typeofobj(args[i]));
+    }
+  }
+
+  double x = __get_double((Number*)args[0]);
+  double y = __get_double((Number*)args[1]);
+  double width = __get_double((Number*)args[2]);
+  double height = __get_double((Number*)args[3]);
+  
+  SDL_FRect *rect = malloc(sizeof(SDL_FRect));
+
+  if (!rect) {
+    return (Object*)initProgramError("Failed to create rect object (Out of memory)");
+  }
+
+  *rect = (SDL_FRect){ x, y, width, height };
+
+  return (Object*)initInt((int64_t)(uintptr_t)rect);
+}
+
+Object* arcUI_fill_rect(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // renderer 
+  if (err) return err;
+
+  err = enforceType(args[1], OBJ_NUMBER_INT, 2); // rect ptr
+  if (err) return err;
+
+  void* renderer = (void*)(uintptr_t)((Number*)args[0])->as.i;
+  void* rectPtr = (void*)(uintptr_t)((Number*)args[1])->as.i;
+
+  if (!SDL_RenderFillRect(renderer, rectPtr)) {
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "Failed to fill rect: %s", SDL_GetError());
+    return (Object*)initProgramError(buf);
+  } 
+
+  return (Object*)initInt(1);
+}
+
+Object* arcUI_get_mouse_info(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // event ptr 
+  if (err) return err;
+
+  SDL_Event ev = *(SDL_Event*)(uintptr_t)((Number*)args[0])->as.i;
+
+  if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN || ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+    Object* x = (Object*)initFloat(ev.button.x);
+    Object* y = (Object*)initFloat(ev.button.y);
+    Object* button = (Object*)initInt(ev.button.button == SDL_BUTTON_LEFT ? 0 : 1);
+    Object* status = (Object*)initInt(ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 1 : 0);
+
+    return (Object*)initList((Object*[]){x, y, button, status}, 4, 4);
+  }
+
+  return (Object*)initNull();
+}
+
+Object* arcUI_point(Object** args, size_t argCount) {
+  (void)argCount;
+  
+  for (size_t i = 0; i < 2; i++) {
+    if (args[i]->type != OBJ_NUMBER_INT && args[i]->type != OBJ_NUMBER_FLOAT) {
+      char buf[256];
+      snprintf(buf, sizeof(buf), "Expected argument %zu to be object of type 'int' or 'float', received '%s'", i + 1, typeofobj(args[i]));
+    }
+  }
+  
+  double x = __get_double((Number*)args[0]);
+  double y = __get_double((Number*)args[1]);
+
+  SDL_FPoint* point = malloc(sizeof(SDL_FPoint));
+
+  if (!point) {
+    return (Object*)initProgramError("Failed to create point object (Out of memory)");
+  }
+
+  *point = (SDL_FPoint){x, y};
+
+  return (Object*)initInt((int64_t)(uintptr_t)point);
+}
+
+Object* arcUI_point_in_rect(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // point ptr
+  if (err) return err;
+
+  err = enforceType(args[1], OBJ_NUMBER_INT, 2); // rect ptr
+  if (err) return err;
+  
+  SDL_FPoint *point = (SDL_FPoint*)(uintptr_t)((Number*)args[0])->as.i;
+  SDL_FRect *rect = (SDL_FRect*)(uintptr_t)((Number*)args[1])->as.i;
+  
+  if (SDL_PointInRectFloat(point, rect)) {
+    return (Object*)initInt(1);
+  }
+
+  return (Object*)initInt(0);
+}
