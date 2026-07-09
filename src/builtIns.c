@@ -78,6 +78,10 @@ void initSysModule(SymbolTable* table) {
   NativeFunction* systemFn = initNativeFunction("system", builtIn_system, 1, false);
   setTable(table, internIdentifier("system", 6), VAL_OBJ((Object*)systemFn));
   freeObject((Object*)systemFn);
+
+  NativeFunction* getenvFn = initNativeFunction("getenv", builtIn_getenv, 1, false);
+  setTable(table, internIdentifier("getenv", 6), VAL_OBJ((Object*)getenvFn));
+  freeObject((Object*)getenvFn);
   
   #ifndef _WIN32
     NativeFunction* accessFn = initNativeFunction("access", builtIn_access, 2, false);

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <errno.h>
+#include <string.h>
 
 #ifndef _WIN32 
   #include <unistd.h> // TODO: windows support 
@@ -124,3 +125,20 @@ Object* builtIn_write(Object** args, size_t argCount) {
 }
 
 #endif
+
+Object* builtIn_getenv(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_STRING, 1); // key
+  if (err) return err;
+
+  char *key = ((String*)args[0])->value;
+  
+  char *val = getenv(key);
+
+  if (!val) {
+    val = "";
+  }
+
+  return (Object*)initString(val, strlen(val));
+}

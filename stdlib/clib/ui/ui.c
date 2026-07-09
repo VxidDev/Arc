@@ -35,7 +35,7 @@ Object* arcUI_create_frame(Object** args, size_t argCount) {
   );
 
   if (!window) {
-    SDL_Quit();
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
     char buf[1024];
 
@@ -47,7 +47,7 @@ Object* arcUI_create_frame(Object** args, size_t argCount) {
 
   if (!renderer) {
     SDL_DestroyWindow(window);
-    SDL_Quit();
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
     return (Object*)initProgramError("Failed to initialize renderer.");
   }
   
@@ -86,7 +86,7 @@ Object* arcUI_quit(Object** args, size_t argCount) {
   (void)argCount;
   (void)args;
   
-  SDL_Quit();
+  SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
   return (Object*)initInt(1);
 }

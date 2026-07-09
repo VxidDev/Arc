@@ -118,7 +118,8 @@ install-libs:
 	$(ECHO) "Installing Arc standard library to $(ARC_LIB_DIR)..."
 	$(Q)install -d $(ARC_LIB_DIR)
 	$(Q)sudo make -C stdlib/clib/net
-	$(Q)sudo make -C stdlib/clib/ui 
+	$(Q)sudo make -C stdlib/clib/ui
+	$(Q)sudo make -C stdlib/clib/mixer
 	$(Q)sudo make -C stdlib/clib/json
 	$(Q)sudo install -d $(ARC_LIB_DIR)/clib
 	$(Q)sudo cp $(CLIB_SRC_DIR)/*/build/*.so $(ARC_LIB_DIR)/clib/
