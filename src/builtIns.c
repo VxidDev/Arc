@@ -102,4 +102,8 @@ void initTimeModule(SymbolTable* table) {
   NativeFunction* perf_counterFn = initNativeFunction("perf_counter", builtIn_perf_counter, 0, false);
   setTable(table, internIdentifier("perf_counter", 12), VAL_OBJ((Object*)perf_counterFn));
   freeObject((Object*)perf_counterFn);
+
+  NativeFunction* sleepFn = initNativeFunction("sleep", builtIn_sleep, 1, false);
+  setTable(table, internIdentifier("sleep", 5), VAL_OBJ((Object*)sleepFn));
+  freeObject((Object*)sleepFn);
 }

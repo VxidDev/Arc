@@ -12,8 +12,13 @@
 
 Object* builtIn_typeof(Object** args, size_t argCount) {
   (void)argCount;
+  
+  if (args[0]->type != OBJ_INSTANCE) {
+    char* objName = typeofobj(args[0]);
+    return (Object*)initString(objName, strlen(objName));
+  }
 
-  char* objName = typeofobj(args[0]);
+  char *objName = ((Instance*)args[0])->klass->name;
   return (Object*)initString(objName, strlen(objName));
 }
 

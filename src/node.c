@@ -319,7 +319,7 @@ UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node) {
   return unaryNode;
 }
 
-VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position start) {
+VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position start, bool isDeclaration) {
   if (!identifier || !value) return NULL;
 
   VarAssignNode* varAssignNode = arenaAlloc(parseArena, sizeof(VarAssignNode));
@@ -336,6 +336,7 @@ VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position star
   varAssignNode->base.end = value->end;
 
   varAssignNode->value = value;
+  varAssignNode->isDeclaration = isDeclaration;
 
   return varAssignNode;
 }

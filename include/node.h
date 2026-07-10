@@ -69,6 +69,7 @@ typedef struct VarAssignNode {
   ASTNode base;
   char *identifier;
   ASTNode *value;
+  bool isDeclaration;
 } VarAssignNode;
 
 typedef struct IndexNode {
@@ -203,7 +204,7 @@ ClassNode* initClassNode(Token identifier, ASTNode* body, Position start, Positi
 BinOpNode* initBinOpNode(ASTNode *leftNode, Token operTok, ASTNode *rightNode);
 UnaryOpNode* initUnaryOpNode(Token operTok, ASTNode* node);
 VarAccessNode* initVarAccessNode(Token token);
-VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position start);
+VarAssignNode* initVarAssignNode(char *identifier, ASTNode* value, Position start, bool isDeclaration);
 IfNode* initIfNode(ASTNode* condition, ASTNode* thenExpr, ASTNode** elifConds, ASTNode** elifExprs, size_t elifCount, ASTNode* elseExpr);
 ListNode* initListNode(Token startBracket, Token endBracket, ASTNode** objects, uint64_t size, uint64_t capacity);
 IndexNode* initIndexNode(ASTNode* target, ASTNode* index, Position start, Position end);

@@ -35,16 +35,21 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
 }
 
 void setTable(SymbolTable *table, char *name, Value value) {
-  size_t index = hashPointer(name) & (table->capacity - 1); // table capacity MUST be power of 2
-
-  for (Symbol* sym = table->buckets[index]; sym; sym = sym->next) {
-    if (sym->name == name) {
-      freeValue(sym->value);
-      sym->value = IS_OBJ(value) ? copyValue(value) : value;
-      return;
+  size_t hash = hashPointer(name);
+  
+  for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
+    if (currTable->count == 0) continue;
+    size_t index = hash & (currTable->capacity - 1); // capacity differs per table
+    for (Symbol *sym = currTable->buckets[index]; sym; sym = sym->next) {
+      if (sym->name == name) {
+        freeValue(sym->value);
+        sym->value = IS_OBJ(value) ? copyValue(value) : value;
+        return;
+      }
     }
   }
-
+  
+  size_t index = hash & (table->capacity - 1);
   Symbol *newSym = poolAlloc(symbolPool);
   if (!newSym) return;
 

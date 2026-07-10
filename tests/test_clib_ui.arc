@@ -5,7 +5,7 @@ import "@stdlib/math.arc"
 
 var __ui__ = dl_open(stdlib_path() + "/clib/libarcui.so", 1)
 
-var ui_create_frame = dl_sym(__ui__, "arcUI_create_frame", 3, false)
+var ui_create_stage = dl_sym(__ui__, "arcUI_create_stage", 3, false)
 var ui_delay = dl_sym(__ui__, "arcUI_delay", 1, false)
 var ui_render_present = dl_sym(__ui__, "arcUI_render_present", 1, false)
 var ui_quit = dl_sym(__ui__, "arcUI_quit", 0, false)
@@ -19,7 +19,7 @@ var ui_get_mouse_info = dl_sym(__ui__, "arcUI_get_mouse_info", 1, false)
 var ui_point = dl_sym(__ui__, "arcUI_point", 2, false)
 var ui_point_in_rect = dl_sym(__ui__, "arcUI_point_in_rect", 2, false)
 
-var frame = ui_create_frame(500, 500, "Arc Window")
+var stage = ui_create_stage(500, 500, "Arc Window")
 var RUNNING = true 
 
 var button_rect = ui_rect(200, 200, 50, 50)
@@ -54,13 +54,13 @@ while RUNNING then
   var g = to_int((sin(time + 2.094) + 1.0) * 127.5)
   var b = to_int((sin(time + 4.188) + 1.0) * 127.5)
   
-  ui_set_render_draw_color(frame[1], r, g, b, 255)
-  ui_render_clear(frame[1])
+  ui_set_render_draw_color(stage[1], r, g, b, 255)
+  ui_render_clear(stage[1])
 
-  ui_set_render_draw_color(frame[1], 30, 30, 30, 255)
-  ui_fill_rect(frame[1], button_rect)
+  ui_set_render_draw_color(stage[1], 30, 30, 30, 255)
+  ui_fill_rect(stage[1], button_rect)
   
-  ui_render_present(frame[1])
+  ui_render_present(stage[1])
 
   ui_delay(16)
 end 

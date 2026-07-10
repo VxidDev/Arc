@@ -2,8 +2,8 @@ IMPORT "@stdlib/io/file.arc"
 IMPORT "__sys"
 
 fn analyze_file_object(file) then 
-  if typeof(file) != "instance" then 
-    RuntimeError("Expected object of type 'file', received:", typeof(file))
+  if typeof(file) != "File" then 
+    RuntimeError("Expected object of type 'file', received:" + typeof(file))
   end 
 
   print("file.is_open:", if file.is_open then "true" else "false" end)

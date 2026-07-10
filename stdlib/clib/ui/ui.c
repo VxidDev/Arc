@@ -7,8 +7,8 @@
 
 static SDL_Event globalEv;
 
-// create_frame(width: int, height: int, name: string) -> int64_t
-Object* arcUI_create_frame(Object** args, size_t argCount) {
+// create_stage(width: int, height: int, name: string) -> int64_t
+Object* arcUI_create_stage(Object** args, size_t argCount) {
   (void)argCount;
 
   Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // width 
@@ -287,4 +287,38 @@ Object* arcUI_point_in_rect(Object** args, size_t argCount) {
   }
 
   return (Object*)initInt(0);
+}
+
+typedef enum ARCUI_EVENT {
+  MOUSE_BUTTON_DOWN,
+  MOUSE_BUTTON_UP,
+  MOUSE_WHEEL,
+  KEY_DOWN,
+  KEY_UP,
+  QUIT,
+  NOT_MAPPED
+} ARCUI_EVENT;
+
+Object* arcUI_get_event_type(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
+  if (err) return err;
+
+  SDL_Event ev = *(SDL_Event*)(uintptr_t)((Number*)args[0])->as.i;
+  
+  uint32_t type;
+
+  switch (ev.type) {
+    case SDL_EVENT_MOUSE_BUTTON_DOWN: type = MOUSE_BUTTON_DOWN; break;
+    case SDL_EVENT_MOUSE_BUTTON_UP: type = MOUSE_BUTTON_UP; break;
+    case SDL_EVENT_MOUSE_WHEEL: type = MOUSE_WHEEL; break;
+    case SDL_EVENT_KEY_DOWN: type = KEY_DOWN; break;
+    case SDL_EVENT_KEY_UP: type = KEY_UP; break;
+    case SDL_EVENT_QUIT: type = QUIT; break;
+
+    default: type = NOT_MAPPED; break;
+  }
+
+  return (Object*)initInt(type);
 }

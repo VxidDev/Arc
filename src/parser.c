@@ -1042,7 +1042,7 @@ ASTNode* __exprParser(Parser* parser) {
       return NULL;
     }
 
-    return (ASTNode*)initVarAssignNode(varName, expr, start);
+    return (ASTNode*)initVarAssignNode(varName, expr, start, true);
   }
 
   if (parser->currentToken.type == TOK_IDENTIFIER) {
@@ -1064,7 +1064,7 @@ ASTNode* __exprParser(Parser* parser) {
 
       if (target->type == NODE_VARACCESS) {
         VarAccessNode* va = (VarAccessNode*)target;
-        return (ASTNode*)initVarAssignNode(va->token.val.s, value, va->token.start);
+        return (ASTNode*)initVarAssignNode(va->token.val.s, value, va->token.start, false);
       }
 
       if (target->type == NODE_PROPERTYACCESS) {

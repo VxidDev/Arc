@@ -501,15 +501,18 @@ static void compileVarAssign(ASTNode *node, Compiler *c) {
   setPosFromNode(c, node);
 
   if (c->isFunction) {
-    int slot = resolveLocal(c, va->identifier);
-
-    if (slot < 0) {
-      slot = addLocal(c, va->identifier);
-    }
-
-    if (slot >= 0) {
-      emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
-      return;
+    if (va->isDeclaration) {
+      int slot = addLocal(c, va->identifier);
+      if (slot >= 0) {
+        emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
+        return;
+      }
+    } else {
+      int slot = resolveLocal(c, va->identifier);
+      if (slot >= 0) {
+        emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
+        return;
+      }
     }
   }
 

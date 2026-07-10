@@ -126,3 +126,12 @@ Object* arcMixer_track_playing(Object** args, size_t argCount) {
     return (Object*)initInt(0);
   }
 }
+
+Object* arcMixer_disable_signal_handlers(Object** args, size_t argCount) {
+  (void)args;
+  (void)argCount;
+
+  SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
+
+  return (Object*)initInt(1);
+}

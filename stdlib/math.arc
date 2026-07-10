@@ -22,7 +22,6 @@ FN logn(x) THEN
   VAR i = 0
 
   WHILE i < 20 THEN
-    ey = exp(y)
     y = y + x * exp(-y) - 1
 
     i = i + 1
@@ -86,19 +85,19 @@ FN sin(x) THEN
   VAR x = fmod(x, TWO_PI)
 
   IF x > PI THEN
-    VAR x = x - TWO_PI
+    x = x - TWO_PI
   END
 
   IF x < -PI THEN
-    VAR x = x + TWO_PI
+    x = x + TWO_PI
   END
 
   IF x > PI_2 THEN
-    VAR x = PI - x
+    x = PI - x
   END
 
   IF x < -PI_2 THEN
-    VAR x = -PI - x
+    x = -PI - x
   END
 
   VAR x2 = x * x
@@ -137,11 +136,11 @@ FN max(x) THEN
 
     WHILE i < len THEN
       IF (x[i] > prev_max) OR (is_set == 0) THEN
-        VAR prev_max = x[i]
-        VAR is_set = 1
+        prev_max = x[i]
+        is_set = 1
       END 
 
-      VAR i = i + 1
+      i = i + 1
     END 
 
     RETURN prev_max
@@ -161,11 +160,11 @@ FN min(x) THEN
 
     WHILE i < len THEN
       IF (x[i] < prev_min) OR (is_set == 0) THEN
-        VAR prev_min = x[i]
-        VAR is_set = 1
+        prev_min = x[i]
+        is_set = 1
       END 
 
-      VAR i = i + 1
+      i = i + 1
     END 
 
     RETURN prev_min
