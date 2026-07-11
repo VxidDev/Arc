@@ -1,7 +1,10 @@
 #include "../../../include/object.h"
 #include "../../../include/utils.h"
+#include "../../../include/repl/repl.h"
 
 #include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
 
 #include <SDL3/SDL.h>
 
@@ -31,7 +34,7 @@ Object* arcUI_create_stage(Object** args, size_t argCount) {
     ((String*)args[2])->value,
     ((Number*)args[0])->as.i,
     ((Number*)args[1])->as.i,
-    SDL_WINDOW_RESIZABLE
+    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
   );
 
   if (!window) {
@@ -50,6 +53,8 @@ Object* arcUI_create_stage(Object** args, size_t argCount) {
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
     return (Object*)initProgramError("Failed to initialize renderer.");
   }
+
+  SDL_SyncWindow(window);
   
   Object *tmp[2] = { (Object*)initInt((int64_t)(uintptr_t)window), (Object*)initInt((int64_t)(uintptr_t)renderer) };
   List* out = initList(tmp, 2, 2);
@@ -246,6 +251,25 @@ Object* arcUI_get_mouse_info(Object** args, size_t argCount) {
   return (Object*)initNull();
 }
 
+Object* arcUI_get_key_info(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // event ptr 
+  if (err) return err;
+
+  SDL_Event ev = *(SDL_Event*)(uintptr_t)((Number*)args[0])->as.i;
+
+  if (ev.type == SDL_EVENT_KEY_DOWN || ev.type == SDL_EVENT_KEY_UP) {
+    Object* scancode = (Object*)initInt(ev.key.scancode);
+    Object* keycode = (Object*)initInt(ev.key.key);
+    Object* status = (Object*)initInt(ev.type == SDL_EVENT_KEY_DOWN ? 1 : 0);
+
+    return (Object*)initList((Object*[]){scancode, keycode, status}, 4, 4);
+  }
+
+  return (Object*)initNull();
+}
+
 Object* arcUI_point(Object** args, size_t argCount) {
   (void)argCount;
   
@@ -289,6 +313,54 @@ Object* arcUI_point_in_rect(Object** args, size_t argCount) {
   return (Object*)initInt(0);
 }
 
+Object* arcUI_update_rect_pos(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // rect ptr
+  if (err) return err;
+
+  for (size_t i = 1; i < 3; i++) {
+    if (args[i]->type != OBJ_NUMBER_INT && args[i]->type != OBJ_NUMBER_FLOAT) {
+      char buf[256];
+      snprintf(buf, sizeof(buf), "Expected argument %zu to be object of type 'int' or 'float', received '%s'", i + 1, typeofobj(args[i]));
+    }
+  }
+  
+  SDL_FRect *rect = (SDL_FRect*)(uintptr_t)((Number*)args[0])->as.i;
+
+  double x = __get_double((Number*)args[1]);
+  double y = __get_double((Number*)args[2]);
+  
+  rect->x = x;
+  rect->y = y;
+
+  return (Object*)initInt(0);
+}
+
+Object* __registerSDLKeys(Object** args, size_t argCount) {
+  (void)args;
+  (void)argCount;
+
+  for (int i = 0; i < SDL_SCANCODE_COUNT; i++) {
+    // Create a unique name for each key, e.g., "KEY_A", "KEY_W"
+    const char* name = SDL_GetScancodeName((SDL_Scancode)i);
+        
+    if (name && name[0] != '\0') {
+      char fullname[256];
+      
+      snprintf(fullname, sizeof(fullname), "KEY_%s", name);
+
+      for (int j = 4; fullname[j] != '\0'; j++) {
+        fullname[j] = toupper((unsigned char)fullname[j]);
+      }
+
+      setTable(variables, internIdentifier(fullname, strlen(fullname)), VAL_OBJ((Object*)initInt(i)));
+    }
+  }
+
+  return (Object*)initInt(1);
+}
+
 typedef enum ARCUI_EVENT {
   MOUSE_BUTTON_DOWN,
   MOUSE_BUTTON_UP,
@@ -321,4 +393,47 @@ Object* arcUI_get_event_type(Object** args, size_t argCount) {
   }
 
   return (Object*)initInt(type);
+}
+
+Object* arcUI_get_window_size_pixels(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // window
+  if (err) return err;
+
+  SDL_Window* window = (SDL_Window*)(uintptr_t)((Number*)args[0])->as.i;
+
+  int w, h;
+
+  if (!SDL_GetWindowSizeInPixels(window, &w, &h)) {
+    char buf[512];
+    snprintf(buf, sizeof(buf), "Could not get window size: %s", SDL_GetError());
+    return (Object*)initProgramError(buf);
+  }
+  
+  Object* width = (Object*)initInt(w);
+  Object* height = (Object*)initInt(h);
+
+  return (Object*)initList((Object*[]){width, height}, 2, 2);
+}
+
+Object* arcUI_set_window_resizable(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // window
+  if (err) return err;
+
+  err = enforceType(args[1], OBJ_NUMBER_INT, 2); // is resizable
+  if (err) return err;
+
+  SDL_Window* window = (SDL_Window*)(uintptr_t)((Number*)args[0])->as.i;
+  int64_t isResizable = ((Number*)args[1])->as.i;
+
+  if (!SDL_SetWindowResizable(window, isResizable)) {
+    char buf[512];
+    snprintf(buf, sizeof(buf), "Could not update window resizability: %s", SDL_GetError());
+    return (Object*)initProgramError(buf);
+  }
+  
+  return (Object*)initInt(1);
 }

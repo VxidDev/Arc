@@ -23,4 +23,7 @@ Value getTable(SymbolTable *table, const char *name);
 void removeSymbol(SymbolTable *table, const char *name);
 void freeTable(SymbolTable *table);
 
+void setTableLocal(SymbolTable *table, char *name, Value value);
+Value getTableLocal(SymbolTable *table, const char *name);
+
 #endif // SYMBOL_TABLE_H

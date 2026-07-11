@@ -97,7 +97,7 @@ end
 try 
   f.write(f, "hello world")
 catch e then 
-  print("ERROR: write failed on open file")
+  print("ERROR: write failed on open file:", e)
   exit(1)
 end 
 

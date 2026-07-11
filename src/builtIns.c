@@ -4,6 +4,17 @@
 #include "../include/builtIns/time.h"
 #include "../include/builtIns/ctools.h"
 #include "../include/builtIns/libtools.h"
+#include "../include/builtIns/random.h"
+
+#include <time.h>
+
+void initRandomModule(SymbolTable* table) {
+  NativeFunction* randintFn = initNativeFunction("randint", builtIn_randint, 1, false);
+  setTable(table, internIdentifier("randint", 7), VAL_OBJ((Object*)randintFn));
+  freeObject((Object*)randintFn);
+
+  pcg32srandom((uint64_t)time(NULL), 1);
+}
 
 void initMathModule(SymbolTable* table) {
   NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false); // DEPRECATED, to_int() is prefered.
@@ -50,6 +61,7 @@ void initCTools(SymbolTable* table) {
   setTable(table, internIdentifier("C_CHAR", 6), VAL_INT(6));
   setTable(table, internIdentifier("C_CHAR_PTR", 10), VAL_INT(7));
   setTable(table, internIdentifier("C_VOID_PTR", 10), VAL_INT(8));
+  setTable(table, internIdentifier("C_VOID", 6), VAL_INT(9));
 
   NativeFunction* c_runFn = initNativeFunction("c_run", builtIn_c_run, 3, false);
   setTable(table, internIdentifier("c_run", 5), VAL_OBJ((Object*)c_runFn));

@@ -73,7 +73,8 @@ typedef enum C_FFI_TYPES {
   C_DOUBLE_PTR,
   C_CHAR,
   C_CHAR_PTR,
-  C_VOID_PTR
+  C_VOID_PTR,
+  C_VOID
 } C_FFI_TYPES;
 
 void* __convert_to_primitive(Object* obj) {
@@ -159,6 +160,7 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
       case C_CHAR: returnType = &ffi_type_schar; break;
       case C_CHAR_PTR: returnType = &ffi_type_pointer; break;
       case C_VOID_PTR: returnType = &ffi_type_pointer; break;
+      case C_VOID: returnType = &ffi_type_void; break;
       default: {
         char buf[256];
         snprintf(buf, sizeof(buf), "Invalid FFI return type signature. (Value %" PRId64 " is not valid)", retType);
@@ -250,6 +252,7 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
     case C_CHAR: return (Object*)initString((char[]){result.i64, '\0'}, 2);
     case C_CHAR_PTR: return (Object*)initInt((int64_t)(uintptr_t)result.p);
     case C_VOID_PTR: return (Object*)initInt((int64_t)(uintptr_t)result.p);
+    case C_VOID: return (Object*)initNull();
   }
 
   return (Object*)initNull();

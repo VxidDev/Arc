@@ -20,6 +20,8 @@ const NativeModuleEntry* stdlibModules[] = {
   #ifndef ARC_EXCLUDE_CTOOLS
   &(NativeModuleEntry){ "__c_tools", initCTools },
   #endif // ARC_EXCLUDE_CTOOLS
+  
+  &(NativeModuleEntry){ "__random", initRandomModule },
 
   &(NativeModuleEntry){ "__lib_tools", initLibtools }, NULL 
 };

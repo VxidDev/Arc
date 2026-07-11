@@ -34,6 +34,38 @@ SymbolTable *createTable(size_t capacity, SymbolTable *parent) {
   return table;
 }
 
+void setTableLocal(SymbolTable *table, char *name, Value value) {
+  size_t hash = hashPointer(name);
+  size_t index = hash & (table->capacity - 1);
+
+  for (Symbol *sym = table->buckets[index]; sym; sym = sym->next) {
+    if (sym->name == name) {
+      freeValue(sym->value);
+      sym->value = IS_OBJ(value) ? copyValue(value) : value;
+      return;
+    }
+  }
+
+  Symbol *newSym = poolAlloc(symbolPool);
+  if (!newSym) return;
+  newSym->name = name;
+  newSym->value = IS_OBJ(value) ? copyValue(value) : value;
+  newSym->next = table->buckets[index];
+  table->buckets[index] = newSym;
+  table->count++;
+}
+
+Value getTableLocal(SymbolTable *table, const char *name) {
+  size_t hash = hashPointer(name);
+  size_t index = hash & (table->capacity - 1);
+
+  for (Symbol *sym = table->buckets[index]; sym; sym = sym->next)
+    if (sym->name == name)
+      return sym->value;
+
+  return VAL_UNDEF();
+}
+
 void setTable(SymbolTable *table, char *name, Value value) {
   size_t hash = hashPointer(name);
   

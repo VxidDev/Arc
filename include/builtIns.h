@@ -8,5 +8,6 @@ void initSysModule(SymbolTable* globals);
 void initTimeModule(SymbolTable* globals);
 void initCTools(SymbolTable* globals);
 void initLibtools(SymbolTable* globals);
+void initRandomModule(SymbolTable* globals);
 
 #endif // !BUILTINS_H

@@ -181,6 +181,7 @@ static inline Object *valueToObject(Value v) {
   if (IS_INT(v)) return (Object*)initInt(AS_INT(v));
   if (IS_FLOAT(v)) return (Object*)initFloat(AS_FLOAT(v));
   if (IS_NULL(v)) return (Object*)initNull();
+  if (IS_UNDEF(v)) return (Object*)initNull();
   return AS_OBJ(v);
 }
 
@@ -255,6 +256,11 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
   Object* aObj = IS_OBJ(a) ? AS_OBJ(a) : NULL;
   Object* bObj = IS_OBJ(b) ? AS_OBJ(b) : NULL;
 
+  if ((IS_OBJ(a) && !aObj) || (IS_OBJ(b) && !bObj)) {
+    VM_ERR_FRAME(vm, frame, initTypeError, "Operand is undefined.");
+    return VAL_UNDEF();
+  }
+
   bool aStr = aObj && aObj->type == OBJ_STRING;
   bool bStr = bObj && bObj->type == OBJ_STRING; 
 
@@ -289,6 +295,13 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
     if (!returnedDest) freeValue(a);
     freeValue(b);
     return res;
+  }
+
+  if (!aObj || !bObj || (aObj->type != OBJ_NUMBER_INT && aObj->type != OBJ_NUMBER_FLOAT)) {
+    VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
+    freeValue(a);
+    freeValue(b);
+    return VAL_UNDEF();
   }
 
   // Fallback to Number objects (should be rare now)
@@ -457,7 +470,7 @@ Object *vmRun(VM *vm) {
       }
 
       Instance* target = (Instance*)AS_OBJ(targetVal);
-      Value val = getTable(target->fields, name->value);
+      Value val = getTableLocal(target->fields, name->value);
 
       if (UNLIKELY(IS_UNDEF(val))) {
         char buf[256];
@@ -486,7 +499,7 @@ Object *vmRun(VM *vm) {
       }
 
       Instance* target = (Instance*)AS_OBJ(targetVal);
-      setTable(target->fields, name->value, IS_OBJ(val) ? copyValue(val) : val);
+      setTableLocal(target->fields, name->value, val);
 
       PUSH(val);
       freeValue(targetVal);
@@ -497,7 +510,13 @@ Object *vmRun(VM *vm) {
     OP_STORE_VAR: {
       String *name = (String *)READ_CONST();
       Value val = PEEK(0);
-      setTable(vars, name->value, IS_OBJ(val) ? copyValue(val) : val);
+      
+      if (frame->instance) {
+        setTableLocal(vars, name->value, val);
+      } else {
+        setTable(vars, name->value, val);
+      }
+
       DISPATCH();
     }
 
@@ -1024,7 +1043,7 @@ Object *vmRun(VM *vm) {
           HANDLE_ERROR();
         }
 
-        Instance* instance = initInstance(class, vars);
+        Instance* instance = initInstance(class, vm->frames[0].variables);
 
         if (UNLIKELY(!instance)) {
           VM_ERR(initRuntimeError, "Out of memory.");
