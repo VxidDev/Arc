@@ -15,9 +15,17 @@ var ui_pump_events = dl_sym(__ui__, "arcUI_pump_events", 0, false)
 var ui_poll_event = dl_sym(__ui__, "arcUI_poll_event", 0, false)
 var ui_rect = dl_sym(__ui__, "arcUI_rect", 4, false)
 var ui_fill_rect = dl_sym(__ui__, "arcUI_fill_rect", 2, false)
-var ui_get_mouse_info = dl_sym(__ui__, "arcUI_get_mouse_info", 1, false)
 var ui_point = dl_sym(__ui__, "arcUI_point", 2, false)
 var ui_point_in_rect = dl_sym(__ui__, "arcUI_point_in_rect", 2, false)
+var ui_destroy_window = dl_sym(__ui__, "arcUI_destroy_window", 1, false)
+
+var MOUSE_BUTTON_DOWN = 0
+var MOUSE_BUTTON_UP = 1
+var MOUSE_WHEEL = 2
+var KEY_DOWN = 3
+var KEY_UP = 4
+var QUIT = 5
+var NOT_MAPPED = 6
 
 var stage = ui_create_stage(500, 500, "Arc Window")
 var RUNNING = true 
@@ -29,22 +37,20 @@ var time = 0.0
 while RUNNING then
   while true then 
     ev = ui_poll_event()
-
-    if ev == 0 then 
-      break 
+    
+    if ev == 0 then
+      break
     end
 
-    if int_at(ev) == 256 then 
+    if ev[0][1] == QUIT then 
       RUNNING = false
       break
-    end 
+    end
 
-    if (int_at(ev) == 1026) or (int_at(ev) == 1025) then 
-      var info = ui_get_mouse_info(ev)
+    if ev[0][1] == MOUSE_BUTTON_DOWN or ev[0][1] == MOUSE_BUTTON_UP then 
+      var point = ui_point(ev[1][1], ev[2][1])
 
-      var point = ui_point(info[0], info[1])
-
-      print("Mouse button:", if info[2] == 0 then "left" else "right" end, "Status:", if info[3] == 1 then "down" else "up" end, "X:", info[0], "Y:", info[1], "Collides rect:", ui_point_in_rect(point, button_rect))
+      print("Mouse button:", if ev[3][1] == 0 then "left" else "right" end, "Status:", if ev[4][1] == 1 then "down" else "up" end, "X:", ev[1][1], "Y:", ev[2][1], "Collides rect:", ui_point_in_rect(point, button_rect))
     end 
   end
 
@@ -63,4 +69,6 @@ while RUNNING then
   ui_render_present(stage[1])
 
   ui_delay(16)
-end 
+end
+
+ui_destroy_window(stage[0])

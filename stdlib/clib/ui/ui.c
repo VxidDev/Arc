@@ -167,12 +167,143 @@ Object* arcUI_pump_events(Object** args, size_t argCount) {
   return (Object*)initInt(1);
 }
 
+typedef enum ARCUI_EVENT {
+  MOUSE_BUTTON_DOWN,
+  MOUSE_BUTTON_UP,
+  MOUSE_WHEEL,
+  KEY_DOWN,
+  KEY_UP,
+  QUIT,
+  NOT_MAPPED
+} ARCUI_EVENT;
+
+Object* __getEventType(SDL_Event *ev) { 
+  uint32_t type;
+
+  switch (ev->type) {
+    case SDL_EVENT_MOUSE_BUTTON_DOWN: type = MOUSE_BUTTON_DOWN; break;
+    case SDL_EVENT_MOUSE_BUTTON_UP: type = MOUSE_BUTTON_UP; break;
+    case SDL_EVENT_MOUSE_WHEEL: type = MOUSE_WHEEL; break;
+    case SDL_EVENT_KEY_DOWN: type = KEY_DOWN; break;
+    case SDL_EVENT_KEY_UP: type = KEY_UP; break;
+    case SDL_EVENT_QUIT: type = QUIT; break;
+
+    default: type = NOT_MAPPED; break;
+  }
+
+  return (Object*)initInt(type);
+}
+
+bool __appendList(Object** pairs, char *key, Object* value, size_t *idx) {
+  if (!value) {
+    for (size_t i = 0; i < *idx; i++) {
+      freeObject(pairs[i]);
+    }
+
+    free(pairs);
+
+    return false;
+  }
+
+  Object* keyString = (Object*)initString(key, strlen(key));
+  
+  if (!keyString) {
+    for (size_t i = 0; i < *idx; i++) {
+      freeObject(pairs[i]);
+    }
+
+    free(pairs);
+    freeObject(value);
+
+    return false;
+  }
+
+  Object* pair = (Object*)initList((Object*[]){keyString, value}, 2, 2);
+
+  if (!pair) {
+    for (size_t i = 0; i < *idx; i++) {
+      freeObject(pairs[i]);
+    }
+
+    free(pairs);
+
+    freeObject(keyString);
+    freeObject(value);
+
+    return false;
+  }
+
+  pairs[*idx] = pair;
+  (*idx)++;
+
+  return true;
+}
+
+Object* __arcUIEventToList(SDL_Event* ev) {
+  size_t idx = 0;
+  Object** pairs = malloc(sizeof(Object*) * 8);
+  
+  if (!pairs) {
+    return (Object*)initProgramError("Failed to parse event (Out of memory)");
+  }
+
+  if (!__appendList(pairs, "type", (Object*)__getEventType(ev), &idx))
+    return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+  switch (ev->type) {
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_UP: {
+      const char* keyname = SDL_GetKeyName(ev->key.key);
+
+      if (!__appendList(pairs, "key", (Object*)initString(keyname, strlen(keyname)), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+      if (!__appendList(pairs, "down", (Object*)initInt(ev->type == SDL_EVENT_KEY_DOWN), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+      if (!__appendList(pairs, "scancode", (Object*)initInt(ev->key.scancode), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+      break;
+    }
+
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP: {
+      if (!__appendList(pairs, "mouse_pos_x", (Object*)initFloat(ev->button.x), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+      if (!__appendList(pairs, "mouse_pos_y", (Object*)initFloat(ev->button.y), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+      if (!__appendList(pairs, "clicked_button", (Object*)initInt(ev->button.button == SDL_BUTTON_LEFT ? 0 : 1), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+      
+      if (!__appendList(pairs, "down", (Object*)initInt(ev->type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 1 : 0), &idx))
+        return (Object*)initProgramError("Failed to parse event (Out of memory)");
+
+      break;
+    }
+
+    case SDL_EVENT_QUIT: {
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  Object* list = (Object*)initList(pairs, idx, idx);
+  free(pairs);
+
+  return list;
+}
+
 Object* arcUI_poll_event(Object** args, size_t argCount) {
   (void)argCount;
   (void)args;
 
   if (SDL_PollEvent(&globalEv)) {
-    return (Object*)initInt((int64_t)(uintptr_t)&globalEv);
+    return __arcUIEventToList(&globalEv);
   }
 
   return (Object*)initInt(0);
@@ -229,45 +360,6 @@ Object* arcUI_fill_rect(Object** args, size_t argCount) {
   } 
 
   return (Object*)initInt(1);
-}
-
-Object* arcUI_get_mouse_info(Object** args, size_t argCount) {
-  (void)argCount;
-
-  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // event ptr 
-  if (err) return err;
-
-  SDL_Event ev = *(SDL_Event*)(uintptr_t)((Number*)args[0])->as.i;
-
-  if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN || ev.type == SDL_EVENT_MOUSE_BUTTON_UP) {
-    Object* x = (Object*)initFloat(ev.button.x);
-    Object* y = (Object*)initFloat(ev.button.y);
-    Object* button = (Object*)initInt(ev.button.button == SDL_BUTTON_LEFT ? 0 : 1);
-    Object* status = (Object*)initInt(ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 1 : 0);
-
-    return (Object*)initList((Object*[]){x, y, button, status}, 4, 4);
-  }
-
-  return (Object*)initNull();
-}
-
-Object* arcUI_get_key_info(Object** args, size_t argCount) {
-  (void)argCount;
-
-  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // event ptr 
-  if (err) return err;
-
-  SDL_Event ev = *(SDL_Event*)(uintptr_t)((Number*)args[0])->as.i;
-
-  if (ev.type == SDL_EVENT_KEY_DOWN || ev.type == SDL_EVENT_KEY_UP) {
-    Object* scancode = (Object*)initInt(ev.key.scancode);
-    Object* keycode = (Object*)initInt(ev.key.key);
-    Object* status = (Object*)initInt(ev.type == SDL_EVENT_KEY_DOWN ? 1 : 0);
-
-    return (Object*)initList((Object*[]){scancode, keycode, status}, 4, 4);
-  }
-
-  return (Object*)initNull();
 }
 
 Object* arcUI_point(Object** args, size_t argCount) {
@@ -361,40 +453,6 @@ Object* __registerSDLKeys(Object** args, size_t argCount) {
   return (Object*)initInt(1);
 }
 
-typedef enum ARCUI_EVENT {
-  MOUSE_BUTTON_DOWN,
-  MOUSE_BUTTON_UP,
-  MOUSE_WHEEL,
-  KEY_DOWN,
-  KEY_UP,
-  QUIT,
-  NOT_MAPPED
-} ARCUI_EVENT;
-
-Object* arcUI_get_event_type(Object** args, size_t argCount) {
-  (void)argCount;
-
-  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1);
-  if (err) return err;
-
-  SDL_Event ev = *(SDL_Event*)(uintptr_t)((Number*)args[0])->as.i;
-  
-  uint32_t type;
-
-  switch (ev.type) {
-    case SDL_EVENT_MOUSE_BUTTON_DOWN: type = MOUSE_BUTTON_DOWN; break;
-    case SDL_EVENT_MOUSE_BUTTON_UP: type = MOUSE_BUTTON_UP; break;
-    case SDL_EVENT_MOUSE_WHEEL: type = MOUSE_WHEEL; break;
-    case SDL_EVENT_KEY_DOWN: type = KEY_DOWN; break;
-    case SDL_EVENT_KEY_UP: type = KEY_UP; break;
-    case SDL_EVENT_QUIT: type = QUIT; break;
-
-    default: type = NOT_MAPPED; break;
-  }
-
-  return (Object*)initInt(type);
-}
-
 Object* arcUI_get_window_size_pixels(Object** args, size_t argCount) {
   (void)argCount;
 
@@ -435,5 +493,17 @@ Object* arcUI_set_window_resizable(Object** args, size_t argCount) {
     return (Object*)initProgramError(buf);
   }
   
+  return (Object*)initInt(1);
+}
+
+Object* arcUI_destroy_window(Object** args, size_t argCount) {
+  (void)argCount;
+
+  Object* err = enforceType(args[0], OBJ_NUMBER_INT, 1); // window 
+  if (err) return err;
+  
+  SDL_Window* window = (SDL_Window*)(uintptr_t)((Number*)args[0])->as.i;
+  SDL_DestroyWindow(window);
+
   return (Object*)initInt(1);
 }

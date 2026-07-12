@@ -64,7 +64,7 @@ void freeObject(Object* obj) {
 
     case OBJ_STRING:
       String* s = (String*)obj;
-      if (s->value) free(s->value);
+      if (s->ownsValue && s->value) free(s->value);
       poolFree(stringPool, obj); 
       return; 
  

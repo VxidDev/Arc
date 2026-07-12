@@ -16,4 +16,6 @@ Object* builtIn_string_at(Object** args, size_t argCount);
 Object* builtIn_int_at(Object** args, size_t argCount);
 Object* builtIn_pointer_at(Object** args, size_t argCount);
 
+void ctoolsCleanup(void);
+
 #endif // ARC_CTOOLS_H

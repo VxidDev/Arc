@@ -1,7 +1,7 @@
 import "__c_tools"
 import "__lib_tools"
 
-import "@stdlib/libc/stdlib.arc"
+import "@stdlib/list/tools.arc"
 
 var __ui__ = dl_open(stdlib_path() + "/clib/libarcui.so", 1)
 
@@ -16,14 +16,12 @@ var __UI_pump_events = dl_sym(__ui__, "arcUI_pump_events", 0, false)
 var __UI_poll_event = dl_sym(__ui__, "arcUI_poll_event", 0, false)
 var __UI_rect = dl_sym(__ui__, "arcUI_rect", 4, false)
 var __UI_fill_rect = dl_sym(__ui__, "arcUI_fill_rect", 2, false)
-var __UI_get_mouse_info = dl_sym(__ui__, "arcUI_get_mouse_info", 1, false)
 var __UI_point = dl_sym(__ui__, "arcUI_point", 2, false)
 var __UI_point_in_rect = dl_sym(__ui__, "arcUI_point_in_rect", 2, false)
 var __UI_get_event_type = dl_sym(__ui__, "arcUI_get_event_type", 1, false)
 var __UI_get_window_size_pixels = dl_sym(__ui__, "arcUI_get_window_size_pixels", 1, false)
 var __UI_set_window_resizable = dl_sym(__ui__, "arcUI_set_window_resizable", 2, false)
 var __UI_update_rect_pos = dl_sym(__ui__, "arcUI_update_rect_pos", 3, false)
-var __UI_get_key_info = dl_sym(__ui__, "arcUI_get_key_info", 1, false)
 
 class Rect
   var __rect_ptr = null
@@ -268,30 +266,33 @@ end
 
 class Event
   var type = null 
-  var __event_ptr = null
   var is_initialized = false
+  
+  var key = null
+  var down = null
+  var scancode = null
+  var mouse_pos_x = null
+  var mouse_pos_y = null
+  var clicked_button = null
 
   fn init(self, ev) then
     if self.is_initialized then
       RuntimeError("Object is already initialized")
     end
 
-    if typeof(ev) != "int" then
-      RuntimeError("Argument 'ev' must be an integer")
+    if typeof(ev) != "list" then
+      RuntimeError("Argument 'ev' must be a list")
     end
-
-    self.type = __UI_get_event_type(ev)
-    self.__event_ptr = ev
+ 
+    self.type = get_item(ev, "type")
+    self.key = get_item(ev, "key")
+    self.down = get_item(ev, "down")
+    self.scancode = get_item(ev, "scancode")
+    self.mouse_pos_x = get_item(ev, "mouse_pos_x")
+    self.mouse_pos_y = get_item(ev, "mouse_pos_y")
+    self.clicked_button = get_item(ev, "clicked_button")
 
     self.is_initialized = true
-  end
-
-  fn cleanup(self) then
-    if not self.is_initialized then
-      RuntimeError("Object is not initialized")
-    end
-
-    free(self.__event_ptr)
   end
 end
 
@@ -343,22 +344,6 @@ class _ui
 
   fn delay(ms) then
     __UI_delay(ms)
-  end
-
-  fn get_mouse_info(ev) then
-    if typeof(ev) != "Event" then
-      RuntimeError("Argument 'ev' must be an instance of class Event")
-    end
-
-    __UI_get_mouse_info(ev.__event_ptr)
-  end
-
-  fn get_key_info(ev) then
-    if typeof(ev) != "Event" then
-      RuntimeError("Argument 'ev' must be an instance of class Event")
-    end
-
-    __UI_get_key_info(ev.__event_ptr)
   end
 end
 

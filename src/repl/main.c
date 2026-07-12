@@ -1,6 +1,8 @@
 #include "../../include/repl/input.h"
 #include "../../include/utils.h"
 
+#include "../../include/builtIns/ctools.h"
+
 #include "../../include/token.h"
 #include "../../include/lexer.h"
 #include "../../include/parser.h"
@@ -416,6 +418,10 @@ void parseArguments(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+  #ifndef ARC_EXCLUDE_CTOOLS
+    atexit(ctoolsCleanup);
+  #endif // ARC_EXCLUDE_CTOOLS
+
   char *userInput = NULL; 
   
   argVect = malloc(sizeof(String*) * argVectCap);

@@ -84,22 +84,25 @@ ECHO = @echo
 
 .PHONY: all dev debug release install dev-install debug-install release-install uninstall clean test profile
 
+EXTRA_CFLAGS ?=
+EXTRA_LDFLAGS ?=
+
 all: dev
 
-dev: CFLAGS = $(CFLAGS_DEV)
-dev: LDFLAGS = $(LDFLAGS_DEV)
+dev: CFLAGS = $(CFLAGS_DEV) $(EXTRA_CFLAGS)
+dev: LDFLAGS = $(LDFLAGS_DEV) $(EXTRA_LDFLAGS)
 dev: $(TARGET)
 
-profile: CFLAGS = $(CFLAGS_PROFILE)
-profile: LDFLAGS = $(LDFLAGS_PROFILE)
+profile: CFLAGS = $(CFLAGS_PROFILE) $(EXTRA_CFLAGS)
+profile: LDFLAGS = $(LDFLAGS_PROFILE) $(EXTRA_LDFLAGS)
 profile: $(TARGET)
 
-debug: CFLAGS = $(CFLAGS_DEBUG)
-debug: LDFLAGS = $(LDFLAGS_DEBUG)
+debug: CFLAGS = $(CFLAGS_DEBUG) $(EXTRA_CFLAGS)
+debug: LDFLAGS = $(LDFLAGS_DEBUG) $(EXTRA_LDFLAGS)
 debug: $(TARGET)
 
-release: CFLAGS = $(CFLAGS_RELEASE)
-release: LDFLAGS = $(LDFLAGS_RELEASE)
+release: CFLAGS = $(CFLAGS_RELEASE) $(EXTRA_CFLAGS)
+release: LDFLAGS = $(LDFLAGS_RELEASE) $(EXTRA_LDFLAGS)
 release: $(TARGET)
 
 $(CLIB_SRC_DIR)/%/build/libarc%.so:

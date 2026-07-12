@@ -67,6 +67,7 @@ typedef struct Chunk {
   char* sourcetext;
 
   int maxLocals;
+  bool freed;
 } Chunk;
 
 typedef struct JumpList {
@@ -78,6 +79,7 @@ typedef struct LoopInfo {
   int start;
   JumpList *breaks;
   JumpList *continues;
+  bool isFor;
   struct LoopInfo *next;
 } LoopInfo;
 

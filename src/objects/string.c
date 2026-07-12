@@ -111,6 +111,7 @@ String *initStringBuffer(size_t initialCapacity) {
   str->len = 0;
   str->capacity = cap;
   str->isBuffer = true;
+  str->ownsValue = true;
 
   return str;
 }
@@ -136,6 +137,7 @@ String *initString(char *value, uint64_t len) {
   str->len = len;
   str->capacity = len;
   str->isBuffer = false;
+  str->ownsValue = true;
 
   return str;
 }
@@ -156,6 +158,7 @@ String *noCopyInitString(char *value, uint64_t len) {
   str->len = len;
   str->capacity = len;
   str->isBuffer = false;
+  str->ownsValue = true;
 
   return str;
 }
@@ -172,6 +175,7 @@ String *initStringConst(char *value, uint64_t len) {
   str->len = len;
   str->capacity = len;
   str->isBuffer = false;
+  str->ownsValue = false;
 
   return str;
 }
@@ -210,6 +214,7 @@ String *addString(String *dest, const String *src) {
     res->len = total;
     res->capacity = newCap;
     res->isBuffer = false;
+    res->ownsValue = true;
 
     return res;
   }
@@ -255,6 +260,7 @@ String *mulString(String *dest, const Number *src) {
     res->len = total;
     res->capacity = total;
     res->isBuffer = false;
+    res->ownsValue = true;
 
     return res;
   }

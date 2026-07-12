@@ -45,9 +45,10 @@
 #define READ_BYTE()  (*ip++)
 
 static inline uint32_t _read_const_idx(uint8_t **ipp) {
-  uint32_t idx = ((uint32_t)(*ipp)[0] << 16) | ((uint32_t)(*ipp)[1] << 8) | (*ipp)[2];
+  uint32_t v;
+  __builtin_memcpy(&v, *ipp, 4); // 1 byte over-read past the 3 we want
   *ipp += 3;
-  return idx;
+  return __builtin_bswap32(v) >> 8;
 }
 
 #define READ_CONST() (constants[_read_const_idx(&ip)])
@@ -107,6 +108,7 @@ static inline bool isTruthy(Value v) {
 
 #define VM_ERR_FRAME(vm, frame, initFn, msg) do { \
   if (!*(vm)->err) { \
+    frame->currentInstr = (uint32_t)(ip - frame->chunk->code); \
     Position _ps, _pe; \
     vmGetPos(frame, &_ps, &_pe); \
     *(vm)->err = initFn(_ps, _pe, (frame)->chunk->filename, msg, (frame)->chunk->sourcetext); \
@@ -208,7 +210,7 @@ static void vmGetPos(CallFrame *frame, Position *start, Position *end) {
   *end = entries[idx].end;
 }
 
-static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
+static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b, uint8_t *ip) {
   if ((IS_INT(a) || IS_FLOAT(a)) && (IS_INT(b) || IS_FLOAT(b))) {
     double na = IS_INT(a) ? (double)AS_INT(a) : AS_FLOAT(a);
     double nb = IS_INT(b) ? (double)AS_INT(b) : AS_FLOAT(b);
@@ -238,12 +240,13 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
   }
 
   if (IS_NULL(a) || IS_NULL(b)) {
-    if (op == OP_EQ) return VAL_INT(IS_NULL(a) && IS_NULL(b));
-    if (op == OP_NE) return VAL_INT(!(IS_NULL(a) && IS_NULL(b)));
-
-    VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
+    bool eq = IS_NULL(a) && IS_NULL(b);
     freeValue(a);
     freeValue(b);
+    if (op == OP_EQ) return VAL_INT(eq);
+    if (op == OP_NE) return VAL_INT(!eq);
+
+    VM_ERR_FRAME(vm, frame, initTypeError, "Incompatible types for operation.");
     return VAL_UNDEF();
   }
 
@@ -295,6 +298,13 @@ static Value doArith(VM *vm, CallFrame* frame, OpCode op, Value a, Value b) {
     if (!returnedDest) freeValue(a);
     freeValue(b);
     return res;
+  }
+
+  if (op == OP_EQ || op == OP_NE) {
+    bool eq = false; 
+    freeValue(a);
+    freeValue(b);
+    return VAL_INT(op == OP_EQ ? eq : !eq);
   }
 
   if (!aObj || !bObj || (aObj->type != OBJ_NUMBER_INT && aObj->type != OBJ_NUMBER_FLOAT)) {
@@ -558,7 +568,7 @@ Object *vmRun(VM *vm) {
 
     
   #define ARITH_SLOW(OP_ENUM) \
-    { Value res = doArith(vm, frame, OP_ENUM, a, b); \
+    { Value res = doArith(vm, frame, OP_ENUM, a, b, ip); \
       if (UNLIKELY(*vm->err)) { freeValue(res); HANDLE_ERROR(); } \
       PUSH(res); DISPATCH(); }
  
@@ -927,21 +937,23 @@ Object *vmRun(VM *vm) {
           freeValue(calleeVal);
           HANDLE_ERROR();
         }
-          
+        
+        CallFrame* newFrame = &vm->frames[vm->frameTop];
+
         SAVE_STATE();
           
-        CallFrame *newFrame = &vm->frames[vm->frameTop];
-          
-        newFrame->chunk = func->chunk;
-        newFrame->ip = func->chunk->code;
-        newFrame->variables = vars;
-        newFrame->tryStackTop = vm->tryStackTop;
-        newFrame->localsBase = vm->localsTop;
-        newFrame->localCount = func->maxLocals;
-        newFrame->currentInstr = 0;
-        newFrame->instance = NULL;
-        newFrame->filename = frame->filename;
-        newFrame->ownsChunk = false;
+        *newFrame = (CallFrame){
+          .chunk = func->chunk,
+          .ip = func->chunk->code,
+          .variables = vars,
+          .tryStackTop = vm->tryStackTop,
+          .localsBase = vm->localsTop,
+          .localCount = func->maxLocals,
+          .currentInstr = 0,
+          .instance = NULL,
+          .filename = frame->filename,
+          .ownsChunk = false
+        };
         
         int paramCount = (int)func->paramCount;
         int base = newFrame->localsBase;
@@ -1054,17 +1066,19 @@ Object *vmRun(VM *vm) {
         CallFrame* newFrame = &vm->frames[vm->frameTop];
         
         SAVE_STATE();
-
-        newFrame->chunk = class->chunk;
-        newFrame->ip = class->chunk->code;
-        newFrame->variables = instance->fields;
-        newFrame->tryStackTop = vm->tryStackTop;
-        newFrame->localsBase = vm->localsTop;
-        newFrame->localCount = 0;
-        newFrame->currentInstr = 0;
-        newFrame->instance = (Object*)instance;
-        newFrame->filename = frame->filename;
-        newFrame->ownsChunk = false;
+        
+        *newFrame = (CallFrame){
+          .chunk = class->chunk,
+          .ip = class->chunk->code,
+          .variables = instance->fields,
+          .tryStackTop = vm->tryStackTop,
+          .localsBase = vm->localsTop,
+          .localCount = 0,
+          .currentInstr = 0,
+          .instance = (Object*)instance,
+          .filename = frame->filename,
+          .ownsChunk = false
+        };
 
         for (int i = 0; i < class->maxLocals; i++)
           vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
@@ -1233,6 +1247,8 @@ Object *vmRun(VM *vm) {
         } else if (leavingFrame->variables != vm->frames[vm->frameTop - 1].variables) {
           freeTable(leavingFrame->variables);
         }
+
+        if (leavingFrame->ownsChunk) freeChunk(leavingFrame->chunk);
 
         vm->tryStackTop = leavingFrame->tryStackTop;
 

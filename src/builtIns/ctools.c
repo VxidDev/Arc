@@ -207,7 +207,12 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
       local_argSignature = argSignature;
     } else {  
       if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, signature->size - 1, returnType, argSignature) != FFI_OK) {
+        free(argSignature);
         return (Object*)initProgramError("Failed to prepare ffi_cif.");
+      }
+
+      if (last.isInitialized && last.argSignature) {
+        free(last.argSignature);
       }
 
       last.cif = cif;
@@ -256,6 +261,14 @@ Object* builtIn_c_run(Object** args, size_t argCount) {
   }
 
   return (Object*)initNull();
+}
+
+void ctoolsCleanup(void) {
+  if (last.isInitialized && last.argSignature) {
+    free(last.argSignature);
+    last.argSignature = NULL;
+    last.isInitialized = false;
+  }
 }
 
 Object* builtIn_dl_open(Object** args, size_t argCount) {

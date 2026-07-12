@@ -15,6 +15,7 @@
 #include "./axionetd/include/router.h"
 
 static CURL* curl = NULL;
+static bool initialized = false;
 
 Object* arcNet_request_init(Object** args, size_t argCount) {
   (void)args;
@@ -22,6 +23,11 @@ Object* arcNet_request_init(Object** args, size_t argCount) {
   
   if (curl) {
     return (Object*)initInt(1);
+  }
+  
+  if (!initialized) {
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    initialized = true;
   }
 
   curl = curl_easy_init();
@@ -101,6 +107,9 @@ Object* arcNet_request_deinit(Object** args, size_t argCount) {
 
   curl_easy_cleanup(curl);
   curl = NULL;
+
+  curl_global_cleanup();
+  initialized = false;
 
   return (Object*)initInt(1);
 }

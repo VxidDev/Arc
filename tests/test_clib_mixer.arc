@@ -18,7 +18,7 @@ var mixer = mixer_init()
 var sound = mixer_load_sound(mixer, getenv("HOME") + "/Music/test.mp3")
 mixer_play_sound(sound[1], sound[0], 0)
 
-sleep(5000)
+sleep(100)
 
 mixer_destroy_mixer(mixer)
 mixer_quit()

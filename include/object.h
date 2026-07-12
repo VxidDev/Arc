@@ -67,7 +67,7 @@ typedef struct String {
   char *value;
   uint64_t len, capacity;
   long hash;
-  bool isBuffer;
+  bool isBuffer, ownsValue;
 } String;
 
 typedef struct List {
