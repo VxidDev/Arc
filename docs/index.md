@@ -23,3 +23,6 @@ Welcome to the documentation for the Arc programming language.
 *   [**Properties Library**](stdlib/properties.md): Type inspection utilities.
 *   [**JSON Library**](stdlib/json.md): Parsing and handling JSON in Arc.
 *   [**C JSON Library**](stdlib/json_clib.md): High-performance C-based JSON library.
+* 	[**Net Library**](stdlib/net.md): Built-in networking and HTTP server capabilities.
+* 	[**Mixer Library**](stdlib/mixer.md): Audio loading and playback execution utilities.
+* 	[**UI Library**](stdlib/ui.md): Low-level graphical user interface and event handling.
