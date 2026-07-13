@@ -71,3 +71,4 @@ dkms.conf
 # debug information files
 *.dwo
 test.arc
+.vs/
