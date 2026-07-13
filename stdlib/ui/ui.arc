@@ -119,14 +119,18 @@ class Rect
     self.bottom.x = self.x
     self.bottom.y = self.y + self.height
   end
-
+  
+  # Returns true if the two rects overlap
+  fn intersects(self, other) then
+    return (self.x < other.x + other.width) and (self.x + self.width > other.x) and (self.y < other.y + other.height) and (self.y + self.height > other.y)
+  end
+  
   fn collides_with(self, rect) then
     if not self.is_initialized then
       RuntimeError("Object is not initialized")
     end
 
-    var point_ptr = __UI_point(rect.x, rect.y)
-    return __UI_point_in_rect(point_ptr, self.__rect_ptr)
+    return self.intersects(self, rect)
   end
 end
 
@@ -331,6 +335,10 @@ class _ui
     event.init(event, raw_ev)
 
     return event
+  end
+
+  fn pump_events() then
+    __UI_pump_events()
   end
 
   fn rect(x, y, width, height) then

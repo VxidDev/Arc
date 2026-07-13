@@ -124,6 +124,7 @@ install-libs:
 	$(Q)sudo make -C stdlib/clib/ui
 	$(Q)sudo make -C stdlib/clib/mixer
 	$(Q)sudo make -C stdlib/clib/json
+	$(Q)sudo make -C stdlib/clib/image
 	$(Q)sudo install -d $(ARC_LIB_DIR)/clib
 	$(Q)sudo cp $(CLIB_SRC_DIR)/*/build/*.so $(ARC_LIB_DIR)/clib/
 	$(Q)sudo find stdlib -name "*.arc" -exec install -Dm644 {} $(ARC_LIB_DIR)/{} \;
