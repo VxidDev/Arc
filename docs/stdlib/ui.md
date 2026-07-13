@@ -38,17 +38,6 @@ These constants are used to evaluate the `type` property of an `Event` instance:
   * **Description:** Pauses the execution thread for a designated duration.
   * **Parameters:**
     * `ms` (Integer): The delay duration in milliseconds.
-
-* **`ui.get_mouse_info(ev)`**
-  * **Description:** Populates native mouse position and state details from a given event.
-  * **Parameters:**
-    * `ev` (Event): The active event instance.
-
-* **`ui.get_key_info(ev)`**
-  * **Description:** Extracts keyboard hardware key state info from a given event.
-  * **Parameters:**
-    * `ev` (Event): The active event instance.
-
 ---
 
 ## Classes
@@ -98,7 +87,9 @@ A utility container wrapping a polled system or hardware message handle.
 
 #### Properties
 * `type` (Integer): Resolved mapping corresponding to the `ui` event type constants.
-
-#### Methods
-* **`Event.cleanup()`**
-  * **Description:** Dismantles the event structure and manually frees native memory allocation handles.
+* `key` (String | null): Scancode converted to readable format, for example "Escape". Accessible only when type is KEY_DOWN or KEY_UP, otherwise null.
+* `down` (Boolean | null): true on *_DOWN and false on *_UP events, otherwise null.
+* `scancode` (Integer | null): Integer value representing key's scancode. Accessible only when type is KEY_DOWN or KEY_UP, otherwise null.
+* `mouse_pos_x` (Float | null): Float value representing mouse's position on x axis. Accessible only when type is MOUSE_BUTTON_DOWN or MOUSE_BUTTON_UP, otherwise null.
+* `mouse_pos_y` (Float | null): Float value representing mouse's position on y axis. Accessible only when type is MOUSE_BUTTON_DOWN or MOUSE_BUTTON_UP, otherwise null.
+* `clicked_button` (Integer | null): Integer value representing currently clicked mouse button. 0 on left and 1 on right mouse button. Accessible only when type is MOUSE_BUTTON_DOWN or MOUSE_BUTTON_UP, otherwise null.
