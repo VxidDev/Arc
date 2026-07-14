@@ -10,7 +10,7 @@ BINDIR = $(DESTDIR)$(PREFIX)/bin
 ifneq (,$(findstring mingw, $(CC)))
 	ARC_LIB_DIR = "C:/ProgramData/arc/lib"
 else
-	ARC_LIB_DIR = /usr/local/share/arc/lib
+	ARC_LIB_DIR = $(PREFIX)/share/arc/lib
 endif 
 
 CLIB_SRC_DIR = stdlib/clib
@@ -81,6 +81,7 @@ else
 endif
 
 ECHO = @echo
+INSTALL_LIB_DIR = $(DESTDIR)$(ARC_LIB_DIR)
 
 .PHONY: all dev debug release install dev-install debug-install release-install uninstall clean test profile
 
@@ -118,16 +119,21 @@ dev-libs: CFLAGS = $(CFLAGS_DEV)
 dev-libs: $(CLIB_TARGETS)
 
 install-libs:
-	$(ECHO) "Installing Arc standard library to $(ARC_LIB_DIR)..."
-	$(Q)install -d $(ARC_LIB_DIR)
-	$(Q)sudo make -C stdlib/clib/net
-	$(Q)sudo make -C stdlib/clib/ui
-	$(Q)sudo make -C stdlib/clib/mixer
-	$(Q)sudo make -C stdlib/clib/json
-	$(Q)sudo make -C stdlib/clib/image
-	$(Q)sudo install -d $(ARC_LIB_DIR)/clib
-	$(Q)sudo cp $(CLIB_SRC_DIR)/*/build/*.so $(ARC_LIB_DIR)/clib/
-	$(Q)sudo find stdlib -name "*.arc" -exec install -Dm644 {} $(ARC_LIB_DIR)/{} \;
+	$(ECHO) "Installing Arc standard library..."
+	$(Q)install -d $(INSTALL_LIB_DIR)/clib
+	
+	$(MAKE) release-libs
+	
+	$(Q)cp stdlib/clib/net/axionetd/*.so $(INSTALL_LIB_DIR)/clib/ 2>/dev/null || true
+	$(Q)cp stdlib/clib/ui/build/*.so $(INSTALL_LIB_DIR)/clib/ 2>/dev/null || true
+	$(Q)cp stdlib/clib/mixer/build/*.so $(INSTALL_LIB_DIR)/clib/ 2>/dev/null || true
+	$(Q)cp stdlib/clib/json/build/*.so $(INSTALL_LIB_DIR)/clib/ 2>/dev/null || true
+	$(Q)cp stdlib/clib/image/build/*.so $(INSTALL_LIB_DIR)/clib/ 2>/dev/null || true
+	
+	$(Q)install -d $(INSTALL_LIB_DIR)/include/axionetd
+	$(Q)cp -r stdlib/clib/net/axionetd/include/* $(INSTALL_LIB_DIR)/include/axionetd/
+	
+	$(Q)find stdlib -name "*.arc" -exec install -Dm644 {} $(INSTALL_LIB_DIR)/{} \;
 
 $(TARGET): $(OBJ)
 	$(Q)$(CC) $(OBJ) -o $@ $(LDFLAGS) $(LDLIBS)
@@ -147,6 +153,7 @@ debug-install: debug
 release-install: release
 	$(ECHO) "Installing RELEASE -> $(BINDIR)"
 	$(Q)install -Dm755 $(TARGET) $(BINDIR)/$(TARGET)
+	$(Q)$(MAKE) install-libs
 
 test: release
 	$(ECHO) "Running tests..."

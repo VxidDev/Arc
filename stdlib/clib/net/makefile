@@ -38,7 +38,7 @@ LDFLAGS_DEBUG += -rdynamic
 
 CFLAGS_PROFILE = $(BASE_FLAGS) -O2 -g -pg
 LDFLAGS_PROFILE = -pg
-.PHONY: all dev debug release profile clean
+.PHONY: all dev debug release profile clean install
 
 CFLAGS_DEV = $(BASE_FLAGS) -O0 -g
 LDFLAGS_DEV = -rdynamic
@@ -65,6 +65,9 @@ $(TARGET_LIB): net.c
 	@mkdir -p $(BUILD_DIR)
 	make -C axionetd install
 	$(CC) $(CFLAGS) net.c -o $(BUILD_DIR)/$@ $(LDFLAGS)
+
+install:
+	$(MAKE) DESTDIR=$(DESTDIR) -C axionetd install
 
 clean:
 	rm -rf $(BUILD_DIR)

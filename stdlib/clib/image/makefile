@@ -1,7 +1,7 @@
 CC = gcc
 
 BUILD_DIR = build
-TARGET_LIB = libarcimage.so
+TARGET_LIB = $(BUILD_DIR)libarcimage.so
 
 BASE_FLAGS = -Wall -Wextra -I../../../include -MMD -MP -fPIC -shared -lSDL3 -lSDL3_image
 CFLAGS_DEBUG = $(BASE_FLAGS) -O0 -g \
@@ -63,7 +63,7 @@ profile: $(TARGET_LIB)
 
 $(TARGET_LIB): image.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) image.c -o $(BUILD_DIR)/$@ $(LDFLAGS)
+	$(CC) $(CFLAGS) image.c -o $@ $(LDFLAGS)
 
 clean:
 	rm -rf $(BUILD_DIR)
