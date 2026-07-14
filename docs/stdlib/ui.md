@@ -19,16 +19,16 @@ These constants are used to evaluate the `type` property of an `Event` instance:
 ### Methods
 
 * **`ui.create_stage(width, height, window_name)`**
-  * **Description:** Initializes a window and a corresponding renderer context wrapped inside a low-level context.
+  * **Description:** Initializes a window and a corresponding renderer context wrapped inside a unified `Stage` object.
   * **Parameters:**
     * `width` (Integer): Width of the window in pixels.
     * `height` (Integer): Height of the window in pixels.
     * `window_name` (String): The title displayed on the window bar.
-  * **Returns:** A `List` containing the internal pointer addresses `[window_ptr, renderer_ptr]`.
+  * **Returns:** A configured `Stage` object.
 
 * **`ui.get_event()`**
   * **Description:** Polls the application event queue for pending user interactions.
-  * **Returns:** An `Event` object if an interaction is available; otherwise, returns `0` (Integer).
+  * **Returns:** An `Event` object if an interaction is available; otherwise, returns `null`.
 
 * **`ui.pump_events()`**
   * **Description:** Manually pumps the event loop, gathering pending input signals from hardware devices into the internal event queue.
@@ -37,40 +37,34 @@ These constants are used to evaluate the `type` property of an `Event` instance:
 * **`ui.rect(x, y, width, height)`**
   * **Description:** Factory method to construct and allocate a bounded 2D rectangular structure.
   * **Parameters:** Accepts coordinates and dimensions as `Integer` or `Float`.
-  * **Returns:** An internal pointer address (Integer) to the allocated rectangle.
+  * **Returns:** A configured `Rect` object.
 
-* **`ui.point(x, y)`**
+* **`__UI_point(x, y)`**
   * **Description:** Allocates a 2D coordinate point structure.
   * **Parameters:** Accepts `x` and `y` coordinates as `Integer` or `Float`.
   * **Returns:** An internal pointer address (Integer) to the allocated point structure.
 
-* **`ui.point_in_rect(point_ptr, rect_ptr)`**
+* **`__UI_point_in_rect(point_ptr, rect_ptr)`**
   * **Description:** Evaluates a collision check to determine if a point falls within the boundaries of a target rectangle.
   * **Parameters:** 
     * `point_ptr` (Integer): The pointer address of the target point.
     * `rect_ptr` (Integer): The pointer address of the target rectangle.
   * **Returns:** `1` (Integer) if the point is inside the rectangle bounds; otherwise `0` (Integer).
 
-* **`ui.update_rect_pos(rect_ptr, x, y)`**
+* **`__UI_update_rect_pos(rect_ptr, x, y)`**
   * **Description:** Updates the positional coordinates of an existing rectangle structure.
   * **Parameters:** 
     * `rect_ptr` (Integer): The pointer address of the rectangle.
     * `x`, `y` (Integer/Float): New positional coordinates.
   * **Returns:** `0` (Integer).
 
-* **`ui.get_window_size_pixels(window_ptr)`**
+* **`__UI_get_window_size_pixels(window_ptr)`**
   * **Description:** Retrieves the current pixel resolution dimensions of the targeted window window surface.
   * **Parameters:** 
     * `window_ptr` (Integer): The internal pointer address of the window.
   * **Returns:** A `List` containing `[width, height]`.
 
-* **`ui.destroy_window(window_ptr)`**
-  * **Description:** Safely destroys the specified window surface context and releases its allocated resource bindings.
-  * **Parameters:** 
-    * `window_ptr` (Integer): The internal pointer address of the window.
-  * **Returns:** `1` (Integer).
-
-* **`ui.delay(ms)`**
+* **`__UI_delay(ms)`**
   * **Description:** Pauses the execution thread for a designated duration.
   * **Parameters:**
     * `ms` (Integer): The delay duration in milliseconds.
