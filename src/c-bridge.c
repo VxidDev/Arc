@@ -2,7 +2,16 @@
 
 #include "../include/object.h"
 #include "../include/vm.h"
-
+/**
+ * callArcFunction
+ * * Summary: Executes a compiled or AST-based Arc function within the virtual machine environment.
+ * * @param vm: Pointer to the active Virtual Machine (VM) instance.
+ * * @param func: Pointer to the Arc Function object to be executed.
+ * * @param args: Pointer to the array of input arguments (Value) for the function.
+ * * @param argCount: The total number of arguments passed to the function.
+ * * @returns: Pointer to the resulting Object returned by the function execution, or NULL if a runtime/compilation error occurs.
+ * * @note: Lazily compiles the AST function body to bytecode on first invocation. Validates parameter counts and prevents call stack or local variable overflow. Manages call frame push/pop and frees local variables upon execution completion.
+ */
 Object *callArcFunction(VM *vm, Function *func, Value *args, int argCount) {
   if (!func->chunk && func->body) {
     func->chunk = compileAST(func->body, vm->err, vm->filename, vm->sourcetext);

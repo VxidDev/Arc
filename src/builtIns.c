@@ -7,7 +7,13 @@
 #include "../include/builtIns/random.h"
 
 #include <time.h>
-
+/**
+ * initRandomModule
+ * * Summary: Initializes the random module by registering the 'randint' native function and seeding the random number generator.
+ * * @param table: Pointer to the SymbolTable where the module functions are registered.
+ * * @returns: void (nothing).
+ * * @note: Instantiates the 'randint' native function, registers it in the symbol table, and frees the temporary object wrapper. Seeds the PCG32 generator using the current system time.
+ */
 void initRandomModule(SymbolTable* table) {
   NativeFunction* randintFn = initNativeFunction("randint", builtIn_randint, 1, false);
   setTable(table, internIdentifier("randint", 7), VAL_OBJ((Object*)randintFn));
@@ -15,13 +21,25 @@ void initRandomModule(SymbolTable* table) {
 
   pcg32srandom((uint64_t)time(NULL), 1);
 }
-
+/**
+ * initMathModule
+ * * Summary: Initializes the math module by registering math-related native functions like 'truncate'.
+ * * @param table: Pointer to the SymbolTable where the math functions are registered.
+ * * @returns: void (nothing).
+ * * @note: Note that 'truncate' is marked as DEPRECATED in favor of 'to_int'. Registers and frees the function object wrapper.
+ */
 void initMathModule(SymbolTable* table) {
   NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false); // DEPRECATED, to_int() is prefered.
   setTable(table, internIdentifier("truncate", 8), VAL_OBJ((Object*)truncateFn));
   freeObject((Object*)truncateFn);
 }
-
+/**
+ * initLibtools
+ * * Summary: Registers core library utility functions, specifically 'stdlib_path', into the system.
+ * * @param table: Pointer to the SymbolTable where utility functions are registered.
+ * * @returns: void (nothing).
+ * * @note: Creates the native function 'stdlib_path' with 0 arguments and registers it in the symbol table before freeing the temporary object.
+ */
 void initLibtools(SymbolTable* table) {
   NativeFunction* stdlib_pathFn = initNativeFunction("stdlib_path", builtIn_stdlib_path, 0, false);
   setTable(table, internIdentifier("stdlib_path", 11), VAL_OBJ((Object*)stdlib_pathFn));
@@ -29,7 +47,13 @@ void initLibtools(SymbolTable* table) {
 }
 
 #ifndef ARC_EXCLUDE_CTOOLS
-
+/**
+ * initCTools
+ * * Summary: Registers native C interaction functions (like 'dl_open' and 'dl_sym') for dynamic linking, unless excluded.
+ * * @param table: Pointer to the SymbolTable where C-interaction functions are registered.
+ * * @returns: void (nothing).
+ * * @note: Wrapped in 'ifndef ARC_EXCLUDE_CTOOLS' to allow disabling C-linking tools during compilation. Registers dynamic loading hooks.
+ */
 void initCTools(SymbolTable* table) {
   NativeFunction* dl_openFn = initNativeFunction("dl_open", builtIn_dl_open, 2, false);
   setTable(table, internIdentifier("dl_open", 7), VAL_OBJ((Object*)dl_openFn));
@@ -81,7 +105,13 @@ void initCTools(SymbolTable* table) {
 }
 
 #endif // ARC_EXCLUDE_CTOOLS
-
+/**
+ * initSysModule
+ * * Summary: Registers core system interaction functions such as 'exit', 'system', 'getenv', and platform-specific file tools.
+ * * @param table: Pointer to the SymbolTable where system functions are registered.
+ * * @returns: void (nothing).
+ * * @note: Native functions 'access', 'unlink', and 'write' are wrapped inside 'ifndef _WIN32', meaning they are conditionally registered only on non-Windows (Unix-like) operating systems.
+ */
 void initSysModule(SymbolTable* table) {
   NativeFunction* exitFn = initNativeFunction("exit", builtIn_exit, 1, false);
   setTable(table, internIdentifier("exit", 4), VAL_OBJ((Object*)exitFn));
@@ -109,7 +139,13 @@ void initSysModule(SymbolTable* table) {
     freeObject((Object*)writeFn);
   #endif
 }
-
+/**
+ * initTimeModule
+ * * Summary: Initializes the time module by registering performance tracking and sleep/delay utility functions.
+ * * @param table: Pointer to the SymbolTable where time-related functions are registered.
+ * * @returns: void (nothing).
+ * * @note: Registers 'perf_counter' (high-resolution timer with 0 arguments) and 'sleep' (execution pause with 1 argument) into the runtime environment.
+ */
 void initTimeModule(SymbolTable* table) {
   NativeFunction* perf_counterFn = initNativeFunction("perf_counter", builtIn_perf_counter, 0, false);
   setTable(table, internIdentifier("perf_counter", 12), VAL_OBJ((Object*)perf_counterFn));
