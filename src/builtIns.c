@@ -31,7 +31,7 @@ void initLibtools(SymbolTable* table) {
 #ifndef ARC_EXCLUDE_CTOOLS
 
 void initCTools(SymbolTable* table) {
-  NativeFunction* dl_openFn = initNativeFunction("dl_open", builtIn_dl_open, 2, false);
+  NativeFunction* dl_openFn = initNativeFunction("dl_open", builtIn_dl_open, 1, false);
   setTable(table, internIdentifier("dl_open", 7), VAL_OBJ((Object*)dl_openFn));
   freeObject((Object*)dl_openFn);
 
@@ -63,7 +63,7 @@ void initCTools(SymbolTable* table) {
   setTable(table, internIdentifier("C_VOID_PTR", 10), VAL_INT(8));
   setTable(table, internIdentifier("C_VOID", 6), VAL_INT(9));
 
-  NativeFunction* c_runFn = initNativeFunction("c_run", builtIn_c_run, 3, false);
+  NativeFunction* c_runFn = initNativeFunction("c_run", builtIn_c_run, 3, true);
   setTable(table, internIdentifier("c_run", 5), VAL_OBJ((Object*)c_runFn));
   freeObject((Object*)c_runFn);
 
@@ -95,6 +95,10 @@ void initSysModule(SymbolTable* table) {
   setTable(table, internIdentifier("getenv", 6), VAL_OBJ((Object*)getenvFn));
   freeObject((Object*)getenvFn);
   
+  NativeFunction* get_osFn = initNativeFunction("get_os", builtIn_get_os, 0, false);
+  setTable(table, internIdentifier("get_os", 6), VAL_OBJ((Object*)get_osFn));
+  freeObject((Object*)get_osFn);
+
   #ifndef _WIN32
     NativeFunction* accessFn = initNativeFunction("access", builtIn_access, 2, false);
     setTable(table, internIdentifier("access", 6), VAL_OBJ((Object*)accessFn));

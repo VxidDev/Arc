@@ -6,7 +6,6 @@ text.*
 calc.arc
 arc.arc
 vgcore.*
-lib.c
 perf.data*
 test.py
 nested.json

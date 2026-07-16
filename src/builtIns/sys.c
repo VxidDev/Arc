@@ -142,3 +142,10 @@ Object* builtIn_getenv(Object** args, size_t argCount) {
 
   return (Object*)initString(val, strlen(val));
 }
+
+Object* builtIn_get_os(Object** args, size_t argCount) {
+  (void)args;
+  (void)argCount;
+
+  return (Object*)initString(OS_NAME, strlen(OS_NAME));
+}

@@ -3,7 +3,16 @@ import "__lib_tools"
 import "__sys"
 import "__time"
 
-var __mixer__ = dl_open(stdlib_path() + "/clib/libarcmixer.so", 1)
+if get_os() == "Linux" then
+  var __mixer__ = dl_open(stdlib_path() + "/clib/libarcmixer.so")
+elif get_os() == "MacOS" then
+  var __mixer__ = dl_open(stdlib_path() + "/clib/libarcmixer.dylib")
+elif get_os() == "Windows" then
+  var __mixer__ = dl_open(stdlib_path() + "\\clib\\libarcmixer.dll")
+else
+  RuntimeError("Unknown OS.")
+end
+
 var mixer_init = dl_sym(__mixer__, "arcMixer_init", 0, false)
 var mixer_load_sound = dl_sym(__mixer__, "arcMixer_load_audio", 2, false)
 var mixer_quit = dl_sym(__mixer__, "arcMixer_quit", 0, false)

@@ -1,7 +1,16 @@
 import "__c_tools"
 import "__lib_tools"
+import "__sys"
 
-var __IMG__ = dl_open(stdlib_path() + "/clib/libarcimage.so", 1)
+if get_os() == "Linux" then
+  var __IMG__ = dl_open(stdlib_path() + "/clib/libarcimage.so")
+elif get_os() == "MacOS" then
+  var __IMG__ = dl_open(stdlib_path() + "/clib/libarcimage.dylib")
+elif get_os() == "Windows" then
+  var __IMG__ = dl_open(stdlib_path() + "\\clib\\libarcimage.dll")
+else
+  RuntimeError("Unknown OS.")
+end
 
 var __IMG_load_texture = dl_sym(__IMG__, "arcImg_load_texture", 2, false)
 var __IMG_render_texture = dl_sym(__IMG__, "arcImg_render_texture", 3, false)

@@ -1,9 +1,18 @@
 import "__c_tools"
 import "__lib_tools"
+import "__sys"
 
 import "@stdlib/list/tools.arc"
 
-var __ui__ = dl_open(stdlib_path() + "/clib/libarcui.so", 1)
+if get_os() == "Linux" then
+  var __ui__ = dl_open(stdlib_path() + "/clib/libarcui.so")
+elif get_os() == "MacOS" then
+  var __ui__ = dl_open(stdlib_path() + "/clib/libarcui.dylib")
+elif get_os() == "Windows" then
+  var __ui__ = dl_open(stdlib_path() + "\\clib\\libarcui.dll")
+else
+  RuntimeError("Unknown OS.")
+end
 
 var __UI_register_sdl_keys = dl_sym(__ui__, "__registerSDLKeys", 0, false)
 var __UI_create_stage = dl_sym(__ui__, "arcUI_create_stage", 3, false)

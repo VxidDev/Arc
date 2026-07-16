@@ -981,9 +981,15 @@ Object *vmRun(VM *vm) {
       if (callee->type == OBJ_NATIVE_FUNCTION) {
         NativeFunction *nf = (NativeFunction *)callee;
         
-        if (argCount < nf->requiredArgCount) {
+        if ((nf->isVariadic && argCount < nf->requiredArgCount) || (!nf->isVariadic && argCount != nf->requiredArgCount)) {
           char buf[256];
-          snprintf(buf, sizeof(buf), "Function \"%s\" expects atleast %zu arguments, got %d.", nf->name, nf->requiredArgCount, argCount);
+
+          if (nf->isVariadic) {
+            snprintf(buf, sizeof(buf), "Function \"%s\" expects at least %zu arguments, got %d.", nf->name, nf->requiredArgCount, argCount);
+          } else {
+            snprintf(buf, sizeof(buf), "Function \"%s\" expects %zu arguments, got %d.", nf->name, nf->requiredArgCount, argCount);
+          }
+          
           VM_ERR(initRuntimeError, buf);
           freeValue(calleeVal);
           HANDLE_ERROR();

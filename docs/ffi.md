@@ -20,11 +20,10 @@ To load and use an external C library in Arc:
 
 These functions are available within Arc to interact with native libraries.
 
-### `dl_open(string path, int mode)`
+### `dl_open(string path)`
 - **Description:** Loads a shared library.
 - **Parameters:**
   - `path`: Path to the shared object file.
-  - `mode`: Loading flags (e.g., `RTLD_LAZY`, `RTLD_NOW`).
 - **Return Value:** Integer handle to the loaded library or `ProgramError` if loading fails.
 
 ### `dl_sym(int handle, string name, int paramCount, int isVariadic)`
@@ -46,8 +45,8 @@ These functions are available within Arc to interact with native libraries.
 
 ```c
 // Arc code
-let lib = dl_open("mylib.so", 1); // 1 = RTLD_LAZY
-let myFunction = dl_sym(lib, "my_native_function", 2, 0);
+var lib = dl_open("mylib.so"); // opens with RTLD_LAZY | RTLD_GLOBAL on Linux/MacOS (.dll for Windows, .dylib for MacOS.)
+var myFunction = dl_sym(lib, "my_native_function", 2, 0);
 myFunction(1, 2);
 dl_close(lib);
 ```

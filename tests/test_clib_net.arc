@@ -1,7 +1,17 @@
 import "__c_tools"
+import "__lib_tools"
 import "@stdlib/json/json.arc"
+import "__sys"
 
-var netlib = dl_open("./stdlib/clib/net/build/libarcnet.so", 1)
+if get_os() == "Linux" then
+  var netlib = dl_open(stdlib_path() + "/clib/libarcnet.so")
+elif get_os() == "MacOS" then
+  var netlib = dl_open(stdlib_path() + "/clib/libarcnet.dylib")
+elif get_os() == "Windows" then
+  var netlib = dl_open(stdlib_path() + "\\clib\\libarcnet.dll")
+else
+  RuntimeError("Unknown OS.")
+end
 
 var net_req_init = dl_sym(netlib, "arcNet_request_init", 0, false)
 var net_req_deinit = dl_sym(netlib, "arcNet_request_deinit", 0, false)

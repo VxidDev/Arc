@@ -34,7 +34,7 @@ static inline int arcDlclose(arcLibHandle handle) {
 typedef void *arcLibHandle;
 
 static inline arcLibHandle arcDlopen(const char *path) {
-  return dlopen(path, RTLD_LAZY);
+  return dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
 }
 
 static inline void *arcDlsym(arcLibHandle handle, const char *name) {
@@ -273,16 +273,15 @@ void ctoolsCleanup(void) {
 
 Object* builtIn_dl_open(Object** args, size_t argCount) {
   (void)argCount;
-
-  Object* err = enforceType(args[0], OBJ_STRING, 1);
-
-  if (err) {
-    return err;
+  
+  if (args[0]->type != OBJ_STRING && args[0]->type != OBJ_NULL) {
+    char buf[512];
+    snprintf(buf, sizeof(buf), "Expected argument 1 to be object of type 'string' or 'null', received '%s'.", typeofobj(args[0]));
+    return (Object*)initProgramError(buf);
   }
-
-  String* path = (String*)args[0];
-
-  arcLibHandle handle = arcDlopen(path->value);
+  
+  char *path = args[0]->type == OBJ_STRING ? ((String*)args[0])->value : NULL;
+  arcLibHandle handle = arcDlopen(path);
 
   if (!handle) {
     return (Object*)initProgramError("Failed to open shared object.");
