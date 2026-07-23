@@ -25,6 +25,9 @@ make
 # Build release (optimized)
 make release
 
+# Build and install libraries
+sudo make install-libs
+
 # Install to /usr/bin
 sudo make install
 ```
