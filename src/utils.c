@@ -8,11 +8,32 @@
 #include <string.h>
 #include <stdlib.h>
 
+// ID: Pemisah direktori spesifik sistem operasi (Windows vs POSIX)
+// EN: OS-specific directory separator (Windows vs POSIX)
 #ifdef _WIN32
   #define PATH_SEP '\\'
 #else
   #define PATH_SEP '/'
 #endif
+
+// ID: Fungsi pembantu untuk memeriksa apakah path bersifat absolut di lintas platform
+// EN: Helper function to check whether a path is absolute across platforms
+static int isAbsolutePath(const char *path) {
+  if (!path || path[0] == '\0') return 0;
+
+#ifdef _WIN32
+  // ID: Format absolut Windows (misal: "C:\", "C:/", atau UNC path "\\")
+  // EN: Windows absolute path format (e.g., "C:\", "C:/", or UNC path "\\")
+  if (((path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z')) && path[1] == ':') {
+    return (path[2] == '/' || path[2] == '\\');
+  }
+  return (path[0] == '/' || path[0] == '\\');
+#else
+  // ID: Format absolut POSIX/Linux (dimulai dengan '/')
+  // EN: POSIX/Linux absolute path format (starts with '/')
+  return path[0] == '/';
+#endif
+}
 
 char *stringDup(const char *s) {
   size_t len = strlen(s) + 1;
@@ -140,12 +161,10 @@ void getDirectory(const char* path, char* out) {
   char* slash = strrchr(out, '/');
 
   #ifdef _WIN32
-
   char* backslash = strrchr(out, '\\');
 
   if (!slash || (backslash && backslash > slash))
     slash = backslash;
-
   #endif // _WIN32
 
   if (slash)
@@ -173,15 +192,19 @@ char* resolveImportPath(const char* currentFile, const char* importPath) {
     const char *path = importPath + 1;
     char buffer[4096];
 
+    // ID: Menggunakan PATH_SEP agar konsisten sesuai OS
+    // EN: Use PATH_SEP for OS-consistent path formatting
     if (hasExtension(path)) {
-      snprintf(buffer, sizeof(buffer), "%s/%s", ARC_LIB_DIR, path);
+      snprintf(buffer, sizeof(buffer), "%s%c%s", ARC_LIB_DIR, PATH_SEP, path);
     } else {
-      snprintf(buffer, sizeof(buffer), "%s/%s.arc", ARC_LIB_DIR, path);
+      snprintf(buffer, sizeof(buffer), "%s%c%s.arc", ARC_LIB_DIR, PATH_SEP, path);
     }
     return stringDup(buffer);
   }
 
-  if (importPath[0] == '/') {
+  // ID: Pengecekan path absolut secara komprehensif (POSIX vs Win32)
+  // EN: Comprehensive absolute path verification (POSIX vs Win32)
+  if (isAbsolutePath(importPath)) {
     return stringDup(importPath);
   }
 
@@ -190,10 +213,12 @@ char* resolveImportPath(const char* currentFile, const char* importPath) {
 
   char buffer[4096];
 
+  // ID: Menggabungkan direktori dengan separator terkonfigurasi
+  // EN: Combine directory using configured separator
   if (hasExtension(importPath)) {
-    snprintf(buffer, sizeof(buffer), "%s/%s", dir, importPath);
+    snprintf(buffer, sizeof(buffer), "%s%c%s", dir, PATH_SEP, importPath);
   } else {
-    snprintf(buffer, sizeof(buffer), "%s/%s.arc", dir, importPath);
+    snprintf(buffer, sizeof(buffer), "%s%c%s.arc", dir, PATH_SEP, importPath);
   }
 
   return stringDup(buffer);
