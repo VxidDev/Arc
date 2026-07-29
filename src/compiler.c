@@ -905,9 +905,16 @@ static void compileList(ASTNode *node, Compiler *c) {
     setPosFromNode(c, node);
     compileNode(ln->objects[i], c);
   }
+
+  if (ln->size > 0xFFFFFF) {
+    if (c->err && !*c->err)
+      *c->err = initRuntimeError((Position){0,0,0}, (Position){0,0,0}, c->filename, "List literal too large.", c->sourcetext);
+    return;
+  }
   
   setPosFromNode(c, node);
-  emitBytes(c, OP_BUILD_LIST, (uint8_t)ln->size);
+  emitByte(c, OP_BUILD_LIST);
+  emitConstRef(c, (uint32_t)ln->size);
 }
 
 static void compileIndex(ASTNode *node, Compiler *c) {

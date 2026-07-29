@@ -757,7 +757,7 @@ Object *vmRun(VM *vm) {
     }
 
     OP_BUILD_LIST: {
-      uint8_t count = READ_BYTE();
+      uint32_t count = _read_const_idx(&ip);
 
       Object* smallBuf[64];
       Object** items = (count <= 64) ? smallBuf : (Object**)malloc(sizeof(Object*) * count);
