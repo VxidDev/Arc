@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 
 #include <ctype.h>
 
@@ -16,9 +17,20 @@
 
 #define _is_letter(c) (((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')))
 #define _is_digit(c) (c >= '0' && c <= '9')
-#define _is_alnum(c) (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+#define _is_alnum(c)  (_is_letter(c) || _is_digit(c))
 
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
+
+#define CASE_MASK 0xDFDFDFDFDFDFDFDFULL 
+
+static inline uint64_t loadKeyword64(const char *s, size_t len) {
+  uint64_t val = 0;
+  memcpy(&val, s, len);
+  return val & CASE_MASK;
+}
+
+#define STATIC_ASSERT_EXPR(cond) (sizeof(char[1 - 2 * !(cond)]) * 0)
+#define KW(str) (STATIC_ASSERT_EXPR(sizeof(str) - 1 <= 8) + loadKeyword64(str, sizeof(str) - 1))
 
 void advanceLexer(Lexer *lexer) {
   if (!lexer) return;
@@ -42,7 +54,6 @@ Lexer* initLexer(char *filename, char *text) {
   lexer->text = text;
 
   if (!lexer->text) {
-    free(lexer);
     return NULL;
   }
 
@@ -56,7 +67,7 @@ Lexer* initLexer(char *filename, char *text) {
   return lexer;
 }
 
-bool _resizeTokensList(Token **tokens, size_t *capacity) {
+static inline bool _resizeTokensList(Token **tokens, size_t *capacity) {
   size_t newCap = (*capacity) * 2;
 
   Token *tmp = arenaRealloc(parseArena, *tokens, *capacity * sizeof(Token), newCap * sizeof(Token));
@@ -68,111 +79,64 @@ bool _resizeTokensList(Token **tokens, size_t *capacity) {
   return true;
 }
 
-static TokType keywordType(const char *s) {
-  char c = toupper(s[0]);
+static TokType keywordType(const char *s, const uint64_t len) {
+  if (len > 8) return TOK_IDENTIFIER;
+  
+  const uint64_t word = loadKeyword64(s, len);
 
-  switch (c) {
-    case 'A':
-      if (strcasecmp("AND", s) == 0)
-        return TOK_AND;
-
-      break;
-
-    case 'B':
-      if (strcasecmp("BREAK", s) == 0)
-        return TOK_BREAK; 
+  switch (len) {
+    case 2:
+      if (word == KW("IF")) return TOK_IF;
+      if (word == KW("FN")) return TOK_FN;
+      if (word == KW("OR")) return TOK_OR;
+      if (word == KW("IN")) return TOK_IN;
 
       break;
 
-    case 'E':
-      if (strcasecmp("ELIF", s) == 0)
-        return TOK_ELIF;
+    case 3:
+      if (word == KW("AND")) return TOK_AND;
+      if (word == KW("END")) return TOK_END;
+      if (word == KW("TRY")) return TOK_TRY;
+      if (word == KW("VAR")) return TOK_VAR;
+      if (word == KW("FOR")) return TOK_FOR;
+      if (word == KW("NOT")) return TOK_NOT;
 
-      if (strcasecmp("END", s) == 0)
-        return TOK_END;
+      break;
 
-      if (strcasecmp("ELSE", s) == 0)
-        return TOK_ELSE;
-      break; 
+    case 4:
+      if (word == KW("ELIF")) return TOK_ELIF;
+      if (word == KW("ELSE")) return TOK_ELSE;
+      if (word == KW("THEN")) return TOK_THEN;
+      if (word == KW("NULL")) return TOK_NULL;
+      if (word == KW("TRUE")) return TOK_TRUE;
 
-    case 'I':
-      if ((s[1] == 'F' || s[1] == 'f') && s[2] == '\0')
-        return TOK_IF;
+      break;
+
+    case 5:
+      if (word == KW("BREAK")) return TOK_BREAK;
+      if (word == KW("WHILE")) return TOK_WHILE;
+      if (word == KW("CATCH")) return TOK_CATCH;
+      if (word == KW("CLASS")) return TOK_CLASS;
+      if (word == KW("FALSE")) return TOK_FALSE;
+
+      break;
+    
+    case 6:
+      if (word == KW("IMPORT")) return TOK_IMPORT;
+      if (word == KW("RETURN")) return TOK_RETURN;      
+
+      break;
+    
+    case 8:
+      if (word == KW("CONTINUE")) return TOK_CONTINUE;
       
-      if ((s[1] == 'N' || s[1] == 'n') && s[2] == '\0')
-        return TOK_IN;
-
-      if (strcasecmp("IMPORT", s) == 0)
-        return TOK_IMPORT;
-
-      break;
-
-    case 'O':
-      if ((s[1] == 'R' || s[1] == 'r') && s[2] == '\0')
-        return TOK_OR;
-      break;
-
-    case 'T':
-      if (strcasecmp("THEN", s) == 0)
-        return TOK_THEN;
-
-      if (strcasecmp("TRY", s) == 0)
-        return TOK_TRY;
-
-      break;
-
-    case 'V':
-      if (strcasecmp("VAR", s) == 0)
-        return TOK_VAR;
-
-      break;
-
-    case 'W':
-      if (strcasecmp("WHILE", s) == 0)
-        return TOK_WHILE;
-
-      break;
-
-    case 'F':
-      if (strcasecmp("FOR", s) == 0)
-        return TOK_FOR;
-      
-      if ((s[1] == 'N' || s[1] == 'n') && s[2] == '\0')
-        return TOK_FN;
-      break;
-
-    case 'R':
-      if (strcasecmp("RETURN", s) == 0)
-        return TOK_RETURN;
-
-      break;
-
-    case 'C':
-      if (strcasecmp("CATCH", s) == 0)
-        return TOK_CATCH;
-
-      if (strcasecmp("CONTINUE", s) == 0)
-        return TOK_CONTINUE;
-
-      if (strcasecmp("CLASS", s) == 0)
-        return TOK_CLASS;
-
-      break;
-
-    case 'N':
-      if (strcasecmp("NOT", s) == 0)
-        return TOK_NOT;
-
-      if (strcasecmp("NULL", s) == 0)
-        return TOK_NULL;
-
       break;
   }
 
   return TOK_IDENTIFIER;
 }
 
-Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
+static Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
   if (!lexer) return (Token){.type = TOK_INVALID};
 
   size_t size = 0;
@@ -269,59 +233,29 @@ Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
   return token;
 }
 
-Token makeIdentifierLexer(Lexer *lexer) {
-  size_t size = 0;
-  size_t capacity = 32;
-
-  char *idStr = arenaAlloc(stringArena, capacity);
-
-  if (!idStr) return (Token){.type = TOK_INVALID};
-
+static Token makeIdentifierLexer(Lexer *lexer) {
   Position start = lexer->pos;
+  const char *startPtr = &lexer->text[lexer->pos.index];
+  size_t len = 0;
 
   while (lexer->currChar && (_is_alnum(lexer->currChar) || lexer->currChar == '_')) {
-    if (size >= capacity) {
-      size_t oldcap = capacity;
-      capacity *= 2;
-
-      void* tmp = arenaRealloc(stringArena, idStr, oldcap, capacity);
-
-      if (!tmp) {
-        return (Token){.type = TOK_INVALID};
-      }
-
-      idStr = tmp;
-    }
-
-    idStr[size++] = lexer->currChar;
+    len++;
     advanceLexer(lexer);
   }
 
-  idStr[size] = '\0';
+  TokType type = keywordType(startPtr, len);
 
-  if (strcmp(idStr, "true") == 0) {
-    int64_t *val = arenaAlloc(stringArena, sizeof(int64_t));
-    if (!val) return (Token){.type = TOK_INVALID};
-    *val = 1;
-
-    return initToken(TOK_INT, val, false, start, lexer->pos);
+  if (type != TOK_IDENTIFIER) {
+    return initToken(type, NULL, false, start, lexer->pos);
   }
 
-  if (strcmp(idStr, "false") == 0) {
-    int64_t *val = arenaAlloc(stringArena, sizeof(int64_t));
-    if (!val) return (Token){.type = TOK_INVALID};
-    *val = 0;
+  char *idStr = arenaAlloc(stringArena, len + 1);
+  if (!idStr) return (Token){ .type = TOK_INVALID };
+  
+  memcpy(idStr, startPtr, len);
+  idStr[len] = '\0';
 
-    return initToken(TOK_INT, val, false, start, lexer->pos);
-  }
-
-  TokType type = keywordType(idStr);
-
-  if (type == TOK_IDENTIFIER) {
-    return initToken(type, idStr, false, start, lexer->pos);
-  }
-
-  return initToken(type, NULL, false, start, lexer->pos);
+  return initToken(TOK_IDENTIFIER, idStr, false, start, lexer->pos);
 }
 
 Token makeStringLexer(Lexer* lexer, Error** error) {
@@ -409,7 +343,7 @@ static Token makeCharLexer(Lexer *lexer, Error** error) {
   return initToken(TOK_INT, &value, false, start, lexer->pos);
 }
 
-bool _generateToken(Lexer *lexer, Token** tokens, size_t *size, size_t *capacity, TokType tokenType) {
+static bool _generateToken(Lexer *lexer, Token** tokens, size_t *size, size_t *capacity, TokType tokenType) {
   if (UNLIKELY(*size >= *capacity)) {
     if (!_resizeTokensList(tokens, capacity)) {
       freeTokens(*tokens, *size);
@@ -436,7 +370,7 @@ bool _generateToken(Lexer *lexer, Token** tokens, size_t *size, size_t *capacity
   return true;
 }
 
-bool _appendToken(Token token, Token** tokens, size_t *size, size_t *capacity) {
+static inline bool _appendToken(Token token, Token** tokens, size_t *size, size_t *capacity) {
   if (token.type == TOK_INVALID) {
     freeTokens(*tokens, *size);
     return false;
@@ -453,7 +387,7 @@ bool _appendToken(Token token, Token** tokens, size_t *size, size_t *capacity) {
   return true;
 }
 
-Token makeNotEqualsToken(Lexer* lexer, Error** error) {
+static Token makeNotEqualsToken(Lexer* lexer, Error** error) {
   Position start = lexer->pos;
   advanceLexer(lexer);
 
@@ -471,7 +405,7 @@ Token makeNotEqualsToken(Lexer* lexer, Error** error) {
   return (Token){.type = TOK_INVALID};
 }
 
-Token makeEqualsToken(Lexer* lexer) {
+static Token makeEqualsToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -484,7 +418,7 @@ Token makeEqualsToken(Lexer* lexer) {
   return initToken(TOK_EQ, NULL, false, start, lexer->pos);
 }
 
-Token makeLessThanToken(Lexer* lexer) {
+static Token makeLessThanToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -497,7 +431,7 @@ Token makeLessThanToken(Lexer* lexer) {
   return initToken(TOK_LT, NULL, false, start, lexer->pos);
 }
 
-Token makeGreaterThanToken(Lexer* lexer) {
+static Token makeGreaterThanToken(Lexer* lexer) {
   Position start = lexer->pos;
 
   advanceLexer(lexer);
@@ -523,140 +457,121 @@ Token* makeTokensLexer(Lexer *lexer, Error **error, size_t *outSize) {
       continue;
     }
 
-    if (_is_digit(lexer->currChar)) {
-      if (!_appendToken(makeNumberTokenLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
-      continue;
+    switch (lexer->currChar) {
+      case '"':
+        if (!_appendToken(makeStringLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
+        continue;
+
+      case '\'':       
+        if (!_appendToken(makeCharLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
+        continue;
+
+      case '!':
+        if (!_appendToken(makeNotEqualsToken(lexer, error), &tokens, &size, &capacity)) return NULL;
+        continue;
+
+      case '=':  
+        if (!_appendToken(makeEqualsToken(lexer), &tokens, &size, &capacity)) return NULL;
+        continue;
+
+      case '<':
+        if (!_appendToken(makeLessThanToken(lexer), &tokens, &size, &capacity)) return NULL;
+        continue;
+
+      case '>':
+        if (!_appendToken(makeGreaterThanToken(lexer), &tokens, &size, &capacity)) return NULL;
+        continue;
+
+      case '+':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_PLUS)) return NULL;
+        continue;
+
+      case '-':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MINUS)) return NULL;
+        continue;
+
+      case '[':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LBRACK)) return NULL;
+        continue;
+
+      case ']':    
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RBRACK)) return NULL;
+        continue;
+
+      case '{':    
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LCURLBRACK)) return NULL;
+        continue;
+
+      case '}':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RCURLBRACK)) return NULL;
+        continue;
+
+      case ':':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_COLON)) return NULL;
+        continue;
+
+      case ',':  
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_COMMA)) return NULL;
+        continue;
+
+      case '*':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MUL)) return NULL;
+        continue;
+
+      case '/':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DIV)) return NULL;
+        continue;
+
+      case '^':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_POW)) return NULL;
+        continue;
+
+      case '(':    
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LPAREN)) return NULL;
+        continue;
+
+      case ')':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RPAREN)) return NULL;
+        continue;
+
+      case '#':
+        while (lexer->currChar != '\n' && lexer->currChar != '\0') advanceLexer(lexer);
+        continue;
+
+      case '.':
+        if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DOT)) return NULL;
+        continue;
+
+      default:     
+        if (_is_digit(lexer->currChar)) {
+          if (!_appendToken(makeNumberTokenLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
+          continue;
+        }
+
+        if (_is_letter(lexer->currChar) || lexer->currChar == '_') {
+          if (!_appendToken(makeIdentifierLexer(lexer), &tokens, &size, &capacity)) return NULL;
+          continue;
+        }
+
+        char details[4] = {'\'', lexer->currChar, '\'', '\0'};
+        Position start = lexer->pos;
+        advanceLexer(lexer);
+        Position end = lexer->pos;
+
+        if (error) {
+          *error = initIllegalCharError(start, end, lexer->filename, details, lexer->text);
+        }
+
+        freeTokens(tokens, size);
+        return NULL;
     }
-
-    if (_is_letter(lexer->currChar) || lexer->currChar == '_') {
-      if (!_appendToken(makeIdentifierLexer(lexer), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '"') {
-      if (!_appendToken(makeStringLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '\'') {
-      if (!_appendToken(makeCharLexer(lexer, error), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '!') {
-      if (!_appendToken(makeNotEqualsToken(lexer, error), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '=') {
-      if (!_appendToken(makeEqualsToken(lexer), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '<') {
-      if (!_appendToken(makeLessThanToken(lexer), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '>') {
-      if (!_appendToken(makeGreaterThanToken(lexer), &tokens, &size, &capacity)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '+') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_PLUS)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '-') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MINUS)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '[') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LBRACK)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == ']') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RBRACK)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '{') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LCURLBRACK)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '}') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RCURLBRACK)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == ':') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_COLON)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == ',') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_COMMA)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '*') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_MUL)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '/') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DIV)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '^') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_POW)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '(') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_LPAREN)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == ')') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_RPAREN)) return NULL;
-      continue;
-    }
-
-    if (lexer->currChar == '#') {
-      while (lexer->currChar != '\n' && lexer->currChar != '\0') advanceLexer(lexer);
-      continue;
-    }
-
-    if (lexer->currChar == '.') {
-      if (!_generateToken(lexer, &tokens, &size, &capacity, TOK_DOT)) return NULL;
-      continue;
-    }
-
-    char details[4] = {'\'', lexer->currChar, '\'', '\0'};
-    Position start = lexer->pos;
-    advanceLexer(lexer);
-    Position end = lexer->pos;
-
-    if (error) {
-      *error = initIllegalCharError(start, end, lexer->filename, details, lexer->text);
-    }
-
-    freeTokens(tokens, size);
-    return NULL;
   }
+
   tokens[size] = (Token){.type = TOK_EOF};
   *outSize = size;
   return tokens;
 }
 
 void freeLexer(Lexer *lexer) {
-  if (!lexer) return;
-
-  free(lexer);
+  // TODO: cleanup
 }
