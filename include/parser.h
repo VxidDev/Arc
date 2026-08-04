@@ -6,28 +6,15 @@
 #include "token.h"
 #include "node.h"
 #include "error.h"
+#include "lexer.h"
 
 typedef struct Parser {
-  Token *tokens;
   Token currentToken;
-
-  int64_t tokenIndex;
-  uint64_t tokenAmount;
-
+  Lexer* lexer;
   Error **error;
-  char* sourcetext;
-  char *filename;
 } Parser;
 
-typedef struct ParserCheckpoint {
-  int tokenIndex;
-  Token currentToken;
-} ParserCheckpoint;
-
-ParserCheckpoint saveParser(Parser* parser);
-void rewindParser(Parser* parser, ParserCheckpoint checkpoint);
-
-Parser* initParser(Token *tokens, const unsigned long tokenAmount, Error **error, char *sourcetext, char *filename);
+Parser* initParser(Lexer* lexer, Error **error);
 Token advanceParser(Parser* parser);
 
 ASTNode* parseParser(Parser* parser);

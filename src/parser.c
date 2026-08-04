@@ -11,37 +11,20 @@
 
 static int sDepth = 0;
 
-ParserCheckpoint saveParser(Parser* parser) {
-  return (ParserCheckpoint){
-    .tokenIndex = parser->tokenIndex,
-    .currentToken = parser->currentToken
-  };
-}
-
-void rewindParser(Parser* parser, ParserCheckpoint checkpoint) {
-  parser->tokenIndex = checkpoint.tokenIndex;
-  parser->currentToken = checkpoint.currentToken;
-}
-
 static inline void setError(Parser* parser, Position start, Position end, char* msg) {
   if (*parser->error == NULL)
-    *parser->error = initSyntaxError(start, end, parser->filename, msg, parser->sourcetext);
+    *parser->error = initSyntaxError(start, end, parser->lexer->filename, msg, parser->lexer->text);
 }
 
-Parser* initParser(Token* tokens, const unsigned long tokenAmount, Error **error, char *sourcetext, char *filename) {
-  if (!tokens || !error) return NULL;
+Parser* initParser(Lexer* lexer, Error **error) {
+  if (!error) return NULL;
 
   Parser* parser = arenaAlloc(parseArena, sizeof(Parser));
 
   if (!parser) return NULL;
 
-  parser->tokens = tokens;
-  parser->tokenAmount = tokenAmount;
-  parser->tokenIndex = -1;
-  parser->currentToken = (Token){.type = TOK_EOF};
-
-  parser->sourcetext = sourcetext;
-  parser->filename = filename;
+  parser->lexer = lexer;
+  parser->currentToken = (Token){ .type = TOK_EOF };
 
   parser->error = error;
 
@@ -53,13 +36,9 @@ Parser* initParser(Token* tokens, const unsigned long tokenAmount, Error **error
 Token advanceParser(Parser* parser) {
   if (!parser) return (Token){.type = TOK_EOF};
 
-  parser->tokenIndex++;
-
-  if ((size_t)parser->tokenIndex < parser->tokenAmount) {
-    parser->currentToken = parser->tokens[parser->tokenIndex];
-  } else {
-    parser->currentToken = (Token){.type = TOK_EOF};
-  }
+  if (parser->currentToken.type != TOK_INVALID) {
+    parser->currentToken = lexNextToken(parser->lexer, parser->error);
+  } 
 
   return parser->currentToken;
 }
@@ -475,8 +454,7 @@ ASTNode* postfixParser(Parser* parser) {
       advanceParser(parser); // skip '.'
 
       if (parser->currentToken.type != TOK_IDENTIFIER) {
-        if (*parser->error == NULL)
-          *parser->error = initSyntaxError(start, parser->currentToken.end, parser->filename, "Expected identifier after '.'.", parser->sourcetext);
+        setError(parser, start, parser->currentToken.end, "Expected identifier after '.'.");
         return NULL;
       }
 

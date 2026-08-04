@@ -1150,14 +1150,8 @@ Object *vmRun(VM *vm) {
       }
 
       Lexer *lexer = initLexer(stringDup(name), fileContent);
-      size_t tokenAmount = 0;
-      Token *tokens = makeTokensLexer(lexer, vm->err, &tokenAmount);
 
-      if (UNLIKELY(!tokens)) {
-        HANDLE_ERROR();
-      }
-
-      Parser *parser = initParser(tokens, tokenAmount, vm->err, fileContent, name);
+      Parser *parser = initParser(lexer, vm->err);
       ASTNode *ast = parseProgram(parser);
 
       if (UNLIKELY(!ast)) { 

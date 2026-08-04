@@ -174,36 +174,9 @@ static inline void run(char *text, Error **error, size_t *size, SymbolTable* var
     return;
   }
 
-  Token *tokens = makeTokensLexer(lexer, error, size);
-
-  if (!tokens) {
-    if (*error) {
-      char *errStr = errorAsString(*error);
-      printf("%s%s%s\n", COLOR(ANSI_BRIGHT_RED_FG), errStr, COLOR(ANSI_RESET));
-      free(errStr);
-
-      freeError(*error);
-      *error = NULL;
-    }
-    
-    return;
-  }
-
-  if (_DEBUG) {
-    printf("\n%sTokens: %s", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_BLUE_FG));
-
-    for (size_t i = 0; i < *size; i++) {
-      printf("%s ", tokToString(tokens[i].type));
-    }
-
-    if (_IS_COLORED) printf("%s\n", ANSI_RESET);
-    else putchar('\n');
-  }
-
-  Parser* parser = initParser(tokens, *size, error, text, filename);
+  Parser* parser = initParser(lexer, error);
 
   if (!parser) {
-    freeTokens(tokens, *size);
     return;
   }
 
@@ -228,7 +201,6 @@ static inline void run(char *text, Error **error, size_t *size, SymbolTable* var
       *error = NULL;
     } 
 
-    freeTokens(tokens, *size);
     return;
   }
 
@@ -243,8 +215,6 @@ static inline void run(char *text, Error **error, size_t *size, SymbolTable* var
       freeError(*error);
       *error = NULL;
     }
-
-    freeTokens(tokens, *size);
 
     printf("%sArc: %sFailed to compile AST tree to bytecode.%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_BRIGHT_RED_FG), COLOR(ANSI_RESET));
     return;
@@ -267,7 +237,6 @@ static inline void run(char *text, Error **error, size_t *size, SymbolTable* var
 
     if (!result) {
       freeChunk(chunk);
-      freeTokens(tokens, *size);
 
       if (*error && (*error)->details[0] != '@') { 
         char *errStr = errorAsString(*error);
@@ -292,7 +261,6 @@ static inline void run(char *text, Error **error, size_t *size, SymbolTable* var
         return;
       }
 
-      freeTokens(tokens, *size);
       return;
     }
 
@@ -302,7 +270,6 @@ static inline void run(char *text, Error **error, size_t *size, SymbolTable* var
   }
 
   freeChunk(chunk);
-  freeTokens(tokens, *size);
 }
 
 void parseArguments(int argc, char **argv) {

@@ -15,11 +15,7 @@ typedef struct Lexer {
 } Lexer;
 
 Lexer* initLexer(char *filename, char *text);
-
-void advanceLexer(Lexer *lexer);
-
-Token* makeTokensLexer(Lexer *lexer, Error** error, size_t *outSize);
-
+Token lexNextToken(Lexer *lexer, Error **error);
 void freeLexer(Lexer* lexer);
 
 #endif // LEXER_H 
