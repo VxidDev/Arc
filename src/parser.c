@@ -712,17 +712,13 @@ static ASTNode* parseFunction(Parser* parser) {
     return NULL;
   }
   
-  char* funcName = stringDup(parser->currentToken.val.s);
+  char* funcName = parser->currentToken.val.s;
   
   start = parser->currentToken.start;
   end = parser->currentToken.end;
 
   Position funcStart = start;
   Position funcEnd = end;
-
-  if (!funcName) {
-    return NULL;
-  }
 
   advanceParser(parser); // skip function name 
 

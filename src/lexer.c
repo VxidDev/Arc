@@ -126,48 +126,37 @@ static TokType keywordType(const char *s, const uint64_t len) {
 
 static Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
   if (!lexer) return (Token){.type = TOK_INVALID};
-
-  size_t size = 0;
-  size_t capacity = 32;
-
-  char *numStr = arenaAlloc(stringArena, capacity);
-
-  if (!numStr) return (Token){.type = TOK_INVALID};
-
-  size_t dotCount = 0;
-
+  
   Position start = lexer->pos;
-
-  while (lexer->currChar != 0 && (_is_digit(lexer->currChar) || lexer->currChar == '.')) {
-    if (size >= capacity) {
-      size_t oldcap = capacity;
-      capacity *= 2;
-
-      void* tmp = arenaRealloc(stringArena, numStr, oldcap, capacity);
-
-      if (!tmp) {
-        return (Token){.type = TOK_INVALID};
-      }
-
-      numStr = tmp;
-    }
-
+  const char *startPtr = &lexer->text[lexer->pos.index];
+  size_t len = 0;
+  size_t dotCount = 0;
+  
+  while (lexer->currChar != '\0' && (_is_digit(lexer->currChar) || lexer->currChar == '.')) {
     if (lexer->currChar == '.') {
       if (dotCount == 1) break;
       dotCount++;
     }
 
-    numStr[size++] = lexer->currChar;
-
+    len++;
     advanceLexer(lexer);
   }
 
-  numStr[size] = '\0';
+  char stackBuf[128];
+  char *numStr = stackBuf;
 
+  if (len >= sizeof(stackBuf)) {
+    numStr = arenaAlloc(stringArena, len + 1);
+    if (!numStr) return (Token){ .type = TOK_INVALID };
+  }
+
+  memcpy(numStr, startPtr, len);
+  numStr[len] = '\0';
+
+  char *end;
+  errno = 0;
+  
   if (dotCount == 0) {
-    char *end;
-    errno = 0;
-
     int64_t value = (int64_t)strtoll(numStr, &end, 10);
 
     // No digits found
@@ -177,7 +166,7 @@ static Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
     }
 
     // overflow / underflow
-    if (errno == ERANGE || value > INT64_MAX || value < INT64_MIN) {
+    if (errno == ERANGE) {
       *error = initSemanticError(start, lexer->pos, lexer->filename, "Number out of range", lexer->text);
       return (Token){.type = TOK_INVALID};
     }
@@ -192,9 +181,6 @@ static Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
 
     return token;
   }
-
-  char *end;
-  errno = 0;
 
   double value = strtod(numStr, &end);
 
@@ -222,6 +208,8 @@ static Token makeNumberTokenLexer(Lexer* lexer, Error** error) {
 }
 
 static Token makeIdentifierLexer(Lexer *lexer) {
+  if (!lexer) return (Token){ .type = TOK_INVALID };
+
   Position start = lexer->pos;
   const char *startPtr = &lexer->text[lexer->pos.index];
   size_t len = 0;
@@ -247,26 +235,46 @@ static Token makeIdentifierLexer(Lexer *lexer) {
 }
 
 Token makeStringLexer(Lexer* lexer, Error** error) {
+  if (!lexer) return (Token){ .type = TOK_INVALID };
+
   Position start = lexer->pos;
-
   advanceLexer(lexer); // Skip opening quote
-
-  char *buffer = arenaAlloc(stringArena, 1024); // fixed length for now
+  
+  char stackBuf[256];
+  char *buffer = stackBuf;
+  size_t capacity = sizeof(stackBuf);
   size_t len = 0;
 
-  while (lexer->currChar && lexer->currChar != '"') {
-    if (lexer->currChar == '\\') {
-        advanceLexer(lexer);
+  while (lexer->currChar != '\0' && lexer->currChar != '"') {
+    if (len + 1 >= capacity) {
+      size_t oldCap = capacity;
+      capacity *= 2;
 
-        switch (lexer->currChar) {
-            case 'n': buffer[len++] = '\n'; break;
-            case 't': buffer[len++] = '\t'; break;
-            case '"': buffer[len++] = '"'; break;
-            case '\\': buffer[len++] = '\\'; break;
-            default: buffer[len++] = lexer->currChar; break;
-        }
+      if (buffer == stackBuf) {
+        buffer = arenaAlloc(stringArena, capacity);
+        if (!buffer) return (Token){ .type = TOK_INVALID };
+        memcpy(buffer, stackBuf, len);
+      } else {
+        void *tmp = arenaRealloc(stringArena, buffer, oldCap, capacity);
+        if (!tmp) return (Token){ .type = TOK_INVALID };
+        buffer = tmp;
+      }
+    }
+
+    if (lexer->currChar == '\\') {
+      advanceLexer(lexer);
+
+      switch (lexer->currChar) {
+        case 'n': buffer[len++] = '\n'; break;
+        case 't': buffer[len++] = '\t'; break;
+        case 'r': buffer[len++] = '\r'; break;
+        case '0': buffer[len++] = '\0'; break;
+        case '"': buffer[len++] = '"'; break;
+        case '\\': buffer[len++] = '\\'; break;
+        default: buffer[len++] = lexer->currChar; break;
+      }
     } else {
-        buffer[len++] = lexer->currChar;
+      buffer[len++] = lexer->currChar;
     }
 
     advanceLexer(lexer);
@@ -280,8 +288,19 @@ Token makeStringLexer(Lexer* lexer, Error** error) {
   buffer[len] = '\0';
 
   advanceLexer(lexer); // skip closing quote
+  
+  char *finalStr;
 
-  return initToken(TOK_STRING, buffer, false, start, lexer->pos);
+  if (buffer == stackBuf) {
+    finalStr = arenaAlloc(stringArena, len + 1);
+    if (!finalStr) return (Token){ .type = TOK_INVALID };
+    memcpy(finalStr, stackBuf, len + 1);
+  } else {
+    // trim block down to exact byte count
+    finalStr = arenaRealloc(stringArena, buffer, capacity, len + 1);
+  }
+
+  return initToken(TOK_STRING, finalStr, false, start, lexer->pos);
 }
 
 static Token makeCharLexer(Lexer *lexer, Error** error) {

@@ -29,8 +29,7 @@ const char* binOpStr[] = {
 };
 
 Token initToken(TokType type, void* value, bool needsToBeFreed, Position start, Position end) {
-  Token token = {0};
-
+  Token token;
   token.type = type;
 
   switch (type) {
