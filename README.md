@@ -13,7 +13,7 @@ For detailed information, please refer to the documentation in the `docs/` folde
 *   **Object-Oriented:** Supports classes with dynamic field access and modularity.
 *   **Memory Management:** Hybrid strategy using arenas, pools, and manual reference management.
 *   **FFI:** Built-in capability to load and interact with external native C libraries (`.so`, `.dll`).
-*   **Standard Library:** Rich standard library covering I/O, math, JSON, and filesystem utilities.
+*   **Standard Library:** Rich standard library covering I/O, math, JSON, filesystem and UI utilities.
 *   **Robust Error Handling:** Position-aware error reporting with `TRY...CATCH` blocks.
 
 ## Build and Install
