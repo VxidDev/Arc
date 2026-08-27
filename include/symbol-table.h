@@ -7,6 +7,8 @@
 typedef struct Symbol {
   char *name;
   Value value;
+  bool isMutable;
+  bool isReference;
   struct Symbol *next;
 } Symbol;
 
@@ -18,7 +20,8 @@ typedef struct SymbolTable {
 } SymbolTable;
 
 SymbolTable *createTable(size_t capacity, SymbolTable *parent);
-void setTable(SymbolTable *table, char *name, Value value);
+bool setTable(SymbolTable *table, char *name, Value value);
+void declareTable(SymbolTable *table, char *name, Value value, bool isMutable, bool isReference);
 Value getTable(SymbolTable *table, const char *name);
 void removeSymbol(SymbolTable *table, const char *name);
 void freeTable(SymbolTable *table);

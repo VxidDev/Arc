@@ -366,6 +366,7 @@ Object *vmRun(VM *vm) {
     [OP_LOAD_CONST] = &&OP_LOAD_CONST,
     [OP_LOAD_VAR] = &&OP_LOAD_VAR,
     [OP_STORE_VAR] = &&OP_STORE_VAR,
+    [OP_DECLARE_VAR] = &&OP_DECLARE_VAR,
 
     [OP_POP] = &&OP_POP,
 
@@ -523,8 +524,28 @@ Object *vmRun(VM *vm) {
       
       if (frame->instance) {
         setTableLocal(vars, name->value, val);
+      } else if (UNLIKELY(!setTable(vars, name->value, val))) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Cannot assign to constant \"%s\".", name->value);
+        VM_ERR(initNameError, buf);
+        HANDLE_ERROR();
+      }
+
+      DISPATCH();
+    }
+
+    OP_DECLARE_VAR: {
+      String *name = (String *)READ_CONST();
+      uint8_t flags = READ_BYTE();
+      Value val = PEEK(0);
+
+      bool isMutable   = flags & 0x1;
+      bool isReference = flags & 0x2;
+
+      if (frame->instance) {
+        setTableLocal(vars, name->value, val);
       } else {
-        setTable(vars, name->value, val);
+        declareTable(vars, name->value, val, isMutable, isReference);
       }
 
       DISPATCH();

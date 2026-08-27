@@ -35,6 +35,7 @@ typedef enum OpCode {
   OP_IMPORT,
   OP_PROPERTY_ACCESS,
   OP_PROPERTY_SET,
+  OP_DECLARE_VAR,
   OP_HALT
 } OpCode;
 
@@ -44,6 +45,7 @@ typedef struct Local {
   const char *name;
   size_t len;
   int slot;
+  bool isReference, isMutable;
 } Local;
 
 typedef struct PosEntry {

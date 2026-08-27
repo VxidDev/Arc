@@ -77,7 +77,7 @@ static ASTNode* parseTryCatch(Parser* parser);
 static ASTNode* parseReturn(Parser* parser);
 static ASTNode* parseFunction(Parser* parser);
 static ASTNode* parseFor(Parser* parser);
-static ASTNode* parseVar(Parser* parser);
+static ASTNode* parseVar(Parser* parser, const bool isMutable, const bool isReference);
 static ASTNode* parseImport(Parser* parser);
 static ASTNode* parseIf(Parser* parser);
 
@@ -113,7 +113,7 @@ static ASTNode* parseExprPrimary(Parser* parser) {
       setError(parser, parser->currentToken.start, parser->currentToken.end, "Unexpected ')'");
       return NULL;
 
-    case TOK_EOF: return NULL; // TODO: error handling
+    case TOK_EOF:   return NULL; // TODO: error handling
     case TOK_CLASS: return parseClass(parser);
     case TOK_FOR:   return parseFor(parser);
 
@@ -135,7 +135,17 @@ static ASTNode* parseExprPrimary(Parser* parser) {
     case TOK_FN:     return parseFunction(parser);
     case TOK_IF:     return parseIf(parser);
     case TOK_IMPORT: return parseImport(parser);
-    case TOK_VAR:    return parseVar(parser);
+    
+    case TOK_CONSTVAL:
+    case TOK_CONSTREF:
+    case TOK_VAR:
+      const TokType type = parser->currentToken.type;
+
+      const bool isReference = (type == TOK_CONSTREF);
+      const bool isMutable = (type == TOK_VAR);
+      
+      return parseVar(parser, isMutable, isReference);
+    
     case TOK_IDENTIFIER: return parseIdentifier(parser);
 
     default: return parseUnary(parser);
@@ -948,18 +958,24 @@ static ASTNode* parseImport(Parser* parser) {
   return (ASTNode*)initImportNode(filePathToken);
 }
 
-static ASTNode* parseVar(Parser* parser) {
+static ASTNode* parseVar(Parser* parser, const bool isMutable, const bool isReference) {
   Token tok = parser->currentToken; // safe copy
   Position start = tok.start;
   advanceParser(parser);
 
   if (parser->currentToken.type == TOK_EOF) {
-    setError(parser, tok.start, tok.end, "Expression token after 'VAR' keyword.");
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected token after '%s' keyword.", tok.type == TOK_VAR ? "VAR" : tok.type == TOK_CONSTVAL ? "CONSTVAL" : "CONSTREF");
+
+    setError(parser, tok.start, tok.end, buf);
     return NULL;
   }
 
   if (parser->currentToken.type != TOK_IDENTIFIER) {
-    setError(parser, parser->currentToken.start, parser->currentToken.end, "Expected identifier after 'VAR'");
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Expected identifier after '%s' keyword.", tok.type == TOK_VAR ? "VAR" : tok.type == TOK_CONSTVAL ? "CONSTVAL" : "CONSTREF");
+    
+    setError(parser, parser->currentToken.start, parser->currentToken.end, buf);
     return NULL;
   }
 
@@ -989,7 +1005,7 @@ static ASTNode* parseVar(Parser* parser) {
     return NULL;
   }
 
-  return (ASTNode*)initVarAssignNode(varName, expr, start, true);
+  return (ASTNode*)initVarAssignNode(varName, expr, start, true, isMutable, isReference);
 }
 
 static ASTNode* parseIdentifier(Parser* parser) {
@@ -1011,7 +1027,7 @@ static ASTNode* parseIdentifier(Parser* parser) {
 
     if (target->type == NODE_VARACCESS) {
       VarAccessNode* va = (VarAccessNode*)target;
-      return (ASTNode*)initVarAssignNode(va->token.val.s, value, va->token.start, false);
+      return (ASTNode*)initVarAssignNode(va->token.val.s, value, va->token.start, false, false, false);
     }
 
     if (target->type == NODE_PROPERTYACCESS) {

@@ -127,6 +127,9 @@ char* tokToString(const TokType type) {
     case TOK_RCURLBRACK: return "RCURLBRACK";
     case TOK_COLON: return "COLON";
 
+    case TOK_CONSTVAL: return "CONSTVAL";
+    case TOK_CONSTREF: return "CONSTREF";
+
     case TOK_EOF: return "EOF";
     case TOK_INVALID: return "INVALID";
 

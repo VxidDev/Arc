@@ -66,7 +66,7 @@ Value getTableLocal(SymbolTable *table, const char *name) {
   return VAL_UNDEF();
 }
 
-void setTable(SymbolTable *table, char *name, Value value) {
+bool setTable(SymbolTable *table, char *name, Value value) {
   size_t hash = hashPointer(name);
   
   for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
@@ -74,21 +74,53 @@ void setTable(SymbolTable *table, char *name, Value value) {
     size_t index = hash & (currTable->capacity - 1); // capacity differs per table
     for (Symbol *sym = currTable->buckets[index]; sym; sym = sym->next) {
       if (sym->name == name) {
+        if (!sym->isMutable) return false;
         freeValue(sym->value);
         sym->value = IS_OBJ(value) ? copyValue(value) : value;
-        return;
+        return true;
       }
     }
   }
   
   size_t index = hash & (table->capacity - 1);
   Symbol *newSym = poolAlloc(symbolPool);
+  if (!newSym) return true;
+
+  newSym->name = name;
+  newSym->value = IS_OBJ(value) ? copyValue(value) : value;
+  newSym->isMutable = true;
+  newSym->isReference = false;
+  newSym->next = table->buckets[index];
+  table->buckets[index] = newSym;
+  table->count++;
+  return true;
+}
+
+void declareTable(SymbolTable *table, char *name, Value value, bool isMutable, bool isReference) {
+  size_t hash = hashPointer(name);
+
+  for (SymbolTable *currTable = table; currTable; currTable = currTable->parent) {
+    if (currTable->count == 0) continue;
+    size_t index = hash & (currTable->capacity - 1);
+    for (Symbol *sym = currTable->buckets[index]; sym; sym = sym->next) {
+      if (sym->name == name) {
+        freeValue(sym->value);
+        sym->value = IS_OBJ(value) ? copyValue(value) : value;
+        sym->isMutable = isMutable;
+        sym->isReference = isReference;
+        return;
+      }
+    }
+  }
+
+  size_t index = hash & (table->capacity - 1);
+  Symbol *newSym = poolAlloc(symbolPool);
   if (!newSym) return;
 
   newSym->name = name;
-
   newSym->value = IS_OBJ(value) ? copyValue(value) : value;
-
+  newSym->isMutable = isMutable;
+  newSym->isReference = isReference;
   newSym->next = table->buckets[index];
   table->buckets[index] = newSym;
   table->count++;

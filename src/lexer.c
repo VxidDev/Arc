@@ -112,12 +112,14 @@ static TokType keywordType(const char *s, const uint64_t len) {
     case 6:
       if (word == KW("IMPORT")) return TOK_IMPORT;
       if (word == KW("RETURN")) return TOK_RETURN;      
-
+      
       break;
     
     case 8:
       if (word == KW("CONTINUE")) return TOK_CONTINUE;
-      
+      if (word == KW("CONSTVAL")) return TOK_CONSTVAL;
+      if (word == KW("CONSTREF")) return TOK_CONSTREF;
+
       break;
   }
 

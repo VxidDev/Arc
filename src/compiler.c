@@ -270,13 +270,15 @@ static int resolveLocal(Compiler *c, const char *name) {
   return -1;
 }
 
-static int addLocal(Compiler *c, const char *name) {
+static int addLocal(Compiler *c, const char *name, bool isMutable, bool isReference) {
   if (c->localCount >= MAX_LOCALS) return -1;
   Local *l = &c->locals[c->localCount];
   
   l->name = name; 
   l->len = strlen(name);
   l->slot = c->localCount;
+  l->isMutable = isMutable;
+  l->isReference = isReference;
 
   c->localCount++;
 
@@ -507,7 +509,7 @@ static void compileVarAssign(ASTNode *node, Compiler *c) {
 
   if (c->isFunction) {
     if (va->isDeclaration) {
-      int slot = addLocal(c, va->identifier);
+      int slot = addLocal(c, va->identifier, va->isMutable, va->isReference);
       if (slot >= 0) {
         emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
         return;
@@ -515,14 +517,30 @@ static void compileVarAssign(ASTNode *node, Compiler *c) {
     } else {
       int slot = resolveLocal(c, va->identifier);
       if (slot >= 0) {
+        if (!c->locals[slot].isMutable) {
+          if (c->err && !*c->err) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "Cannot assign to constant \"%s\".", va->identifier);
+            *c->err = initRuntimeError(getNodeStart(node), getNodeEnd(node), c->filename, buf, c->sourcetext);
+          }
+
+          return;
+        }
+
         emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
         return;
       }
     }
   }
 
-  emitByte(c, OP_STORE_VAR);
-  emitConstRef(c, internString(c, va->identifier, strlen(va->identifier)));
+  if (va->isDeclaration) {
+    emitByte(c, OP_DECLARE_VAR);
+    emitConstRef(c, internString(c, va->identifier, strlen(va->identifier)));
+    emitByte(c, (uint8_t)((va->isMutable ? 0x1 : 0) | (va->isReference ? 0x2 : 0)));
+  } else {
+    emitByte(c, OP_STORE_VAR);
+    emitConstRef(c, internString(c, va->identifier, strlen(va->identifier)));
+  }
 }
 
 static void compileBinOp(ASTNode *node, Compiler *c) {
@@ -700,7 +718,7 @@ static void compileFor(ASTNode *node, Compiler *c) {
   int exitJump = emitJump(c, OP_FOR_ITER);
   
   int slot = -1;
-  if (c->isFunction) slot = addLocal(c, fn->ident.val.s);
+  if (c->isFunction) slot = addLocal(c, fn->ident.val.s, true, false);
 
   if (slot >= 0) {
     emitBytes(c, OP_STORE_LOCAL, (uint8_t)slot);
@@ -767,7 +785,7 @@ static void compileFunction(ASTNode *node, Compiler *c) {
 
   // pre-declare parameters as locals in order
   for (size_t i = 0; i < fn->paramCount; i++)
-    addLocal(&fc, fn->params[i]);
+    addLocal(&fc, fn->params[i], true, false);
 
   if (fn->body->type == NODE_PROGRAM)
     compileProgram(fn->body, &fc);
@@ -865,7 +883,7 @@ static void compileReturn(ASTNode *node, Compiler *c) {
   }
 
   if (forDepth > 0 && c->isFunction) {
-    int tmpSlot = addLocal(c, "$ret_tmp");
+    int tmpSlot = addLocal(c, "$ret_tmp", true, false);
 
     emitBytes(c, OP_STORE_LOCAL, (uint8_t)tmpSlot);
     emitByte(c, OP_POP);
@@ -1153,6 +1171,18 @@ void disassembleChunk(Chunk *chunk, const char *name) {
         i += 3;
         printf("OP_STORE_VAR"); 
         printConstant(chunk, idx);
+        printf("\n");
+        break;
+      }
+      case OP_DECLARE_VAR: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        uint8_t flags = chunk->code[++i];
+        printf("OP_DECLARE_VAR");
+        printConstant(chunk, idx);
+        printf(" [%s%s]",
+              (flags & 0x1) ? "mutable" : "const",
+              (flags & 0x2) ? ",ref" : "");
         printf("\n");
         break;
       }
