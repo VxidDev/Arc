@@ -7,7 +7,8 @@ calc.arc
 arc.arc
 vgcore.*
 perf.data*
-test.py
+test.*
+arc
 nested.json
 
 fib.arc

@@ -1,59 +1,23 @@
-import "@stdlib/json/json.arc"
+IMPORT "@stdlib/assert.arc"
+IMPORT "@stdlib/json/json.arc"
 
-import "__sys"
+VAR json_str = "{\"test\": 1}"
 
-var json_str = "{\"test\": 1}"
+# lexer produces correct token count
+VAR tokens = json_lexer(json_str)
+assert_eq(len_of(tokens), 5, "json lexer token count")
 
-print("json string:", json_str, "\n\n--- Manual Parsing (json_lexer, json_parse_value) --- \n")
+# manual parse produces correct map
+VAR map = json_parse_value(tokens, 0)[1]
+assert_eq(len_of(map), 1, "manual parse map length")
 
-var tokens = json_lexer(json_str)
+# to_json parses correctly
+VAR map2 = to_json(json_str)
+assert_eq(len_of(map2), 1, "to_json map length")
 
-for tok in tokens then 
-  repr = tok.repr(tok)
+# json_get_value retrieves value
+VAR val = json_get_value(map2, "test")
+assert_true(val != null, "json_get_value returns non-null")
+assert_eq(val, 1, "json_get_value('test') == 1")
 
-  write(1, repr, len_of(repr))
-  write(1, " ", 1)
-end 
-
-if len_of(tokens) != 5 then
-  print("\n\nERROR: len_of(tokens) != 5")
-  exit(1)
-end 
-
-var map = json_parse_value(tokens, 0)[1]
-
-print("\n")
-print(map)
-
-if len_of(map) != 1 then 
-  print("\n\nERROR: len_of(map) != 1")
-  exit(1)
-end 
-
-print("\nManual parsing test passed.\n\n--- to_json Parsing ---\n")
-map = to_json(json_str)
-
-print(map)
-
-if len_of(map) != 1 then 
-  print("ERROR: len_of(map) != 1")
-end 
-
-print("\nto_json Parsing test passed.\n\n--- json_get_value test ---\n")
-
-var val = json_get_value(map, "test")
-
-if val == null then 
-  print("ERROR: val == null")
-  exit(1)
-end 
-
-if val != 1 then 
-  print("ERROR: val != 1")
-  exit(1)
-end
-
-print("test's value:", val)
-print("\n--- json_get_value test passed ---")
-
-print("\ntest_stdlib_json.arc passed")
+print("test_stdlib_json.arc passed\n")

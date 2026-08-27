@@ -1,14 +1,18 @@
-# integers
-VAR int = 123 
+IMPORT "@stdlib/assert.arc"
 
-# floats 
-VAR float = 1.23
+VAR int_val = 123
+assert_eq(int_val, 123, "integer variable")
 
-# strings 
-VAR str = "string"
+VAR float_val = 1.23
+assert_eq(float_val, 1.23, "float variable")
 
-# lists 
-VAR list = [1, 2.0, "3"]
+VAR str_val = "string"
+assert_true(str_val == "string", "string variable")
+
+VAR list_val = [1, 2.0, "3"]
+assert_eq(len_of(list_val), 3, "list variable length")
+assert_eq(list_val[0], 1, "list element int")
+assert_eq(list_val[1], 2.0, "list element float")
+assert_true(list_val[2] == "3", "list element string")
 
 print("test_vars.arc passed\n")
-

@@ -1,59 +1,35 @@
-IMPORT "__sys"
+IMPORT "@stdlib/assert.arc"
 
-# Test string concatenation (+)
-var a = "Hello"
-var b = " World"
-var c = a + b
-print("Concatenation: ", c == "Hello World")
+# string concatenation
+VAR a = "Hello"
+VAR b = " World"
+VAR c = a + b
+assert_true(c == "Hello World", "concatenation")
 
-if c != "Hello World" then exit(1) end
+# string multiplication
+VAR d = "Arc"
+VAR e = d * 3
+assert_true(e == "ArcArcArc", "multiplication")
 
-print("Result: ", c)
-
-# Test string multiplication (*)
-var d = "Arc"
-var e = d * 3
-print("Multiplication: ", e == "ArcArcArc")
-
-if e != "ArcArcArc" then exit(1) end 
-
-print("Result: ", e)
-
-# Test equality and mutability interaction
-var s1 = "test"
-var s2 = "test"
-
-print("Initial equality: ", s1 == s2)
-
-if s1 != s2 then exit(1) end 
+# equality and mutability
+VAR s1 = "test"
+VAR s2 = "test"
+assert_true(s1 == s2, "initial equality")
 
 s1[0] = "T"
-print("Modified s1: ", s1)
-print("s2 remains: ", s2)
-print("Equality after mutation: ", s1 == s2)
+assert_true(s1 != s2, "inequality after mutation")
+assert_true(s1 == "Test", "modified value")
+assert_true(s2 == "test", "original unchanged")
 
-if s1 == s2 then exit(1) end 
+# edge cases
+VAR empty = ""
+assert_true(empty + "foo" == "foo", "empty + string")
+assert_true(d * 0 == "", "string * 0")
+assert_true(d * 1 == "Arc", "string * 1")
 
-# Test edge cases
-var empty = ""
+# list of strings
+VAR list = ["a", "b", "c"]
+VAR joined = list[0] + list[1] + list[2]
+assert_true(joined == "abc", "joined list elements")
 
-print("Empty + String: ", (empty + "foo") == "foo")
-
-if (empty + "foo") != "foo" then exit(1) end 
-
-print("String * 0: ", (d * 0) == "")
-
-if (d * 0) != "" then exit(1) end 
-
-print("String * 1: ", (d * 1) == "Arc")
-
-if (d * 1) != "Arc" then exit(1) end
-
-# Test list of strings
-var list = ["a", "b", "c"]
-var joined = list[0] + list[1] + list[2]
-print("Joined list elements: ", joined == "abc")
-
-if joined != "abc" then exit(1) end
-
-print("\ntest_string_ops.arc passed")
+print("test_string_ops.arc passed\n")

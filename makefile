@@ -155,13 +155,30 @@ release-install: release
 	$(Q)install -Dm755 $(TARGET) $(BINDIR)/$(TARGET)
 	$(Q)$(MAKE) install-libs
 
-test: release
-	$(ECHO) "Running tests..."
-	$(Q)for f in $(TEST_FILES); do \
-		echo "== $$f =="; \
-		./$(TARGET) "$$f" || exit 1; \
-	done
-	$(ECHO) "All tests passed."
+test: dev
+	$(Q)passed=0; failed=0; skipped=0; \
+	for f in $(TEST_FILES); do \
+		name=$$(basename "$$f"); \
+		output=$$(./$(TARGET) "$$f" 2>&1); \
+		rc=$$?; \
+		if echo "$$output" | grep -q "passed"; then \
+			printf "  \033[32mPASS\033[0m  %s\n" "$$name"; \
+			passed=$$((passed+1)); \
+		elif [ $$rc -ne 0 ] || echo "$$output" | grep -q "Runtime Error\|FAIL"; then \
+			printf "  \033[31mFAIL\033[0m  %s\n" "$$name"; \
+			echo "$$output" | sed 's/^/        /'; \
+			failed=$$((failed+1)); \
+		else \
+			printf "  \033[33mSKIP\033[0m  %s\n" "$$name"; \
+			skipped=$$((skipped+1)); \
+		fi; \
+	done; \
+	echo ""; \
+	printf "  %d passed, %d failed, %d skipped\n" "$$passed" "$$failed" "$$skipped"; \
+	echo ""; \
+	if [ $$failed -ne 0 ]; then \
+		exit 1; \
+	fi
 
 install: release-install
 

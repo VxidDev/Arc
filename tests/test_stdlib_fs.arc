@@ -1,28 +1,26 @@
-import "@stdlib/io/fs.arc"
-import "@stdlib/io/file.arc"
-# import "__sys" included with fs.arc 
+IMPORT "@stdlib/assert.arc"
+IMPORT "@stdlib/io/fs.arc"
+IMPORT "@stdlib/io/file.arc"
 
-# create test file 
-var file = File()
-file.init(file, "test.txt", "w")
+# create test file
+VAR file = File()
+file.init(file, "test_fs_tmp.txt", "w")
 file.open(file)
 file.close(file)
 
-if fs_exists("test.txt") != true then 
-  print("fs_exists(test.txt)")
-  exit(1)
-end 
+assert_true(fs_exists("test_fs_tmp.txt"), "fs_exists on created file")
 
-if fs_delete("test.txt") != FS_OK then 
-  print("fs_delete(test.txt)")
-  exit(1)
-end 
+VAR del = fs_delete("test_fs_tmp.txt")
+assert_eq(del, FS_OK, "fs_delete returns FS_OK")
 
-try 
-  fs_delete("abc.txt") 
-  print("fs_delete(abc.txt) # unexistent")
-  exit(1)
-catch e then 
-end 
+assert_true(NOT fs_exists("test_fs_tmp.txt"), "file gone after delete")
+
+# delete nonexistent raises error
+TRY
+  fs_delete("nonexistent_abc.txt")
+  assert_true(0, "should not reach here")
+CATCH e THEN
+  assert_true(1, "fs_delete nonexistent raises error")
+END
 
 print("test_stdlib_fs.arc passed\n")
