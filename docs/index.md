@@ -1,10 +1,10 @@
-# Arc Documentation
+# Arc Documentation - v0.5.0-beta
 
-Welcome to the documentation for the Arc programming language.
+Welcome to the documentation for the Arc programming language (stack VM, bytecode compiler, FFI, standard library).
 
 ## Documentation Sections
 
-*   [**Getting Started**](getting-started.md): Installation and your first program.
+*   [**Getting Started**](getting-started.md): Build, run, CLI flags (`--version`, `--debug`, `--code`, …), install, tests.
 *   [**Language Reference**](syntax.md): Syntax, literals, control flow, and built-ins.
 *   [**Architecture**](architecture.md): High-level design of the compiler and VM.
 *   [**Bytecode Reference**](bytecode.md): Detailed guide to the Arc VM instruction set.

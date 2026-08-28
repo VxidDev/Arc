@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 
-typedef struct Interpretator Interpretator;
 typedef struct ASTNode ASTNode;
 typedef struct FunctionNode FunctionNode;
 typedef struct FunctionCallNode FunctionCallNode;
@@ -89,16 +88,6 @@ typedef struct Function {
 
   int maxLocals;
 } Function;
-
-typedef struct FunctionCall {
-  Object base;
-
-  Function *function;
-  Object **args;
-  size_t argCount;
-
-  SymbolTable *env;
-} FunctionCall;
 
 typedef struct NativeFunction {
   Object base;
@@ -202,8 +191,6 @@ Object* initNull(void);
 
 Class* initClass(ClassNode* node);
 Instance* initInstance(Class* klass, SymbolTable* globals);
-
-FunctionCall* initFunctionCall(FunctionCallNode* node, Object* calleeObj, Interpretator* ctx);
 
 Object* copyObject(Object *obj);
 

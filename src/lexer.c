@@ -477,7 +477,3 @@ Token lexNextToken(Lexer *lexer, Error **error) {
     }
   }
 }
-
-void freeLexer(Lexer *lexer) {
-  // TODO: cleanup
-}

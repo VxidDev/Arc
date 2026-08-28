@@ -113,7 +113,7 @@ static ASTNode* parseExprPrimary(Parser* parser) {
       setError(parser, parser->currentToken.start, parser->currentToken.end, "Unexpected ')'");
       return NULL;
 
-    case TOK_EOF:   return NULL; // TODO: error handling
+    case TOK_EOF:   setError(parser, parser->currentToken.start, parser->currentToken.end, "Unexpected EOF"); return NULL;
     case TOK_CLASS: return parseClass(parser);
     case TOK_FOR:   return parseFor(parser);
 
@@ -1045,21 +1045,6 @@ static ASTNode* parseIdentifier(Parser* parser) {
   }
 
   return target; // continueExpr picks up any trailing binary operators
-}
-
-ASTNode* parseParser(Parser* parser) { // pretty much dead code
-  if (!parser) return NULL;
-
-  ASTNode* res = parseExpr(parser, 0);
-
-  if (!res) return NULL; // error is already set
-
-  if (parser->currentToken.type != TOK_EOF) {
-    setError(parser, parser->currentToken.start, parser->currentToken.end, "Unexpected token after expression");
-    return NULL;
-  }
-
-  return res;
 }
 
 ASTNode* parseProgram(Parser* parser) {

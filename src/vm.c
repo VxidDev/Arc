@@ -783,7 +783,7 @@ Object *vmRun(VM *vm) {
       Object* smallBuf[64];
       Object** items = (count <= 64) ? smallBuf : (Object**)malloc(sizeof(Object*) * count);
 
-      for (int i = 0; i < count; i++) 
+      for (uint32_t i = 0; i < count; i++) 
         items[count - 1 - i] = valueToObject(PEEK(i));
       
       sp -= count;
@@ -1226,7 +1226,7 @@ Object *vmRun(VM *vm) {
 
         vm->localsTop = leavingFrame->localsBase;
         
-        if (!leavingFrame->instance && !leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
+        if (!leavingFrame->instance && leavingFrame->variables != vm->frames[vm->frameTop - 1].variables)
           freeTable(leavingFrame->variables);
 
         if (leavingFrame->ownsChunk) freeChunk(leavingFrame->chunk);

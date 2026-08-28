@@ -156,7 +156,7 @@ release-install: release
 	$(Q)$(MAKE) install-libs
 
 test: dev
-	$(Q)passed=0; failed=0; skipped=0; \
+	$(Q)passed=0; failed=0; skipped=0; warn_failed=0; \
 	for f in $(TEST_FILES); do \
 		name=$$(basename "$$f"); \
 		output=$$(./$(TARGET) "$$f" 2>&1); \
@@ -176,7 +176,8 @@ test: dev
 	echo ""; \
 	printf "  %d passed, %d failed, %d skipped\n" "$$passed" "$$failed" "$$skipped"; \
 	echo ""; \
-	if [ $$failed -ne 0 ]; then \
+	bash tests/test_warnings.sh || warn_failed=1; \
+	if [ $$failed -ne 0 ] || [ $$warn_failed -ne 0 ]; then \
 		exit 1; \
 	fi
 

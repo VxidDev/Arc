@@ -16,6 +16,5 @@ typedef struct Lexer {
 
 Lexer* initLexer(char *filename, char *text);
 Token lexNextToken(Lexer *lexer, Error **error);
-void freeLexer(Lexer* lexer);
 
 #endif // LEXER_H 

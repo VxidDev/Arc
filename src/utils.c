@@ -192,11 +192,17 @@ char* resolveImportPath(const char* currentFile, const char* importPath) {
   getDirectory(currentFile, dir);
 
   char buffer[4096];
+  
+  int written;
 
   if (hasExtension(importPath)) {
-    snprintf(buffer, sizeof(buffer), "%s/%s", dir, importPath);
+    written = snprintf(buffer, sizeof(buffer), "%s/%s", dir, importPath);
   } else {
-    snprintf(buffer, sizeof(buffer), "%s/%s.arc", dir, importPath);
+    written = snprintf(buffer, sizeof(buffer), "%s/%s.arc", dir, importPath);
+  }
+
+  if (written < 0 || (size_t)written >= sizeof(buffer)) {
+    return NULL;
   }
 
   return stringDup(buffer);

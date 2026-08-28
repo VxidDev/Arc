@@ -166,7 +166,7 @@ int parseInt(const char *s, int *out) {
   return 1;
 }
 
-static inline void run(char *text, Error **error, size_t *size, SymbolTable* variables, char *filename) {
+static inline void run(char *text, Error **error, SymbolTable* variables, char *filename) {
   Lexer *lexer = initLexer(stringDup(filename), text);
 
   if (!lexer) {
@@ -377,6 +377,9 @@ void parseArguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-C") == 0 || strcmp(argv[i], "--cleanup") == 0) {
       _CLEANUP = true;
       continue;
+    } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+      printf("Arc - version %u.%u.%u\n", _MAJOR_VER, _MINOR_VER, _PATCH_VER);
+      arcExit(0);
     } else {
       printf("%sArc: %sunknown argument \"%s\"%s\n", COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), argv[i], COLOR(ANSI_RESET));
       arcExit(1);
@@ -466,9 +469,7 @@ int main(int argc, char **argv) {
 
   if (code) {
     Error *error = NULL;
-    size_t size = 0;
-
-    run(code, &error, &size, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
+    run(code, &error, variables, _INPUT_FILE ? _INPUT_FILE : "<stdin>");
     
     if (_CLEANUP) {
       freeTable(variables);
@@ -521,8 +522,7 @@ int main(int argc, char **argv) {
 
     Error *error = NULL;
 
-    size_t size = 0;
-    run(userInput, &error, &size, variables, "<stdin>");
+    run(userInput, &error, variables, "<stdin>");
 
     if (error && error->details[0] != '@') {
       char *errStr = errorAsString(error);

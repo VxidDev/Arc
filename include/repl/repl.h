@@ -7,6 +7,10 @@
 #include "../mempool.h"
 #include "../vm.h"
 
+#define _MAJOR_VER 0u
+#define _MINOR_VER 5u
+#define _PATCH_VER 0u
+
 #ifndef ARC_LIB_DIR
   #ifdef _WIN32
     #define ARC_LIB_DIR "C:\\ProgramData\\arc\\lib"

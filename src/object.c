@@ -13,7 +13,6 @@
 #include "../include/mempool.h"
 
 const NativeModuleEntry* stdlibModules[] = {
-  &(NativeModuleEntry){ "__mathlib", initMathModule }, 
   &(NativeModuleEntry){ "__sys", initSysModule }, 
   &(NativeModuleEntry){ "__time", initTimeModule },
   

@@ -17,7 +17,8 @@ void printHelp() {
     "\n    -l, --last-result                        Print last evaluation result."
     "\n    -S, --skip-evaluation                    Skip AST evaluation."
     "\n    -A, --arena-block-size <n>               Set custom memory block arena size (in kilobytes)."
-    "\n    -C, --cleanup                            Free memory before exit (useful for leak checkers).\n",
+    "\n    -C, --cleanup                            Free memory before exit (useful for leak checkers)."
+    "\n    -v, --version                            Print current version of interpreter.\n",
     COLOR(ANSI_BOLD), COLOR(ANSI_RESET), COLOR(ANSI_CYAN_FG), COLOR(ANSI_WHITE_FG), COLOR(ANSI_RESET)
   );
 }

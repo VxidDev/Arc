@@ -17,7 +17,6 @@ typedef struct Parser {
 Parser* initParser(Lexer* lexer, Error **error);
 Token advanceParser(Parser* parser);
 
-ASTNode* parseParser(Parser* parser);
 ASTNode* parseProgram(Parser* parser);
 
 #endif // PARSER_H

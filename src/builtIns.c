@@ -22,18 +22,6 @@ void initRandomModule(SymbolTable* table) {
   pcg32srandom((uint64_t)time(NULL), 1);
 }
 /**
- * initMathModule
- * * Summary: Initializes the math module by registering math-related native functions like 'truncate'.
- * * @param table: Pointer to the SymbolTable where the math functions are registered.
- * * @returns: void (nothing).
- * * @note: Note that 'truncate' is marked as DEPRECATED in favor of 'to_int'. Registers and frees the function object wrapper.
- */
-void initMathModule(SymbolTable* table) {
-  NativeFunction* truncateFn = initNativeFunction("truncate", builtIn_truncate, 1, false); // DEPRECATED, to_int() is prefered.
-  setTable(table, internIdentifier("truncate", 8), VAL_OBJ((Object*)truncateFn));
-  freeObject((Object*)truncateFn);
-}
-/**
  * initLibtools
  * * Summary: Registers core library utility functions, specifically 'stdlib_path', into the system.
  * * @param table: Pointer to the SymbolTable where utility functions are registered.

@@ -4,6 +4,7 @@
 #include "../include/object.h"
 #include "../include/utils.h"
 #include "../include/repl/repl.h"
+#include "../include/ansi-colors.h"
 
 #include "../include/mempool.h"
 
@@ -12,6 +13,48 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdlib.h>
+
+static void compileWarn(Compiler *c, Position start, Position end, const char *msg) {
+  if (!c->filename) return;
+
+  unsigned long line = start.line + 1;
+  unsigned long col = start.column + 1;
+
+  const char *text = c->sourcetext;
+  unsigned long startIdx = start.index;
+  size_t textLen = text ? strlen(text) : 0;
+
+  if (startIdx >= textLen) {
+    printf("%sWarning:%s %s\nFile %s, line %lu, column %lu\n",
+      COLOR(ANSI_BRIGHT_YELLOW_FG), COLOR(ANSI_RESET), msg,
+      c->filename, line, col);
+    return;
+  }
+
+  unsigned long lineStart = startIdx;
+  while (lineStart > 0 && text[lineStart - 1] != '\n')
+    lineStart--;
+
+  unsigned long lineEnd = startIdx;
+  while (text[lineEnd] && text[lineEnd] != '\n')
+    lineEnd++;
+
+  unsigned long lineLen = lineEnd - lineStart;
+
+  printf("%sWarning:%s %s\nFile %s, line %lu, column %lu\n\n%.*s\n",
+    COLOR(ANSI_BRIGHT_YELLOW_FG), COLOR(ANSI_RESET), msg,
+    c->filename, line, col,
+    (int)lineLen, text + lineStart);
+
+  unsigned long startCol = start.column;
+  unsigned long endCol = end.column;
+  if (endCol < startCol) endCol = startCol;
+
+  printf("%*s", (int)startCol + 1, "");
+  for (unsigned long i = startCol; i <= endCol; i++)
+    printf("^");
+  printf("\n");
+}
 
 static void chunkAddPosEntry(Chunk *chunk, uint32_t offset, Position start, Position end) {
   if (chunk->posCount > 0 && chunk->positions[chunk->posCount - 1].offset == offset) {
@@ -565,7 +608,10 @@ static void compileBinOp(ASTNode *node, Compiler *c) {
     case TOK_GTE: emitByte(c, OP_GTE); break;
     case TOK_AND: emitByte(c, OP_AND); break;
     case TOK_OR: emitByte(c, OP_OR);  break;
-    default: break;
+    default:
+      compileWarn(c, getNodeStart(node), getNodeEnd(node),
+        "Unknown binary operator. Operation will be ignored.");
+      break;
   }
 }
 
@@ -580,7 +626,10 @@ static void compileUnaryOp(ASTNode *node, Compiler *c) {
     case TOK_MINUS: emitByte(c, OP_NEG); break;
     case TOK_NOT:   emitByte(c, OP_NOT); break;
     /* TOK_PLUS is a no-op: value already on stack */
-    default: break;
+    default:
+      compileWarn(c, getNodeStart(node), getNodeEnd(node),
+        "Unknown unary operator. Operation will be ignored.");
+      break;
   }
 }
 
@@ -870,6 +919,11 @@ static void compileNull(ASTNode *node, Compiler *c) {
 }
 
 static void compileReturn(ASTNode *node, Compiler *c) {
+  if (!c->isFunction) {
+    compileWarn(c, getNodeStart(node), getNodeEnd(node),
+      "'RETURN' used outside of a function. This statement will have no effect.");
+  }
+
   ReturnNode *ret = (ReturnNode *)node;
 
   compileNode(ret->expr, c);
@@ -1077,6 +1131,9 @@ static void compileNode(ASTNode *node, Compiler *c) {
         int j = emitJump(c, OP_JUMP);
         JumpList *bl = arenaAlloc(objectArena, sizeof(JumpList));
         bl->offset = j; bl->next = c->loop->breaks; c->loop->breaks = bl;
+      } else {
+        compileWarn(c, getNodeStart(node), getNodeEnd(node),
+          "'BREAK' used outside of a loop. This statement will have no effect.");
       }
       break;
     case NODE_CONTINUE:
@@ -1085,6 +1142,9 @@ static void compileNode(ASTNode *node, Compiler *c) {
         int j = emitJump(c, OP_JUMP);
         JumpList *cl = arenaAlloc(objectArena, sizeof(JumpList));
         cl->offset = j; cl->next = c->loop->continues; c->loop->continues = cl;
+      } else {
+        compileWarn(c, getNodeStart(node), getNodeEnd(node),
+          "'CONTINUE' used outside of a loop. This statement will have no effect.");
       }
 
       break;
