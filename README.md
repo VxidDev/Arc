@@ -1,76 +1,103 @@
 # Arc - v0.5.0-beta
 
-Arc is a modern, stack-based bytecode VM and programming language designed for simplicity and performance. Source is compiled to custom bytecode and executed on a high-performance VM with computed-goto dispatch, arena/pool memory management, and a rich standard library.
+Arc is a small, stack based programming language that compiles to its own bytecode and runs on a fast virtual machine. It is easy to read, easy to hack, and built to be practical. You write simple code, it gets compiled to compact bytecode, and the VM runs it with a direct dispatch loop, pooled objects, and arena memory.
 
-## Documentation
+## Start Here
 
-Start with [docs/index.md](docs/index.md) → [Getting Started](docs/getting-started.md) → [Language Reference](docs/syntax.md).
+If you are new, read the docs in order:
 
-| Guide | Description |
-|---|---|
-| [Getting Started](docs/getting-started.md) | Build, run, CLI flags, install |
-| [Language Reference](docs/syntax.md) | Syntax, literals, control flow, imports |
-| [Architecture](docs/architecture.md) | Compiler and VM pipeline |
-| [Bytecode Reference](docs/bytecode.md) | Instruction set |
-| [Object System](docs/object_system.md) | Values, objects, memory |
-| [FFI](docs/ffi.md) | Calling native C libraries |
+1. [Documentation Index](docs/index.md)
+2. [Getting Started](docs/getting-started.md) - how to build, run, and install
+3. [Language Reference](docs/syntax.md) - what the language looks like
+4. [Architecture](docs/architecture.md) - how the compiler and VM fit together
+5. [Bytecode Reference](docs/bytecode.md) - what the VM actually executes
+6. [Object System](docs/object_system.md) - how values live in memory
+7. [FFI](docs/ffi.md) - how to call C libraries
 
-Standard library docs: [I/O](docs/stdlib/io.md) · [Typing](docs/stdlib/typing.md) · [String](docs/stdlib/string.md) · [List](docs/stdlib/list.md) · [Sys/Time](docs/stdlib/sys.md) · [Math](docs/stdlib/math.md) · [Assert](docs/stdlib/assert.md) · [JSON](docs/stdlib/json.md) · [Net](docs/stdlib/net.md) · [Mixer](docs/stdlib/mixer.md) · [UI](docs/stdlib/ui.md)
+Standard library: [I/O](docs/stdlib/io.md) | [Types](docs/stdlib/typing.md) | [String](docs/stdlib/string.md) | [List](docs/stdlib/list.md) | [Sys/Time](docs/stdlib/sys.md) | [Math](docs/stdlib/math.md) | [Assert](docs/stdlib/assert.md) | [JSON](docs/stdlib/json.md) | [Net](docs/stdlib/net.md) | [Mixer](docs/stdlib/mixer.md) | [UI](docs/stdlib/ui.md)
 
-## Features
+## What Arc Gives You
 
-* **Bytecode VM** - AST → Chunk → stack VM with constant interning, jump patching, and labels-as-values dispatch.
-* **Clean Syntax** - case-insensitive keywords (`VAR`/`var`/`Var`), expressive control flow (`IF`/`WHILE`/`FOR...IN`/`BREAK`/`CONTINUE`/`TRY...CATCH`).
-* **Object-Oriented** - `CLASS` with dynamic fields, `self`-explicit methods, first-class `FN` functions.
-* **Memory Management** - arenas for parse/compile phases, pools for runtime objects, precise cleanup via `--cleanup`.
-* **FFI** - load and call native `.so`/`.dll` libraries.
-* **Standard Library** - I/O, math, string/list, JSON (pure Arc + C), filesystem, sys/time, net, mixer, UI, image.
-* **Diagnostics** - position-aware errors and **compiler warnings** (`BREAK`/`CONTINUE` outside loops, `RETURN` outside functions, unknown operators) with source snippet + caret.
-* **Tooling** - version flag, debug dump, configurable mempool/arena, colored output, sanitizer builds.
+**Bytecode VM.** Your source is parsed into an AST, then compiled into a `Chunk` that holds code, constants, and source positions. The VM is a stack machine that dispatches with computed goto. It is small and quick, and it keeps full position info for nice errors.
+
+**Simple syntax.** Keywords are case insensitive. You can write `VAR`, `var`, or `Var` and it means the same thing. Identifiers are case sensitive. Control flow reads like plain English: `IF`, `ELIF`, `ELSE`, `END`, `WHILE`, `FOR item IN list`, `BREAK`, `CONTINUE`, `TRY ... CATCH`, `RETURN`.
+
+**Functions and classes.** `FN` gives you first class functions with their own locals. `CLASS` gives you simple objects with dynamic fields. Methods take `self` explicitly, so there is no hidden binding.
+
+**Memory that stays out of your way.** The front end uses arenas for parsing and compiling, the runtime uses pools for numbers, strings, functions, and instances. You can run normally, or pass `--cleanup` to free everything on exit for leak checking.
+
+**FFI.** Load a shared library with `dl_open`, look up a symbol with `dl_sym`, call it like a normal function. Works for `.so` on Linux, `.dylib` on macOS, `.dll` on Windows.
+
+**Standard library.** File and stream I/O, strings and lists, math, time, sys, JSON in pure Arc and in fast C, plus optional `net`, `mixer`, `ui`, and `image` when you build the clibs.
+
+**Helpful diagnostics.** Errors show file, line, column, the source line, and a caret that points at the problem. The compiler also warns. For example it will warn if you write `BREAK` outside a loop or `RETURN` outside a function, and it will point at the exact spot. Warnings are yellow, they do not stop compilation, and they go to stdout with file and line info.
+
+**Tooling you expect.** `--version` prints `Arc - version 0.5.0`, `--help` lists flags, `--debug` dumps tokens, AST, and bytecode, `--code` runs a string, and there are flags for float precision, colors, pool size, arena size, last result, and more. Sanitizer builds work with `make debug`.
 
 ## Requirements
 
-* `gcc` (or `clang`), `make`, `libffi-dev`
-* Optional: AddressSanitizer/UBSanitizer for `make debug`
+* `gcc` or `clang`, `make`, `libffi-dev`
+* Optional for sanitizers: `ASan` and `UBSan` come with your compiler
+* Optional for extra libs: SDL, SDL_mixer, SDL_image where needed
+
+Tested with GCC 16 and Clang 22.
 
 ## Build and Install
 
 ```bash
-# Dev build (default, -O0 -g)
-make            # or: make dev
+# fast dev build, no optimization, with debug info
+make            # same as make dev
 
-# Debug build (ASan + UBSan)
+# sanitizers, good for finding bugs
 make debug
 
-# Optimized release (-O3 -flto -march=native)
+# full optimization for shipping
 make release
 
-# Run without installing
+# try it without installing
 ./arc --version
 ./arc examples/hello_world.arc
 ./arc -c 'print("hello from -c")'
 
-# Tests (builds dev binary, runs 35+ arc tests + 6 warning tests)
-make test
+# run the test suite
+make test       # builds dev, runs 35+ .arc tests and 6 warning checks
 
-# Install (release binary + stdlib to $PREFIX, default /usr)
-sudo make install
-# or: sudo make dev-install / debug-install / release-install
-# custom prefix: make install PREFIX=$HOME/.local
+# install release binary and stdlib
+sudo make install                 # to /usr
+sudo make dev-install             # or pick a variant
+sudo make debug-install
+sudo make release-install
+make install PREFIX=$HOME/.local  # to your home
 
-# Install libs only
+# only the libraries
 sudo make install-libs
 
-# Uninstall
+# remove what you installed
 sudo make uninstall
 
-# Clean
+# clean build artifacts
 make clean
 ```
 
-CLI flags: `-h/--help`, `-v/--version`, `-c/--code`, `-d/--debug`, `-p/--float-precision`, `-n/--disable-colored-formatting`, `-m/--mempool-size`, `-A/--arena-block-size`, `-l/--last-result`, `-S/--skip-evaluation`, `-C/--cleanup`. See `arc --help` and [Getting Started](docs/getting-started.md).
+All common flags work:
 
-## Example
+```
+-h, --help
+-v, --version
+-c, --code <str>
+-d, --debug
+-p, --float-precision <n>
+-n, --disable-colored-formatting
+-m, --mempool-size <n>
+-A, --arena-block-size <n>
+-l, --last-result
+-S, --skip-evaluation
+-C, --cleanup
+```
+
+See `arc --help` and [Getting Started](docs/getting-started.md) for examples and troubleshooting.
+
+## A Quick Example
 
 ```arc
 VAR list = [1, 2, 3, 4, 5]
@@ -83,16 +110,41 @@ FOR item IN list THEN
 END
 ```
 
-More in [`examples/`](examples/): `hello_world.arc`, `fibonacci.arc`, `classes.arc`, `file_io.arc`, `list_processing.arc`, `string_processing.arc`, `error_handling.arc`.
+More examples live in `examples/`:
+
+* `hello_world.arc` - the basics
+* `fibonacci.arc` - recursion and loops
+* `classes.arc` - fields, instances, methods with explicit `self`
+* `file_io.arc` - reading and writing files
+* `list_processing.arc` - list helpers
+* `string_processing.arc` - string helpers
+* `error_handling.arc` - `TRY` and `CATCH`
+
+## How It Runs
+
+1. **Lexer** turns text into tokens. Keywords are compared case insensitively with a fast SWAR style check.
+2. **Parser** is a recursive descent parser that builds an AST. It tracks `Position` for every node.
+3. **Compiler** walks the AST and emits bytecode into a `Chunk`. It interns strings, dedups numbers, resolves locals, and patches jumps. Locals live in `Compiler.locals` up to `MAX_LOCALS 256`.
+4. **VM** in `src/vm.c` executes the `Chunk` with a value stack (`VM_STACK_MAX 4096`), call frames (`VM_CALL_STACK_MAX 8192`), locals (`VM_LOCALS_MAX 65536`), and a try stack. Numbers are kept as `VAL_INT` or `VAL_FLOAT` directly on the stack, no boxing, so `int64_t` stays intact.
+
+Values are defined in `include/value.h`:
+
+```c
+VAL_UNDEF, VAL_NULL, VAL_INT, VAL_FLOAT, VAL_OBJ
+```
+
+`VAL_OBJ` points at heap objects like `String`, `List`, `Function`, `Class`, `Instance`, `File`, and `NativeFunction`. Pools back the common ones, arenas back the short lived ones.
 
 ## Testing
 
 ```bash
-make test   # PASS/FAIL per file + warning suite summary
+make test
 ```
 
-Tests live in `tests/*.arc`; warning coverage in `tests/test_warnings.sh` (invoked by `make test`). Skipped tests require optional native libs (`image`/`mixer`/`ui`/`c_tools`); `test_clib_net` requires a live Beeceptor endpoint.
+You will see `PASS` or `FAIL` per file, plus a warning suite. Skipped tests mean you did not build an optional native lib (`image`, `mixer`, `ui`, `c_tools`). `test_clib_net` needs a live Beeceptor endpoint and is expected to fail offline. Warning tests check that `BREAK` or `CONTINUE` outside a loop warns, `RETURN` outside a function warns, and correct uses stay quiet.
+
+Tests live in `tests/*.arc`. Warning checks live in `tests/test_warnings.sh` and are run by `make test`.
 
 ## License
 
-GPL-3.0
+GPL-3.0. See `LICENSE`.

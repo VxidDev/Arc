@@ -33,19 +33,21 @@ static inline void arcAlignedFree(void *ptr) {
 
 MemPool* initPool(size_t objSize) {
   if (objSize == 0) return NULL;
+  if (objSize > SIZE_MAX / (size_t)POOL_SIZE) return NULL;
 
   MemPool* pool = NULL;
   
   if (arcAlignedAlloc((void**)&pool, 64, sizeof(MemPool)) != 0 || !pool)
     return NULL;
 
-  pool->slab = arenaAlloc(poolArena, objSize * POOL_SIZE);
-  if (!pool->slab) { free(pool); return NULL; }
+  size_t slabBytes = objSize * (size_t)POOL_SIZE;
+  pool->slab = arenaAlloc(poolArena, slabBytes);
+  if (!pool->slab) { arcAlignedFree(pool); return NULL; }
 
-  memset(pool->slab, 0, objSize * POOL_SIZE);
+  memset(pool->slab, 0, slabBytes);
 
   pool->slots = malloc(POOL_SIZE * sizeof(void*));
-  if (!pool->slots) { free(pool); return NULL; }
+  if (!pool->slots) { arcAlignedFree(pool); return NULL; }
 
   char* base = (char*)pool->slab;
   
@@ -63,12 +65,16 @@ MemPool* initPool(size_t objSize) {
 static inline int _isSlabPtr(const MemPool* pool, const void* ptr) {
   const char* p = (const char*)ptr;
   const char* start = (const char*)pool->slab;
+  // overflow-safe end computation
+  if (pool->objSize != 0 && pool->slabCount > SIZE_MAX / pool->objSize) return 0;
   const char* end = start + pool->objSize * pool->slabCount;
   return p >= start && p < end;
 }
 
 static int _growSlots(MemPool* pool) {
+  if (pool->cap > SIZE_MAX / POOL_GROWTH_FACTOR) return 0;
   size_t newCap = pool->cap * POOL_GROWTH_FACTOR;
+  if (newCap > SIZE_MAX / sizeof(void*)) return 0;
   void** newSlots = realloc(pool->slots, newCap * sizeof(void*));
   if (!newSlots) return 0;
   pool->slots = newSlots;

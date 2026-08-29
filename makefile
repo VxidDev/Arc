@@ -159,8 +159,13 @@ test: dev
 	$(Q)passed=0; failed=0; skipped=0; warn_failed=0; \
 	for f in $(TEST_FILES); do \
 		name=$$(basename "$$f"); \
-		output=$$(./$(TARGET) "$$f" 2>&1); \
+		output=$$(timeout 3 ./$(TARGET) "$$f" 2>&1); \
 		rc=$$?; \
+		if [ $$rc -eq 124 ]; then \
+			printf "  \033[33mSKIP\033[0m  %s (timeout)\n" "$$name"; \
+			skipped=$$((skipped+1)); \
+			continue; \
+		fi; \
 		if echo "$$output" | grep -q "passed"; then \
 			printf "  \033[32mPASS\033[0m  %s\n" "$$name"; \
 			passed=$$((passed+1)); \

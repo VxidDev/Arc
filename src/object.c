@@ -79,12 +79,7 @@ void freeObject(Object* obj) {
       free(obj);
       return;
     }
-
-    case OBJ_FUNCTION_CALL: {
-      poolFree(functionCallPool, obj);
-      return;
-    }
-    
+ 
     case OBJ_ERROR:
     case OBJ_FILE: 
     case OBJ_CONTINUE:
@@ -110,11 +105,12 @@ void freeObject(Object* obj) {
       for (uint64_t i = 0; i < list->size; i++) {
         Object* elem = list->objects[i];
 
-        if (elem && !elem->isStatic) {
+          if (elem && !elem->isStatic) {
           if (elem->type == OBJ_NUMBER_INT || elem->type == OBJ_NUMBER_FLOAT)
             poolFree(numberPool, elem);
           else if (elem->type == OBJ_STRING) {
-            free(((String*)elem)->value);
+            String *se = (String*)elem;
+            if (se->ownsValue && se->value) free(se->value);
             poolFree(stringPool, elem);
           } else freeObject(elem);
         }

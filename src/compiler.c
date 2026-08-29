@@ -66,13 +66,10 @@ static void chunkAddPosEntry(Chunk *chunk, uint32_t offset, Position start, Posi
   if (chunk->posCount >= chunk->posCapacity) {
     size_t oldCap = chunk->posCapacity;
     size_t newCap = oldCap == 0 ? 64 : oldCap * 2;
+    if (newCap < oldCap) return;
 
     PosEntry *grown = arenaRealloc(objectArena, chunk->positions, oldCap * sizeof(PosEntry), newCap * sizeof(PosEntry));
     if (!grown) return;
-
-    if (newCap > oldCap) {
-      memset((char*)grown + oldCap * sizeof(PosEntry), 0, (newCap - oldCap) * sizeof(PosEntry));
-    }
 
     chunk->positions = grown;
     chunk->posCapacity = newCap;
@@ -248,10 +245,9 @@ void chunkWrite(Chunk *chunk, uint8_t byte) {
   if (chunk->count >= chunk->capacity) {
     size_t oldCap = chunk->capacity;
     size_t newCap = oldCap * 2;
+    if (newCap < oldCap) return;
     uint8_t *grown = arenaRealloc(objectArena, chunk->code, oldCap * sizeof(uint8_t), newCap * sizeof(uint8_t));
     if (!grown) return;
-
-    memset(grown + oldCap, 0, (newCap - oldCap) * sizeof(uint8_t));
 
     chunk->code = grown;
     chunk->capacity = newCap;
@@ -268,11 +264,10 @@ int chunkAddConst(Chunk *chunk, Object *obj) {
   if (chunk->constCount >= chunk->constCapacity) {
     size_t oldCap = chunk->constCapacity;
     size_t newCap = oldCap * 2;
+    if (newCap < oldCap) return -1;
 
     Object **grown = arenaRealloc(objectArena, chunk->constants, oldCap * sizeof(Object *), newCap * sizeof(Object *));
     if (!grown) return -1;
-
-    memset(grown + oldCap, 0, (newCap - oldCap) * sizeof(Object *));
 
     chunk->constants = grown;
     chunk->constCapacity = newCap;

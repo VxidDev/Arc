@@ -225,9 +225,6 @@ static inline void run(char *text, Error **error, SymbolTable* variables, char *
   }
   
   if (!_SKIP_EVAL) {
-    //Interpretator* interpretator = initInterpretator(filename, text, error, variables);
-    //Object* result = visitNode(ast, interpretator);
-
     vm = initVM(chunk, variables, error, filename, text);
     if (_DEBUG) printf("[vm] Starting vmRun...\n");
     Object* result = vmRun(vm);

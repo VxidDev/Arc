@@ -27,7 +27,6 @@ typedef struct MP_ALIGN(64) {
 extern MemPool* numberPool;
 extern MemPool* stringPool;
 extern MemPool* nativeFuncPool;
-extern MemPool* functionCallPool;
 extern MemPool* symbolPool;
 extern MemPool* symbolTablePool;
 extern MemPool* functionPool;

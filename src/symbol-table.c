@@ -9,11 +9,24 @@
 #include <string.h>
 
 static inline size_t hashPointer(const char *ptr) {
+  // Pointer identity hash – works only for interned strings.
+  // Fallback to content hash if pointer not in intern table would be slower;
+  // we keep fast path here. Ensure all names are interned via internIdentifier.
   size_t x = (size_t)ptr;
   x ^= x >> 33;
   x *= 0xff51afd7ed558ccdULL;
   x ^= x >> 33;
   x *= 0xc4ceb9fe1a85ec53ULL;
+  x ^= x >> 33;
+  return x;
+}
+
+static inline size_t hashStringContent(const char *s, size_t len) {
+  uint32_t h = hashStr(s, len);
+  // promote to size_t with same avalanche
+  size_t x = h;
+  x ^= x >> 33;
+  x *= 0xff51afd7ed558ccdULL;
   x ^= x >> 33;
   return x;
 }

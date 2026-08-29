@@ -16,8 +16,6 @@ profile.txt
 # Prerequisites
 *.d
 
-RELEASE.md
-
 # Object files
 *.o
 *.ko

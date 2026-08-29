@@ -45,10 +45,10 @@
 #define READ_BYTE()  (*ip++)
 
 static inline uint32_t _read_const_idx(uint8_t **ipp) {
-  uint32_t v;
-  __builtin_memcpy(&v, *ipp, 4); // 1 byte over-read past the 3 we want
+  uint8_t *p = *ipp;
+  uint32_t v = ((uint32_t)p[0] << 16) | ((uint32_t)p[1] << 8) | (uint32_t)p[2];
   *ipp += 3;
-  return __builtin_bswap32(v) >> 8;
+  return v;
 }
 
 #define READ_CONST() (constants[_read_const_idx(&ip)])

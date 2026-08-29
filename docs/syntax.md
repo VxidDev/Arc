@@ -1,247 +1,310 @@
-# Language Reference
+# Language Reference - Arc v0.5.0-beta
 
-## Language Case Sensitivity
+This is how Arc looks when you write it, and how it behaves when you run it.
 
-Arc distinguishes between keywords and identifiers (variable and function names) regarding case sensitivity:
+## Case Rules
 
-- **Keywords are Case-Insensitive**: Keywords such as `VAR`, `FN`, `IF`, `WHILE`, `TRY`, and `RETURN` can be written in any case (e.g., `var`, `Var`, `VAR` are all valid and equivalent).
-- **Identifiers are Case-Sensitive**: Variable and function names are case-sensitive. `myVariable`, `myvariable`, and `MYVARIABLE` are considered distinct identifiers.
+Arc makes a clear split:
+
+* **Keywords are case insensitive.** `VAR`, `var`, `Var`, and `vAr` all mean the same thing. The same is true for `FN`, `IF`, `WHILE`, `FOR`, `TRY`, `CATCH`, `RETURN`, `CLASS`, `BREAK`, `CONTINUE`, `IMPORT`, `END`, `THEN`, `IN`, and so on.
+* **Identifiers are case sensitive.** `myVariable`, `myvariable`, and `MYVARIABLE` are three different names.
 
 ```arc
-var x = 10 # 'var' is recognized as 'VAR'
-VAR Y = 20 # 'VAR' is also recognized
+var x = 10
+VAR Y = 20
 
 FN printSum(a, b) THEN
     print(a + b)
 END
 
-# This would cause an error because 'printsum' (lowercase) is not defined
-# printsum(x, Y) 
+# printsum would fail - it is not the same as printSum
+```
+
+## Comments
+
+A comment starts with `#` and goes to the end of the line:
+
+```arc
+# this is a comment
+VAR x = 10  # this is also a comment
 ```
 
 ## Literals
 
-Arc supports various literal values for representing data.
-
 ### Numbers
 
-Numbers can be integers or floating-point values.
+Arc has two number forms. Both live in a `Value`.
 
 ```arc
-VAR integer_num = 123
-VAR float_num = 3.14159
-```
-
-### Booleans
-
-Arc represents boolean truthiness using numerical values: `0` for false and `1` for true. Expressions that evaluate to true or false will result in these integer values.
-
-```arc
-VAR is_active = 1  # Represents TRUE
-VAR is_done = 0    # Represents FALSE
-
-IF 1 THEN # This condition is true
-    print("This will execute")
-END
+VAR i = 123
+VAR j = -42
+VAR f = 3.14159
+VAR g = 0.5
 ```
 
 ### Strings
 
-Strings are sequences of characters enclosed in double quotes.
+Strings are double quoted. They support the usual escapes like `\n`, `\t`, `\r`, `\"`, `\\`, and `\0`. A single character like `"a"` is just a string of length one:
 
 ```arc
-VAR greeting = "Hello, Arc!"
-VAR empty_string = ""
+VAR s = "Hello, Arc!"
+VAR empty = ""
+VAR withEscape = "line one\nline two"
 ```
 
-## Variables
-Variables are declared using the `VAR` keyword, though it is optional for subsequent assignments.
+### Lists
+
+Lists are ordered collections in square brackets. They can hold different types:
 
 ```arc
-VAR x = 10  # Initial declaration
-x = 20      # Re-assignment
-VAR x = 30  # Re-declaration (also valid)
+VAR a = [1, 2, "hello", 0]
+VAR empty = []
+VAR nested = [1, [2, 3], 4]
 ```
 
-## Classes
+### Null and Booleans
 
-Arc supports a class-based abstraction layer for grouping data and functions. Classes are defined using the `CLASS` keyword.
+Arc spells booleans as numbers: `1` is true, `0` is false. `NULL` is a distinct value for nothing. There is also an internal `VAL_UNDEF` that you will see as a `NameError` if you read a variable before assignment:
 
-### Class Syntax
 ```arc
-CLASS name
-    VAR field = "abc"
+VAR isActive = 1
+VAR isDone = 0
+VAR nothing = NULL
 
-    # 'self' is an explicit parameter and must be passed
-    FN func(self, ...) THEN
-        ...
-    END
+IF 1 THEN
+    print("true")
 END
 ```
 
-### Instances
-Classes are instantiated using function-call syntax:
-```arc
-VAR instance = name()
-```
+## Variables and Constants
 
-### Field Access
-Instance fields are accessed using dot notation and can be modified dynamically:
-```arc
-instance.field        # reads field value
-instance.field = 123  # modifies field value
-```
-
-### Method Calls
-Methods are encapsulated functions. Because they are **not implicitly bound** to the instance, you must explicitly pass the instance as the first argument, conventionally named `self`:
-```arc
-instance.func(instance, ...)
-```
-
-## Lists
-
-Lists are ordered collections of items, enclosed in square brackets `[]`.
+`VAR` declares a mutable variable. `CONSTVAL` and `CONSTREF` declare constants. At runtime the distinction is tracked in the `Compiler.locals` and in `SymbolTable` entries with `isMutable` and `isReference`:
 
 ```arc
-VAR my_list = [1, 2, "hello", 0]
-VAR empty_list = []
+VAR x = 10      # mutable, reassignable
+x = 20          # ok
+VAR x = 30      # redeclare, also ok
+
+CONSTVAL y = 10
+y = 20          # runtime error: cannot assign to constant "y"
+
+CONSTREF r = someList
+# r = other     # also constant, cannot rebind
 ```
 
-You can access elements by their index (starting from 0).
+If you write a lowercase keyword like `var y = 10`, it still declares the same thing - keywords are case insensitive.
+
+A bare assignment without `VAR` also works and will create or update a global:
 
 ```arc
-VAR first_element = my_list[0] // 1
-VAR last_element = my_list[3]  // 0
+x = 10
+x = x + 1
 ```
 
-List-related built-in functions like `len_of`, `max`, and `min` (math.arc) can be used to query properties or perform operations on lists.
+## Functions
 
-## Standard Library
+Functions are first class values. You define them with `FN`, give them a name, a parameter list, and a body. The body is a block that ends with `END`:
 
-Arc provides a set of built-in functions and modules for core functionality:
+```arc
+FN add(a, b) THEN
+    RETURN a + b
+END
 
-- [**I/O**](stdlib/io.md): Input/Output operations.
-- [**Types & Properties**](stdlib/typing.md): Inspection and conversion.
-- [**String Manipulation**](stdlib/string.md): String operations.
-- [**List Manipulation**](stdlib/list.md): List operations.
-- [**System & Time**](stdlib/sys.md): System and timing functions.
-- [**Math Library**](stdlib/math.md): Mathematical constants and functions.
+VAR r = add(2, 3)
+print(r)  # 5
+```
 
+Parameters become locals. A function remembers its own chunk and its `maxLocals`. Inside a function you can use `RETURN`. Outside a function, `RETURN` will warn and do nothing.
+
+Recursion works as you expect:
+
+```arc
+FN fib(n) THEN
+    IF n <= 1 THEN
+        RETURN n
+    END
+    RETURN fib(n - 1) + fib(n - 2)
+END
+```
+
+For speed, prefer iterative when `n` is large. `fibIter(1000)` is `0.03ms` while `fib(30)` recursive is `~90ms`. Memoized is also tiny at `0.008ms`.
+
+## Classes and Instances
+
+A `CLASS` groups fields and methods. Fields are just variables inside the class body. Methods are `FN`s that take `self` explicitly - there is no implicit `this`:
+
+```arc
+CLASS Dog
+    VAR name = "unknown"
+
+    FN bark(self) THEN
+        print("woof from " + self.name)
+    END
+END
+
+VAR d = Dog()
+print(d.name)        # unknown
+d.name = "Rex"
+d.bark(d)            # woof from Rex
+```
+
+You create an instance by calling the class like a function: `Dog()`. Field access uses `.` and is compiled to `OP_PROPERTY_ACCESS` and `OP_PROPERTY_SET`. If you read a missing field you get a `NameError` that says the instance has no property.
+
+Instances keep their fields in their own `SymbolTable` and keep a pointer to the `Class`. `to_string` for `class`, `instance`, `function`, `file`, and `list` currently reports “not yet available” and returns a `ProgramError`.
+
+## Indexing
+
+Both strings and lists can be indexed with `[]`. Indices are `int64_t` and must be in range:
+
+```arc
+VAR s = "Arc"
+print(s[0])   # A as a one-char string
+s[0] = "a"    # ok, single char string only
+
+VAR lst = [10, 20, 30]
+print(lst[1]) # 20
+lst[1] = 99
+lst[1] = lst[1]  # also ok
+```
+
+Out of range or assigning a multi character string to a string index raises `IndexError`. Assignment to a list index uses `freeObject` correctly and checks `ownsValue` for strings.
+
+## Operators
+
+Arc gives you the familiar set:
+
+* **Arithmetic:** `+` `-` `*` `/` `^` (power) and unary `-` and `+`
+* **Comparison:** `==` `!=` `<` `>` `<=` `>=` - each pushes `1` or `0`
+* **Logical:** `AND` `OR` `NOT` (all case insensitive)
+
+Comparisons on numbers use `double` or `int64_t` directly on the `Value` stack for speed. `OP_DIV` checks for `0` and raises `ValueError: Division by zero`. String `+` concatenates, string `* int` repeats.
+
+Unknown binary or unary operators do not crash. The compiler emits a yellow warning that names the operator and says the operation will be ignored.
 
 ## Control Flow
 
-### IF Statements
-Truthiness in Arc is strictly integer-based. A condition is considered **FALSE** if it evaluates to the integer `0`, and **TRUE** if it evaluates to any non-zero integer. Non-integer types (strings, lists) will cause a `TypeError` if used as conditions.
+### IF, ELIF, ELSE
 
 ```arc
-IF 1 THEN
-    print("This is true")
-END
-
-IF 0 THEN
-    # This will not execute
+IF n <= 1 THEN
+    RETURN n
+ELIF n == 2 THEN
+    print("two")
 ELSE
-    print("This is false")
+    print("other")
 END
 ```
 
-### WHILE Loops
+Every branch leaves one value on the stack - the compiler inserts `OP_LOAD_CONST 0` when there is no `ELSE`, and patches jumps with `OP_JUMP_IF_FALSE` and `OP_JUMP`.
+
+### WHILE
+
 ```arc
 VAR i = 0
-
 WHILE i < 5 THEN
+    print(i)
     i = i + 1
 END
 ```
 
-### FOR Loops
-Arc supports iterating over lists and strings using the `FOR...IN` syntax.
+Compiled as `loopStart: condition, JUMP_IF_FALSE exit, body, POP, JUMP loopStart, exit: 1`.
+
+### FOR IN
 
 ```arc
-VAR my_list = [10, 20, 30]
-
-FOR item IN my_list THEN
+VAR lst = [10, 20, 30]
+FOR item IN lst THEN
     print(item)
 END
 
-# Iterating over a string
-FOR char IN "Arc" THEN
-    print(char)
+FOR ch IN "Arc" THEN
+    print(ch)  # each ch is a one-char string
 END
 ```
 
-### Loop Control Statements
+`FOR` is compiled to `OP_FOR_PREP` (push iterable, length, index) and `OP_FOR_ITER` (check `index < length`, push item, bump index, or clean up and exit). `BREAK` and `CONTINUE` inside a `FOR` correctly clean up the three values `iterable, length, index` before jumping. Outside any loop they warn and do nothing.
 
+### BREAK and CONTINUE
 
-Arc provides `BREAK` and `CONTINUE` keywords to alter the flow of loops.
+They only work inside `WHILE` or `FOR`. The compiler tracks `LoopInfo` and patches `breaks` and `continues` lists. Using them at top level gives a warning that points at the keyword with a caret.
 
-*   **BREAK**: Terminates the innermost loop immediately.
-    ```arc
-    VAR i = 0
-
-    WHILE i < 10 THEN
-        i = i + 1
-
-        IF i == 5 THEN
-            BREAK # Exit the loop when i is 5
-        END
-    END
-
-    print(i) # Output will be 5
-    ```
-
-*   **CONTINUE**: Skips the rest of the current iteration of the innermost loop and proceeds to the next iteration.
-
-    ```arc
-    VAR i = 0
-
-    WHILE i < 5 THEN
-        i = i + 1
-        IF i == 3 THEN
-            CONTINUE # Skip printing when i is 3
-        END
-        print(i)
-    END
-    # Output will be:
-    # 1
-    # 2
-    # 4
-    # 5
-    ```
-
-## Operators
-* Arithmetic: `+`, `-`, `*`, `/`, `^`
-* Comparison: `==`, `!=`, `<`, `>`, `<=`, `>=`
-* Logical: `AND`, `OR`, `NOT`
-
-## Importing Files
-```arc
-IMPORT "math.arc"
-```
-
-## Error Handling
-
-Arc provides a `TRY...CATCH` mechanism for handling runtime errors gracefully.
+### TRY and CATCH
 
 ```arc
 TRY
-    # Code that might cause an error
-    # For example, a built-in function that can raise RuntimeError
-    RuntimeError("Something went wrong!")
+    RuntimeError("oops")
 CATCH e THEN
-    # This block executes if an error occurs in the TRY block
-    # 'e' will contain the error details string
-    print("Caught an error:", e)
+    print("caught:", e)
 END
 ```
 
-The `TRY` block encloses the code that might throw an error. If an error occurs within the `TRY` block, execution immediately jumps to the `CATCH` block. The error object is then bound to the identifier specified after `CATCH` (e.g., `e` in the example), which can then be used within the `THEN` block. If no error occurs, the `CATCH...THEN` block is skipped.
+`TRY` compiles to `OP_TRY_PUSH catch`, `body`, `OP_TRY_POP`, `OP_JUMP end`, `catch: STORE_VAR e, POP, handler, end:`. At runtime `vmRun` keeps a `tryStack`. On error it unwinds frames, restores `sp` and `ip`, pushes the error string, and continues at the catch. If no `TRY` is on the stack, the error returns from `vmRun`.
 
-## Comments
-
-Comments are used to add explanations or prevent execution of code. They are denoted by a hash symbol `#` and extend to the end of the line.
+## Imports
 
 ```arc
-# This is a single-line comment
-VAR x = 10 # This is an end-of-line comment
+IMPORT "@math.arc"
+IMPORT "@stdlib/json/json.arc"
+IMPORT "__c_tools"
+IMPORT "__sys"
 ```
+
+A path that starts with `@` is looked up in `$PREFIX/share/arc/lib`. A name like `__c_tools` with no slash loads a native module registered in `stdlibModules`. At runtime `OP_IMPORT` first checks native modules, then resolves the file via `resolveImportPath` and compiles it into a new `CallFrame` that shares the global `SymbolTable`.
+
+Use `--skip-evaluation` if you just want to check that imports and syntax are valid.
+
+## Error Handling and Diagnostics
+
+ Arc reports errors with file, line, column, the source line, and a `^` caret. Colors are used when stdout is a tty, and you can turn them off with `-n`.
+
+ Warnings are for things that are not fatal but probably wrong:
+
+ * `BREAK` outside a loop
+ * `CONTINUE` outside a loop
+ * `RETURN` outside a function
+ * unknown binary or unary operator
+
+Warnings are yellow, go to stdout, and include file, line, column and a snippet like:
+
+```
+Warning: 'BREAK' outside a loop
+File tests/foo.arc, line 2, column 1
+
+BREAK
+^^^^^
+```
+
+## Putting It Together
+
+A small program shows most of the above:
+
+```arc
+IMPORT "@stdlib/assert.arc"
+
+CLASS Counter
+    VAR count = 0
+    FN inc(self) THEN
+        self.count = self.count + 1
+        RETURN self.count
+    END
+END
+
+VAR c = Counter()
+c.inc(c)
+print(c.count)  # 1
+
+VAR lst = []
+FOR i IN [1, 2, 3] THEN
+    lst = append_list(lst, i * 2)
+END
+print(lst)  # [2, 4, 6]
+
+TRY
+    print(lst[10])
+CATCH e THEN
+    print("out of range:", e)
+END
+```
+
+Start that file with `arc -d` to see tokens, the AST, and the disassembly, then without `-d` to just run it.
+

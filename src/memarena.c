@@ -91,6 +91,7 @@ void arenaReset(Arena* arena) {
   }
 
   arena->head = NULL;
+  arena->current = NULL;
 }
 
 void arenaDestroy(Arena* arena) {

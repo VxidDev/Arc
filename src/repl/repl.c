@@ -16,7 +16,6 @@
 MemPool* numberPool = NULL;
 MemPool* stringPool = NULL;
 MemPool* nativeFuncPool = NULL;
-MemPool* functionCallPool = NULL;
 MemPool* symbolPool = NULL;
 MemPool* symbolTablePool = NULL;
 MemPool* functionPool = NULL;
@@ -32,7 +31,6 @@ void initMemPools() {
   numberPool = initPool(sizeof(Number));
   stringPool = initPool(sizeof(String));
   nativeFuncPool = initPool(sizeof(NativeFunction));
-  functionCallPool = initPool(sizeof(FunctionCallNode));
   symbolPool = initPool(sizeof(Symbol));
   symbolTablePool = initPool(sizeof(SymbolTable));
   functionPool = initPool(sizeof(Function));
@@ -59,7 +57,6 @@ void freeMemPools() {
   freePool(numberPool);
   freePool(stringPool);
   freePool(nativeFuncPool);
-  freePool(functionCallPool);
   freePool(symbolPool);
   freePool(symbolTablePool);
   freePool(functionPool);

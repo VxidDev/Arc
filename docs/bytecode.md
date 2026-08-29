@@ -1,136 +1,149 @@
-# Arc Bytecode Reference
+# Bytecode Reference - What the VM Runs
 
-This document lists all opcodes used by the Arc Virtual Machine, their stack effects, and their behavior. Opcodes are defined in `include/compiler.h` and implemented in `src/vm.c`.
+Bytecode is defined in `include/compiler.h` as `OpCode` and implemented in `src/vm.c` as a computed goto table. A `Chunk` holds `code` bytes, a `constants` pool, and a `positions` map for errors. Operands that refer to constants use a 24 bit index `(b1<<16)|(b2<<8)|b3`, jumps use a 16 bit signed offset.
+
+## How to Read This
+
+* **Stack:** what the opcode pops and pushes. `...` is the rest of the stack.
+* **Operands:** bytes that follow the opcode.
+* **Notes:** what it does and what errors it can raise.
 
 ## Data Movement
 
-### OP_LOAD_CONST
-- **Stack**: `... -> ..., value`
-- **Operand**: 1-byte index into the constant pool.
-- **Description**: Pushes a constant (Number, String, or Function) onto the stack.
+**`OP_LOAD_CONST`**
+* Stack: `... -> ..., value`
+* Operands: 24b const index
+* Does: `PUSH(constants[idx])`. If the constant is `NULL` it pushes `VAL_NULL`, if it is an `int` or `float` it pushes `VAL_INT`/`VAL_FLOAT` directly, otherwise it pushes the object. Constants are `isStatic`.
 
-### OP_LOAD_VAR
-- **Stack**: `... -> ..., value`
-- **Operand**: 1-byte index to interned string (name).
-- **Description**: Looks up a variable in the current symbol table and pushes its value.
+**`OP_LOAD_VAR`**
+* Stack: `... -> ..., value`
+* Operands: 24b interned name index
+* Does: `getTable(vars, name->value)` and pushes a copy. If `IS_UNDEF` it raises `NameError: Undefined variable "x"`.
 
-### OP_STORE_VAR
-- **Stack**: `..., value -> ..., value` (peeks)
-- **Operand**: 1-byte index to interned string (name).
-- **Description**: Assigns the top stack value to a variable in the current symbol table.
+**`OP_STORE_VAR`**
+* Stack: `..., value -> ..., value` (peeks, does not pop)
+* Operands: 24b name index
+* Does: `peek = PEEK(0); setTable(vars,name,peek)` or `setTableLocal` when inside a class instance. If `setTable` returns false (constant) it raises `NameError: Cannot assign to constant`.
 
-### OP_LOAD_LOCAL
-- **Stack**: `... -> ..., value`
-- **Operand**: 1-byte stack slot index.
-- **Description**: Pushes the value of a local variable from the current call frame.
+**`OP_DECLARE_VAR`**
+* Stack: `..., value -> ..., value` (peeks)
+* Operands: 24b name index + 1B flags (`0x1 mutable`, `0x2 ref`)
+* Does: `declareTable(vars,name,peek,isMutable,isReference)` or `setTableLocal` for instances.
 
-### OP_STORE_LOCAL
-- **Stack**: `..., value -> ..., value` (peeks)
-- **Operand**: 1-byte stack slot index.
-- **Description**: Assigns the top stack value to a local variable slot.
+**`OP_LOAD_LOCAL`**
+* Stack: `... -> ..., value`
+* Operands: 8b slot
+* Does: `val = locals[base+slot]; if IS_UNDEF raise NameError: Variable used before assignment; PUSH(copyValue(val))` unless `isStatic`.
 
-### OP_POP
-- **Stack**: `..., value -> ...`
-- **Description**: Discards the top value on the stack.
+**`OP_STORE_LOCAL`**
+* Stack: `..., value -> ..., value` (peeks)
+* Operands: 8b slot
+* Does: unboxes `int`/`float` from `Object*` if needed, `freeValue(old)`, `locals[base+slot]=copyValue(peek)`.
 
-## Arithmetic & Logic
+**`OP_POP`**
+* Stack: `..., value -> ...`
+* Does: `freeValue(POP())`.
 
-### OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_POW
-- **Stack**: `..., a, b -> ..., (a op b)`
-- **Description**: Binary arithmetic operations. `OP_DIV` raises a "Division by zero" error if `b` is 0.
+## Arithmetic and Logic
 
-### OP_EQ, OP_NE, OP_LT, OP_GT, OP_LTE, OP_GTE
-- **Stack**: `..., a, b -> ..., (0 or 1)`
-- **Description**: Comparison operations. Results in an integer `1` (true) or `0` (false).
+All of these pop `a` and `b` (or `a` for unary) and push the result. The fast path checks `IS_INT` on both sides first, otherwise `doArith` handles mixed types.
 
-### OP_AND, OP_OR
-- **Stack**: `..., a, b -> ..., (0 or 1)`
-- **Description**: Logical AND/OR operations.
+**`OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_POW`**
+* Stack: `..., a, b -> ..., result`
+* Does: `a + b` etc. `OP_DIV` checks `b==0` and raises `ValueError: Division by zero`. `OP_POW` uses `pow(double,double)`. String `+` concatenates via `addString`, string `* int` repeats via `mulString` with `SIZE_MAX/len` guard.
 
-### OP_NEG
-- **Stack**: `..., a -> ..., -a`
-- **Description**: Unary arithmetic negation.
+**`OP_EQ, OP_NE, OP_LT, OP_GT, OP_LTE, OP_GTE`**
+* Stack: `..., a, b -> ..., 0 or 1`
+* Does: numeric compare, null compare, or string compare with `len` check then `memcmp`. `EQ`/`NE` on non-string, non-number returns `false`/`true` without error.
 
-### OP_NOT
-- **Stack**: `..., a -> ..., !a`
-- **Description**: Logical NOT.
+**`OP_AND, OP_OR`**
+* Stack: `..., a, b -> ..., 0 or 1`
+* Does: `int(a) && int(b)` etc.
+
+**`OP_NEG`**
+* Stack: `..., a -> ..., -a`
+* Does: if `VAL_INT` then `-i`, if `VAL_FLOAT` then `-f`, else `TypeError: Operand must be a number`.
+
+**`OP_NOT`**
+* Stack: `..., a -> ..., !a`
+* Does: logical not for `VAL_INT`/`VAL_FLOAT`, else `TypeError`.
 
 ## Control Flow
 
-### OP_JUMP
-- **Operand**: 2-byte signed offset.
-- **Description**: Unconditionally adds the offset to the Instruction Pointer (`ip`).
+**`OP_JUMP`**
+* Operands: 16b signed offset
+* Does: `ip += offset`.
 
-### OP_JUMP_IF_FALSE
-- **Stack**: `..., condition -> ...` (pops)
-- **Operand**: 2-byte signed offset.
-- **Description**: Jumps if the condition is `0`.
+**`OP_JUMP_IF_FALSE`**
+* Stack: `..., cond -> ...` (pops)
+* Operands: 16b offset
+* Does: `if (!isTruthy(POP())) ip += offset; freeValue(cond)`.
 
-### OP_FOR_PREP
-- **Stack**: `..., iterable -> ..., iterable, length, index(0)`
-- **Description**: Prepares a `FOR` loop by pushing the iterable's length and an initial index onto the stack.
+**`OP_FOR_PREP`**
+* Stack: `..., iterable -> ..., iterable, length, index`
+* Does: expects `iterable` is `OBJ_LIST` or `OBJ_STRING`, pushes the object back, then `VAL_INT(len)` and `VAL_INT(0)`.
 
-### OP_FOR_ITER
-- **Stack**: `..., iterable, length, index -> ..., iterable, length, index, item` (if continuing)
-- **Operand**: 2-byte signed offset (to exit).
-- **Description**: Checks if `index < length`. If so, pushes the next item and increments the index. If not, jumps to exit.
+**`OP_FOR_ITER`**
+* Stack: `..., iterable, length, index -> ..., iterable, length, index, item` or `...,  (cleaned)`
+* Operands: 16b exit offset
+* Does: if `index < length` pushes `item` (`list->objects[index]` or `initString` of one char) and bumps `index`, else pops `index,length,iterable` (freeing iterable) and jumps.
 
-### OP_BREAK / OP_CONTINUE
-- **Description**: Internal markers returned to the VM loop to handle loop control flow.
+**`OP_TRY_PUSH`**
+* Operands: 16b offset to catch
+* Does: pushes `TryFrame{ip+offset, frameTop, stackTop}` onto `tryStack` if not full.
 
-## Functions & Execution
+**`OP_TRY_POP`**
+* Does: pops `tryStack` if any.
 
-### OP_CALL
-- **Stack**: `..., callee, arg1, ..., argN -> ..., result`
-- **Operand**: 1-byte argument count `N`.
-- **Description**: Invokes an Arc function or Native function.
+**`OP_BREAK` / `OP_CONTINUE`**
+* Returned by `vmRun` as `BREAK`/`CONTINUE` objects and handled at compile time as jumps. At runtime they just return.
 
-### OP_RETURN
-- **Stack**: `..., result -> (caller stack)`
-- **Description**: Returns from the current function frame with the top stack value.
+## Functions, Classes, and Properties
 
-### OP_PROPERTY_ACCESS
-- **Stack**: `..., instance -> ..., value`
-- **Operand**: 1-byte index to interned string (property name).
-- **Description**: Accesses a property value from an instance.
+**`OP_CALL`**
+* Stack: `..., callee, arg1..argN -> ..., result`
+* Operands: 8b `N`
+* Does: pops `callee`. If `OBJ_FUNCTION` checks `N==paramCount`, lazy compiles `func->body` if `chunk==NULL`, checks `frameTop` and `localsTop`, saves state, builds a new `CallFrame` with `variables` or `instance->fields`, copies args, zeroes remaining locals to `VAL_UNDEF`, bumps `frameTop`/`localsTop`, and dispatches. If `OBJ_NATIVE_FUNCTION` checks `isVariadic` vs `requiredArgCount`, boxes `Value` args to `Object**`, calls `nf->function`, unboxes, handles `OBJ_ERROR`. If `OBJ_CLASS` creates an `Instance` via `initInstance` and runs its chunk.
 
-### OP_PROPERTY_SET
-- **Stack**: `..., instance, value -> ..., value`
-- **Operand**: 1-byte index to interned string (property name).
-- **Description**: Sets a property value on an instance.
+**`OP_RETURN`**
+* Stack: `..., result -> ...` (to caller)
+* Does: pops `result`, unwinds one `CallFrame`, frees its locals, restores `localsTop` and `tryStackTop`, handles `instance` vs `variables`, frees `ownsChunk`, pushes `result` to caller or returns `valueToObject(result)`.
 
-## Collections & Indexing
+**`OP_PROPERTY_ACCESS`**
+* Stack: `..., instance -> ..., value`
+* Operands: 24b name index
+* Does: expects `OBJ_INSTANCE`, `getTableLocal(fields,name)`, pushes copy, frees instance.
 
-### OP_BUILD_LIST
-- **Stack**: `..., item1, ..., itemN -> ..., [list]`
-- **Operand**: 1-byte count `N`.
-- **Description**: Creates a new list containing the top `N` stack items.
+**`OP_PROPERTY_SET`**
+* Stack: `..., instance, value -> ..., value`
+* Operands: 24b name index
+* Does: expects `OBJ_INSTANCE`, `setTableLocal(fields,name,value)`, pushes `value`, frees instance.
 
-### OP_INDEX_GET
-- **Stack**: `..., target, index -> ..., value`
-- **Description**: Retrieves an element from a String or List at the given index.
+## Collections
 
-### OP_INDEX_SET
-- **Stack**: `..., target, index, value -> ..., 1`
-- **Description**: Sets an element in a String or List. Pushes `1` on success.
+**`OP_BUILD_LIST`**
+* Stack: `..., v1..vN -> ..., list`
+* Operands: 24b `N`
+* Does: checks `N <= VM_STACK_MAX` and `sp-N >= stack`, allocates `items` (`smallBuf[64]` or `malloc`), `valueToObject`s each `PEEK`, pops `N`, `initList`s, pushes `list`.
 
-### OP_STORE_INDEX
-- **Stack**: `..., index, value -> ..., 1`
-- **Operand**: 1-byte index to interned string (target name).
-- **Description**: Specialized assignment for list/string elements: `target[index] = value`.
+**`OP_INDEX_GET`**
+* Stack: `..., target, index -> ..., value`
+* Does: expects `index` is `VAL_INT`, target is `String` or `List`. For string pushes `initString` of one char, for list pushes `copyValue` of `objects[i]`. Out of range raises `IndexError`.
 
-## Miscellaneous
+**`OP_INDEX_SET`**
+* Stack: `..., target, index, value -> ..., 1`
+* Does: for `List` it `freeObject`s old `objects[i]` and stores `valueToObject(value)`. For `String` it expects `value` is a one-char string and `i` in range, then `str->value[i]=char`. Pushes `1`.
 
-### OP_TRY_PUSH
-- **Operand**: 2-byte signed offset (to catch block).
-- **Description**: Pushes the catch block address onto the `tryStack`.
+## Imports and Halt
 
-### OP_TRY_POP
-- **Description**: Removes the top entry from the `tryStack`.
+**`OP_IMPORT`**
+* Operands: 24b path index
+* Does: first scans `stdlibModules` for a native name and `init`s it. Otherwise `resolveImportPath` from `frame->filename`, `readFile`, `initLexer`, `parseProgram`, `compileAST`, checks `frameTop`, builds a new `CallFrame` with `ownsChunk=true` and the same `vars`, and dispatches.
 
-### OP_IMPORT
-- **Operand**: 1-byte index to constant string (path).
-- **Description**: Loads and executes an external file or native module.
+**`OP_DECLARE_VAR` vs `OP_STORE_VAR`:** `DECLARE` is the first `VAR` or `CONSTVAL`/`CONSTREF` for that name, `STORE` is a later plain assignment.
 
-### OP_HALT
-- **Description**: Stops the VM execution loop.
+**`OP_HALT`**
+* Does: pops result if any else `0`, unwinds one frame if `frameTop > exitFrameTop` (handling instance vs variables and `ownsChunk`), pushes result and dispatches, otherwise `return valueToObject(result)` and exits `vmRun`.
+
+All jumps are patched by `emitJump`/`patchJump`/`emitLoop` at compile time, so offsets are already correct when the VM sees them.
+

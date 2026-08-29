@@ -32,11 +32,8 @@ typedef enum {
   NODE_NULL
 } NodeType;
 
-typedef struct Interpretator Interpretator;
 typedef struct Object Object;
 typedef struct ASTNode ASTNode;
-
-typedef Object* (*VisitFn)(ASTNode*, Interpretator*);
 
 typedef struct ASTNode {
   NodeType type;
