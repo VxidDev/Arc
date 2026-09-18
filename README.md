@@ -4,7 +4,7 @@ Arc is a small, stack based programming language that compiles to its own byteco
 
 ## Start Here
 
-If you are new, read the docs in order:
+If you are new, read the docs in this order:
 
 1. [Documentation Index](docs/index.md)
 2. [Getting Started](docs/getting-started.md) - how to build, run, and install
