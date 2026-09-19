@@ -23,6 +23,20 @@ NumberNode* initNumberNode(Token token) {
   return node;
 }
 
+DoNode* initDoNode(Token start, Token end, ASTNode* body) {
+  if (!body) return NULL;
+
+  DoNode* node = arenaAlloc(parseArena, sizeof(DoNode));
+  if (!node) return NULL;
+
+  node->base.type = NODE_NULL;
+
+  node->base.start = start.start;
+  node->base.end = end.end;
+
+  return node;
+}
+
 NullNode* initNullNode(Token tok) {
   if (tok.type == TOK_EOF) return NULL;
 

@@ -107,6 +107,27 @@ static ASTNode* continueExpr(Parser* parser, ASTNode* left, int minPrec) {
   return left;
 }
 
+static ASTNode* parseDo(Parser* parser) {
+  Token start = parser->currentToken;
+
+  advanceParser(parser);
+
+  ASTNode* body = blockParser(parser);
+
+  if (!body) {
+    return NULL;
+  }
+
+  if (parser->currentToken.type != TOK_END) {
+    setError(parser, parser->currentToken.start, parser->currentToken.end, "Expected 'END'");
+    return NULL;
+  }
+
+  advanceParser(parser);
+
+  return (ASTNode*)initDoNode(start, parser->currentToken, body);
+}
+
 static ASTNode* parseExprPrimary(Parser* parser) {
   switch (parser->currentToken.type) {
     case TOK_RPAREN:
@@ -116,6 +137,7 @@ static ASTNode* parseExprPrimary(Parser* parser) {
     case TOK_EOF:   setError(parser, parser->currentToken.start, parser->currentToken.end, "Unexpected EOF"); return NULL;
     case TOK_CLASS: return parseClass(parser);
     case TOK_FOR:   return parseFor(parser);
+    case TOK_DO:    return parseDo(parser);
 
     case TOK_BREAK: {
       ASTNode* node = (ASTNode*)initBreakNode(parser->currentToken);

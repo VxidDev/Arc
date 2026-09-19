@@ -29,7 +29,8 @@ typedef enum {
   NODE_CLASS,
   NODE_PROPERTYACCESS,
   NODE_PROPERTYASSIGN,
-  NODE_NULL
+  NODE_NULL,
+  NODE_DO
 } NodeType;
 
 typedef struct Object Object;
@@ -126,7 +127,7 @@ typedef struct ImportNode {
   Token filePath;
 } ImportNode; 
 
-typedef struct {
+typedef struct ProgramNode {
   ASTNode base;
   ASTNode **statements;
   size_t count;
@@ -194,6 +195,12 @@ typedef struct PropertyAssignNode {
   ASTNode* value;
 } PropertyAssignNode;
 
+typedef struct DoNode {
+  ASTNode base;
+  ASTNode* body;
+} DoNode;
+
+DoNode* initDoNode(Token start, Token end, ASTNode* body);
 PropertyAssignNode* initPropertyAssignNode(ASTNode* target, Token field, ASTNode* value, Position start, Position end);
 NumberNode* initNumberNode(Token token);
 StringNode* initStringNode(Token token);

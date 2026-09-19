@@ -1088,6 +1088,18 @@ static void compilePropertyAccessNode(ASTNode* node, Compiler* c) {
   emitConstRef(c, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
 }
 
+static void compileDoNode(ASTNode* node, Compiler* c) {
+  DoNode* dn = (DoNode*)node;
+
+  setPosFromNode(c, node);
+  emitByte(c, OP_MAKE_SCOPE);
+
+  compileNode(dn->body, c);
+
+  setPosFromNode(c, node);
+  emitByte(c, OP_EXIT_SCOPE);
+}
+
 static void compileNode(ASTNode *node, Compiler *c) {
   if (!node || *c->err) return;
 
@@ -1113,6 +1125,7 @@ static void compileNode(ASTNode *node, Compiler *c) {
     case NODE_NULL: compileNull(node, c); break;
     case NODE_PROPERTYACCESS: compilePropertyAccessNode(node, c); break;
     case NODE_PROPERTYASSIGN: compilePropertyAssignNode(node, c); break;
+    case NODE_DO: compileDoNode(node, c); break;
     case NODE_BREAK:
       if (c->loop) {
         setPosFromNode(c, node);

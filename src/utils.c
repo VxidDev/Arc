@@ -120,6 +120,8 @@ char* tokToString(const TokType type) {
     case TOK_FOR: return "FOR";
     case TOK_IN: return "IN";
 
+    case TOK_DO: return "DO";
+
     case TOK_CLASS: return "CLASS";
     case TOK_DOT: return "DOT";
 

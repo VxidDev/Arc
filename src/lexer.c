@@ -78,6 +78,7 @@ static TokType keywordType(const char *s, const uint64_t len) {
       if (word == KW("FN")) return TOK_FN;
       if (word == KW("OR")) return TOK_OR;
       if (word == KW("IN")) return TOK_IN;
+      if (word == KW("DO")) return TOK_DO;
 
       break;
 

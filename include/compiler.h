@@ -36,6 +36,7 @@ typedef enum OpCode {
   OP_PROPERTY_ACCESS,
   OP_PROPERTY_SET,
   OP_DECLARE_VAR,
+  OP_MAKE_SCOPE, OP_EXIT_SCOPE,
   OP_HALT
 } OpCode;
 
