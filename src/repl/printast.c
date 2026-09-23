@@ -158,6 +158,15 @@ void printAST(ASTNode* node) {
       break;
     }
 
+    case NODE_DO: {
+      DoNode* d = (DoNode*)node;
+
+      printf("%sDO:%s", COLOR(ANSI_BRIGHT_GREEN_FG), COLOR(ANSI_RESET));
+      printAST(d->body);
+
+      break;
+    }
+
     case NODE_FUNCTION: {
       FunctionNode* func = (FunctionNode*)node;
 

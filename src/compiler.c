@@ -1088,16 +1088,57 @@ static void compilePropertyAccessNode(ASTNode* node, Compiler* c) {
   emitConstRef(c, internString(c, pa->field.val.s, strlen(pa->field.val.s)));
 }
 
+/*
+ * DO ... END (block scope)
+ *
+ * The body is compiled into its own chunk and executed by the VM in a
+ * fresh call frame, so declarations get block-local slots.
+ *
+ *   OP_EXEC_SCOPE  <Scope constant>
+ *
+ * The frame's closing OP_HALT pushes the block value back here.
+ */
 static void compileDoNode(ASTNode* node, Compiler* c) {
   DoNode* dn = (DoNode*)node;
 
-  setPosFromNode(c, node);
-  emitByte(c, OP_MAKE_SCOPE);
+  Compiler fc = {0};
+  fc.chunk = initChunk();
+  fc.err = c->err;
+  fc.filename = c->filename;
+  fc.sourcetext = c->sourcetext;
+  fc.isFunction = true;
+  fc.funcName = "!<do-end>";
+  fc.funcObj = NULL;
 
-  compileNode(dn->body, c);
+  fc.chunk->filename = c->filename;
+  fc.chunk->sourcetext = c->sourcetext;
+
+  setPosFromNode(&fc, dn->body);
+
+  if (dn->body->type == NODE_PROGRAM)
+    compileProgram(dn->body, &fc);
+  else
+    compileNode(dn->body, &fc);
+
+  setPosFromNode(&fc, node);
+  emitByte(&fc, OP_HALT);
+
+  fc.chunk->maxLocals = fc.maxLocalCount;
+
+  if (_DEBUG) disassembleChunk(fc.chunk, "!<do-end>");
+
+  Scope *scope = initScope(fc.chunk);
+
+  if (!scope) {
+    if (c->err && !*c->err)
+      *c->err = initRuntimeError(getNodeStart(node), getNodeEnd(node), c->filename, "Failed to create do-block scope.", c->sourcetext);
+    freeChunk(fc.chunk);
+    return;
+  }
 
   setPosFromNode(c, node);
-  emitByte(c, OP_EXIT_SCOPE);
+  emitByte(c, OP_EXEC_SCOPE);
+  emitConstRef(c, addConst(c, (Object *)scope));
 }
 
 static void compileNode(ASTNode *node, Compiler *c) {
@@ -1297,6 +1338,12 @@ void disassembleChunk(Chunk *chunk, const char *name) {
         break;
       }
       case OP_CALL: printf("OP_CALL %u\n", chunk->code[++i]); break;
+      case OP_EXEC_SCOPE: {
+        uint32_t idx = ((uint32_t)chunk->code[i+1] << 16) | ((uint32_t)chunk->code[i+2] << 8) | chunk->code[i+3];
+        i += 3;
+        printf("OP_EXEC_SCOPE %u\n", idx);
+        break;
+      }
       case OP_BREAK: printf("OP_BREAK\n"); break;
       case OP_CONTINUE: printf("OP_CONTINUE\n"); break;
       case OP_RETURN: printf("OP_RETURN\n"); break;

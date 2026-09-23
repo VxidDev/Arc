@@ -36,7 +36,7 @@ typedef enum OpCode {
   OP_PROPERTY_ACCESS,
   OP_PROPERTY_SET,
   OP_DECLARE_VAR,
-  OP_MAKE_SCOPE, OP_EXIT_SCOPE,
+  OP_EXEC_SCOPE, // run a do ... end block chunk in a new frame
   OP_HALT
 } OpCode;
 

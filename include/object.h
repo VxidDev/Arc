@@ -31,7 +31,8 @@ typedef enum ObjType {
   OBJ_CONTINUE,
   OBJ_CLASS,
   OBJ_INSTANCE,
-  OBJ_NULL
+  OBJ_NULL,
+  OBJ_SCOPE
 } ObjType;
 
 typedef struct Object {
@@ -121,6 +122,11 @@ typedef struct Return {
   Object* value;
 } Return;
 
+typedef struct Scope {
+  Object base;
+  Chunk* chunk;
+} Scope;
+
 typedef struct EvalResultNumber {
   Number* num;
   ErrType err;
@@ -183,6 +189,7 @@ Function* copyFunction(Function* func);
 NativeFunction* copyNativeFunction(NativeFunction* func);
 ProgramError* initProgramError(char *details);
 Return* initReturn(Object* value);
+Scope* initScope(Chunk* chunk);
 
 Break* initBreak(void);
 Continue* initContinue(void);
