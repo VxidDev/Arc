@@ -123,9 +123,10 @@ static ASTNode* parseDo(Parser* parser) {
     return NULL;
   }
 
+  Token endTok = parser->currentToken;
   advanceParser(parser);
 
-  return (ASTNode*)initDoNode(start, parser->currentToken, body);
+  return (ASTNode*)initDoNode(start, endTok, body);
 }
 
 static ASTNode* parseExprPrimary(Parser* parser) {

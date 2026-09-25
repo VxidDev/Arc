@@ -417,8 +417,6 @@ Object *vmRun(VM *vm) {
 
     [OP_PROPERTY_ACCESS] = &&OP_PROPERTY_ACCESS,
     [OP_PROPERTY_SET] = &&OP_PROPERTY_SET,
-
-    [OP_EXEC_SCOPE] = &&OP_EXEC_SCOPE,
   };
 
   for (;;) {
@@ -1211,53 +1209,6 @@ Object *vmRun(VM *vm) {
         vm->locals[newFrame->localsBase + i] = VAL_UNDEF();
 
       vm->localsTop += chunk->maxLocals;
-      vm->frameTop++;
-
-      REFRESH_FRAME();
-      DISPATCH();
-    }
-
-    /*
-     * do ... end: run the block's chunk in a fresh call frame.
-     * Declarations become locals of that frame; the frame's OP_HALT
-     * (emitted at the end of the body) returns the block value here.
-     */
-    OP_EXEC_SCOPE: {
-      Scope *scope = (Scope *)READ_CONST();
-      Chunk *bodyChunk = scope->chunk;
-      int scopeLocals = bodyChunk->maxLocals;
-
-      if (UNLIKELY(vm->frameTop >= VM_CALL_STACK_MAX)) {
-        VM_ERR(initRuntimeError, "Call stack overflow.");
-        HANDLE_ERROR();
-      }
-
-      if (UNLIKELY(vm->localsTop + scopeLocals > VM_LOCALS_MAX)) {
-        VM_ERR(initRuntimeError, "Locals stack overflow.");
-        HANDLE_ERROR();
-      }
-
-      SAVE_STATE();
-
-      CallFrame *newFrame = &vm->frames[vm->frameTop];
-
-      *newFrame = (CallFrame){
-        .chunk = bodyChunk,
-        .ip = bodyChunk->code,
-        .variables = vars,
-        .tryStackTop = vm->tryStackTop,
-        .localsBase = vm->localsTop,
-        .localCount = scopeLocals,
-        .currentInstr = 0,
-        .instance = NULL,
-        .filename = frame->filename,
-        .ownsChunk = false
-      };
-
-      for (int i = 0; i < scopeLocals; i++)
-        vm->locals[vm->localsTop + i] = VAL_UNDEF();
-
-      vm->localsTop += scopeLocals;
       vm->frameTop++;
 
       REFRESH_FRAME();

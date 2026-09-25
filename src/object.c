@@ -79,12 +79,6 @@ void freeObject(Object* obj) {
       free(obj);
       return;
     }
-
-    case OBJ_SCOPE:
-      if (((Scope*)obj)->chunk)
-        freeChunk(((Scope*)obj)->chunk);
-      free(obj);
-      return;
  
     case OBJ_ERROR:
     case OBJ_FILE: 
