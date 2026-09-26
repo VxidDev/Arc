@@ -81,3 +81,4 @@ end
 run_fn(greet, ["World"]) # must print "Hello, World!"
 
 dl_close(lib)
+print("test_c_tools.arc passed")

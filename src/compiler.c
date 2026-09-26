@@ -574,7 +574,19 @@ static void compileVarAssign(ASTNode *node, Compiler *c) {
   if (va->isDeclaration) {
     emitByte(c, OP_DECLARE_VAR);
     emitConstRef(c, internString(c, va->identifier, strlen(va->identifier)));
-    emitByte(c, (uint8_t)((va->isMutable ? 0x1 : 0) | (va->isReference ? 0x2 : 0)));
+    emitByte(c, (uint8_t)((va->isMutable ? 0x1 : 0) | (va->isReference ? 0x2 : 0)) | (va->typeAnnotation.type != TOK_INVALID ? 0x4 : 0));
+
+    uint32_t typeIdx = 0xFFFFFF;
+
+    if (va->typeAnnotation.type != TOK_INVALID) {
+      typeIdx = internString(
+        c,
+        va->typeAnnotation.val.s,
+        strlen(va->typeAnnotation.val.s)
+      );
+    }
+
+    emitConstRef(c, typeIdx);
   } else {
     emitByte(c, OP_STORE_VAR);
     emitConstRef(c, internString(c, va->identifier, strlen(va->identifier)));
@@ -1252,10 +1264,19 @@ void disassembleChunk(Chunk *chunk, const char *name) {
         i += 3;
         uint8_t flags = chunk->code[++i];
         printf("OP_DECLARE_VAR");
+        
         printConstant(chunk, idx);
-        printf(" [%s%s]",
+        
+        uint32_t typeAnnotationIdx = ((uint32_t)chunk->code[i + 1] << 16) | ((uint32_t)chunk->code[i + 2] << 8) | (uint32_t)chunk->code[i + 3];
+        i += 3;
+
+        String* s = (String*)(typeAnnotationIdx == 0xFFFFFF ? NULL : chunk->constants[typeAnnotationIdx]); 
+
+        printf(" [%s/%s/%s]",
               (flags & 0x1) ? "mutable" : "const",
-              (flags & 0x2) ? ",ref" : "");
+              (flags & 0x2) ? "ref" : "not-a-ref",
+              (flags & 0x4) ? s ? s->value : "<?>" : "");
+
         printf("\n");
         break;
       }

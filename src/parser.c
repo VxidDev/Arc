@@ -1013,6 +1013,20 @@ static ASTNode* parseVar(Parser* parser, const bool isMutable, const bool isRefe
     return NULL;
   }
 
+  Token typeAnnotation = (Token){ .type = TOK_INVALID };
+
+  if (parser->currentToken.type == TOK_COLON) { // type annotation
+    advanceParser(parser);
+
+    if (parser->currentToken.type != TOK_STRING) {
+      setError(parser, parser->currentToken.start, parser->currentToken.end, "Expected string after colon for type annotation.");
+      return NULL;
+    }
+
+    typeAnnotation = parser->currentToken;
+    advanceParser(parser);
+  }
+
   if (parser->currentToken.type != TOK_EQ) {
     setError(parser, parser->currentToken.start, parser->currentToken.end, "Expected '=' after identifier");
     return NULL;
@@ -1028,7 +1042,7 @@ static ASTNode* parseVar(Parser* parser, const bool isMutable, const bool isRefe
     return NULL;
   }
 
-  return (ASTNode*)initVarAssignNode(varName, expr, start, true, isMutable, isReference);
+  return (ASTNode*)initVarAssignNode(varName, expr, start, true, isMutable, isReference, typeAnnotation);
 }
 
 static ASTNode* parseIdentifier(Parser* parser) {
@@ -1050,7 +1064,7 @@ static ASTNode* parseIdentifier(Parser* parser) {
 
     if (target->type == NODE_VARACCESS) {
       VarAccessNode* va = (VarAccessNode*)target;
-      return (ASTNode*)initVarAssignNode(va->token.val.s, value, va->token.start, false, false, false);
+      return (ASTNode*)initVarAssignNode(va->token.val.s, value, va->token.start, false, false, false, (Token){ .type = TOK_INVALID });
     }
 
     if (target->type == NODE_PROPERTYACCESS) {

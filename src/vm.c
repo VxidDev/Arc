@@ -541,7 +541,14 @@ Object *vmRun(VM *vm) {
 
       bool isMutable   = flags & 0x1;
       bool isReference = flags & 0x2;
+      
+      uint32_t typeAnnotationIdx = _read_const_idx(&ip);
+      String* typeAnnotation = NULL;
 
+      if (typeAnnotationIdx != 0xFFFFFF) {
+        typeAnnotation = (String*)constants[typeAnnotationIdx];
+      }
+ 
       if (frame->instance) {
         setTableLocal(vars, name->value, val);
       } else {

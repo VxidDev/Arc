@@ -54,3 +54,4 @@ FN sum_upto(n) THEN
 END
 
 assert_eq(sum_upto(3), 12, "block in loop inside function")
+print("test_do_end.arc passed")
