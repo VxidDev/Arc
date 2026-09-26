@@ -6,7 +6,7 @@ This is how Arc looks when you write it, and how it behaves when you run it.
 
 Arc makes a clear split:
 
-* **Keywords are case insensitive.** `VAR`, `var`, `Var`, and `vAr` all mean the same thing. The same is true for `FN`, `IF`, `WHILE`, `FOR`, `TRY`, `CATCH`, `RETURN`, `CLASS`, `BREAK`, `CONTINUE`, `IMPORT`, `END`, `THEN`, `IN`, and so on.
+* **Keywords are case insensitive.** `VAR`, `var`, `Var`, and `vAr` all mean the same thing. The same is true for `FN`, `IF`, `WHILE`, `FOR`, `TRY`, `CATCH`, `DO`, `RETURN`, `CLASS`, `BREAK`, `CONTINUE`, `IMPORT`, `END`, `THEN`, `IN`, and so on.
 * **Identifiers are case sensitive.** `myVariable`, `myvariable`, and `MYVARIABLE` are three different names.
 
 ```arc
@@ -239,6 +239,55 @@ END
 ```
 
 `TRY` compiles to `OP_TRY_PUSH catch`, `body`, `OP_TRY_POP`, `OP_JUMP end`, `catch: STORE_VAR e, POP, handler, end:`. At runtime `vmRun` keeps a `tryStack`. On error it unwinds frames, restores `sp` and `ip`, pushes the error string, and continues at the catch. If no `TRY` is on the stack, the error returns from `vmRun`.
+
+### DO ... END
+
+`DO ... END` is a block: a scoped group of statements that evaluates to the value of its last expression. You can use it as a statement or inline as an expression:
+
+```arc
+VAR r = DO
+    VAR a = 1
+    VAR b = 2
+    a + b
+END
+print(r)  # 3
+
+VAR single = DO 7 * 6 END
+print(single)  # 42
+```
+
+`VAR` declarations inside a block are local to it. They shadow outer names and are gone once the block ends, but plain assignment to a name that exists outside still writes through to the outer variable:
+
+```arc
+VAR x = 10
+
+DO
+    VAR x = 20    # shadows outer x
+END
+
+print(x)  # 10, outer x unchanged
+
+VAR counter = 0
+DO
+    counter = counter + 1  # writes the outer counter
+END
+print(counter)  # 1
+```
+
+Blocks nest, and they work inside loops and functions:
+
+```arc
+VAR nested = DO
+    VAR i = 1
+    DO
+        VAR j = 10
+        i + j
+    END + 1
+END
+print(nested)  # 12
+```
+
+Under the hood a `DO` node (`NODE_DO`) compiles its body with the same local-slot machinery a function body uses, so the block gets its own locals without a call frame.
 
 ## Imports
 

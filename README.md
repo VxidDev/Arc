@@ -20,7 +20,7 @@ Standard library: [I/O](docs/stdlib/io.md) | [Types](docs/stdlib/typing.md) | [S
 
 **Bytecode VM.** Your source is parsed into an AST, then compiled into a `Chunk` that holds code, constants, and source positions. The VM is a stack machine that dispatches with computed goto. It is small and quick, and it keeps full position info for nice errors.
 
-**Simple syntax.** Keywords are case insensitive. You can write `VAR`, `var`, or `Var` and it means the same thing. Identifiers are case sensitive. Control flow reads like plain English: `IF`, `ELIF`, `ELSE`, `END`, `WHILE`, `FOR item IN list`, `BREAK`, `CONTINUE`, `TRY ... CATCH`, `RETURN`.
+**Simple syntax.** Keywords are case insensitive. You can write `VAR`, `var`, or `Var` and it means the same thing. Identifiers are case sensitive. Control flow reads like plain English: `IF`, `ELIF`, `ELSE`, `END`, `WHILE`, `FOR item IN list`, `BREAK`, `CONTINUE`, `TRY ... CATCH`, `DO ... END` blocks, `RETURN`.
 
 **Functions and classes.** `FN` gives you first class functions with their own locals. `CLASS` gives you simple objects with dynamic fields. Methods take `self` explicitly, so there is no hidden binding.
 

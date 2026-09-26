@@ -5,7 +5,7 @@ Welcome to Arc. This is the map. If you read these in order you will know how to
 ## Core Docs
 
 * **[Getting Started](getting-started.md)** - Build the project, run programs, understand every CLI flag, install and test, and fix common issues.
-* **[Language Reference](syntax.md)** - How Arc looks and behaves. Covers case rules, literals, variables, functions, classes, lists, operators, imports, and error handling with `TRY` and `CATCH`.
+* **[Language Reference](syntax.md)** - How Arc looks and behaves. Covers case rules, literals, variables, functions, classes, lists, operators, imports, `DO ... END` blocks, and error handling with `TRY` and `CATCH`.
 * **[Architecture](architecture.md)** - The path from source text to bytecode to execution. Lexer, parser, compiler, and VM, plus how memory is organized.
 * **[Bytecode Reference](bytecode.md)** - Every opcode the VM understands, what it pops and pushes, and what it does.
 * **[Object System](object_system.md)** - What a `Value` is, what heap objects exist, how `String`, `List`, `Function`, `Class`, and `Instance` are laid out, and how they are freed.

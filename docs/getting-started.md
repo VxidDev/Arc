@@ -145,7 +145,7 @@ The harness caps hanging UI tests with a 3 second timeout. If a test times out i
 
 ## Where to Go Next
 
-* [Language Reference](syntax.md) - literals, variables, `CLASS`, `FN`, lists, `IF`, `WHILE`, `FOR`, `TRY`/`CATCH`
+* [Language Reference](syntax.md) - literals, variables, `CLASS`, `FN`, lists, `IF`, `WHILE`, `FOR`, `DO ... END` blocks, `TRY`/`CATCH`
 * [Architecture](architecture.md) - how `src/lexer.c` → `src/parser.c` → `src/compiler.c` → `src/vm.c` fits together
 * [Bytecode Reference](bytecode.md) - what each opcode does
 * Look at `examples/` - `hello_world.arc`, `fibonacci.arc`, `classes.arc`, `file_io.arc`, `list_processing.arc`, `string_processing.arc`, `error_handling.arc`

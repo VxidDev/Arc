@@ -46,7 +46,7 @@ The parser is a recursive descent parser with Pratt style precedence for binary 
 * `[` → `initIndexNode`
 * `.` → `initPropertyAccessNode` (expects `IDENTIFIER` after `.`)
 
-Other parsers: `parseIf` (handles `ELIF` and `ELSE`), `parseWhile`, `parseFor` (`FOR ident IN iterable THEN body END`), `parseFunction` (`FN name(params) THEN body END`), `parseClass` (`CLASS name body END`), `parseTryCatch` (`TRY body CATCH ident THEN handler END`), `parseReturn`, `parseImport` (`IMPORT "path"`), `parseVar` (`VAR` / `CONSTVAL` / `CONSTREF` `ident = expr`), and `parseIdentifier` for bare assignments.
+Other parsers: `parseIf` (handles `ELIF` and `ELSE`), `parseWhile`, `parseFor` (`FOR ident IN iterable THEN body END`), `parseFunction` (`FN name(params) THEN body END`), `parseClass` (`CLASS name body END`), `parseTryCatch` (`TRY body CATCH ident THEN handler END`), `parseDo` (`DO body END`, an expression that evaluates to its last value), `parseReturn`, `parseImport` (`IMPORT "path"`), `parseVar` (`VAR` / `CONSTVAL` / `CONSTREF` `ident = expr`), and `parseIdentifier` for bare assignments.
 
 `blockParser` and `parseProgram` collect statements until `EOF`, `ELIF`, `ELSE`, `END`, or `CATCH`. They start with small capacities (`parseProgram` uses `1024` to avoid realloc, `__blockParser` uses `64`, call args use `16`, lists use `64`) and grow with `arenaRealloc`. Depth is guarded by `MAX_DEPTH 8192` and a per parse `sDepth` counter that is reset per top level statement.
 
@@ -68,7 +68,7 @@ struct Chunk {
 
 **Positions:** `setPos` and `setPosFromNode` mark `posStart/posEnd/posDirty`. `emitByte` flushes a `PosEntry` when dirty, so `vmGetPos` can binary search `positions` by `currentInstr` to report errors.
 
-**Locals:** `Compiler.locals[MAX_LOCALS 256]` tracks `name`, `len`, `slot`, `isMutable`, `isReference`. `resolveLocal` scans backwards with `strcmp`, `addLocal` appends. `c->isFunction` tells the compiler whether locals are allowed. At `FN` compile time a fresh `Compiler fc` is made, `maxLocals` is copied from `fc.maxLocalCount` to `func->chunk->maxLocals` and `func->maxLocals`.
+**Locals:** `Compiler.locals[MAX_LOCALS 256]` tracks `name`, `len`, `slot`, `isMutable`, `isReference`. `resolveLocal` scans backwards with `strcmp`, `addLocal` appends. `c->isFunction` tells the compiler whether locals are allowed. At `FN` compile time a fresh `Compiler fc` is made, `maxLocals` is copied from `fc.maxLocalCount` to `func->chunk->maxLocals` and `func->maxLocals`. `compileDoNode` (`DO ... END`) temporarily flips `isFunction` to `true` and saves and restores `localCount`, so the block body gets its own locals without a call frame.
 
 **Constants:** `chunkAddConst` grows `constants` with `arenaRealloc` and marks `obj->isStatic = true`. Two dedup tables avoid bloat:
 
