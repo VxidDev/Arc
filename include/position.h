@@ -1,8 +1,10 @@
 #ifndef POSITION_H
 #define POSITION_H
 
+#include <stdint.h>
+
 typedef struct Position {
-  unsigned long index, line, column;
+  uint32_t index, line, column;
 } Position;
 
 void advancePosition(Position *pos, char c);

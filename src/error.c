@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 void freeError(Error* err) {
   if (!err) return;
@@ -80,14 +81,14 @@ char* errorAsString(const Error* error) {
     return NULL;
   
   if (!error->filetext || !*error->filetext) {
-    int needed = snprintf(NULL, 0, "%s: %s\nFile %s, line %lu, column %lu\n",
+    int needed = snprintf(NULL, 0, "%s: %s\nFile %s, line %" PRIu32 ", column %" PRIu32 "\n",
       error->name, error->details, error->filename,
       error->start.line + 1, error->start.column + 1);
 
     char *out = malloc(needed + 1);
     if (!out) return NULL;
 
-    snprintf(out, needed + 1, "%s: %s\nFile %s, line %lu, column %lu\n",
+    snprintf(out, needed + 1, "%s: %s\nFile %s, line %" PRIu32 ", column %" PRIu32 "\n",
       error->name, error->details, error->filename,
       error->start.line + 1, error->start.column + 1);
 
@@ -99,14 +100,14 @@ char* errorAsString(const Error* error) {
   size_t textLen = strlen(text); 
   
   if (startIdx >= textLen) {
-    int needed = snprintf(NULL, 0, "%s: %s\nFile %s, line %lu, column %lu\n",
+    int needed = snprintf(NULL, 0, "%s: %s\nFile %s, line %" PRIu32 ", column %" PRIu32 "\n",
       error->name, error->details, error->filename,
       error->start.line + 1, error->start.column + 1);
 
     char *out = malloc(needed + 1);
     if (!out) return NULL;
 
-    snprintf(out, needed + 1, "%s: %s\nFile %s, line %lu, column %lu\n",
+    snprintf(out, needed + 1, "%s: %s\nFile %s, line %" PRIu32 ", column %" PRIu32 "\n",
       error->name, error->details, error->filename,
       error->start.line + 1, error->start.column + 1);
 
@@ -150,7 +151,7 @@ char* errorAsString(const Error* error) {
   int needed = snprintf(
     NULL, 0,
     "%s: %s\n"
-    "File %s, line %lu, column %lu\n\n"
+    "File %s, line %" PRIu32 ", column %" PRIu32 "\n\n"
     "%s\n"
     "%s\n",
     error->name,
@@ -172,7 +173,7 @@ char* errorAsString(const Error* error) {
   snprintf(
     result, needed + 1,
     "%s: %s\n"
-    "File %s, line %lu, column %lu\n\n"
+    "File %s, line %" PRIu32 ", column %" PRIu32 "\n\n"
     "%s\n"
     "%s\n",
     error->name,
